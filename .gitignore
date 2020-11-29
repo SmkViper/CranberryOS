@@ -1,0 +1,5 @@
+# Ignore any build artifacts
+/build*
+# Ignore the user's vscode settings, minus the cmake-kits.json which specifies the build toolchain
+/.vscode/*
+!/.vscode/cmake-kits.json

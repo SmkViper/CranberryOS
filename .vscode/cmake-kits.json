@@ -1,0 +1,6 @@
+[
+    {
+        "name": "Clang RPi3 Baremetal",
+        "toolchainFile": "${workspaceRoot}/cmake/toolchain-clang-rpi3-baremetal.cmake"
+    }
+]
