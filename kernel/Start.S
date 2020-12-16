@@ -36,3 +36,4 @@ clear_bss:
 
 start_kmain:
     bl      kmain
+    b       proc_hang           // hang the processor if kmain ever exits

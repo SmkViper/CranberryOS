@@ -8,6 +8,35 @@ SECTIONS
     */
     .text : { KEEP(*(.text.boot)) *(.text .text.*) } /* code sections */
     .rodata : { *(.rodata .rodata.*) } /* read-only data sections */
+
+    /* .init_array is a list of pointers to constructors for static variables - pointer alignment */
+    .init_array ALIGN(0x8) : {
+        __init_start = .;
+        KEEP(*(SORT(.init_array.*))) /* make sure constructor priorities are respected by sorting */
+        KEEP(*(.init_array*))
+        __init_end = .;
+    }
+
+    /* .fini_array is a list of pointers to destructors for static variables - pointer alignment */
+    .fini_array ALIGN(0x8) : {
+        __fini_start = .;
+        KEEP (*(SORT(.fini_array.*))) /* make sure destructor priorities are respected by sorting */
+        KEEP(*(.fini_array*))
+        __fini_end = .;
+    }
+
+    /* exception handler frame information */
+    .eh_frame : {
+        *(.eh_frame*)
+    }
+
+    /* stack unwind information */
+    .ARM.exidx : {
+        __exidx_start = .;
+        *(.ARM.exidx*)
+        __exidx_end = .;
+    }
+
     .data : { *(.data .data.*) } /* initialized writable data sections */
     /*
         .bss is data that should be initialized to 0, which the compiler puts into this seperate section to save a bit
