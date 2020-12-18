@@ -8,6 +8,8 @@
 // Unclear if that's what's being followed for AARCH64, but those are the symbols that clang wants.
 // Will need to do more research later to see how to properly handle exceptions on ARM.
 
+#include <cstdint>
+
 namespace
 {
     using ExitFunction = void (*)(void *apThis);
@@ -37,10 +39,10 @@ namespace
 
     struct _Unwind_Exception
     {
-        unsigned long long exception_class;
+        uint64_t exception_class;
         _Unwind_Exception_Cleanup_Fn exception_cleanup;
-        unsigned long long private_1;
-        unsigned long long private_2;
+        uint64_t private_1;
+        uint64_t private_2;
     };
 }
 
@@ -87,7 +89,7 @@ extern "C"
      * 
      * @return How further unwind should happen, or any errors
      */
-    _Unwind_Reason_Code __gxx_personality_v0(int /*aVersion*/, _Unwind_Action /*aActions*/, unsigned long long /*aExceptionClass*/,
+    _Unwind_Reason_Code __gxx_personality_v0(int /*aVersion*/, _Unwind_Action /*aActions*/, uint64_t /*aExceptionClass*/,
                                              _Unwind_Exception* /*apExceptionObject*/, _Unwind_Context* /*apContext*/)
     {
         // TODO

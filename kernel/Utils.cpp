@@ -2,22 +2,22 @@
 
 namespace MemoryMappedIO
 {
-    void Put32(unsigned long aAddress, unsigned int aData)
+    void Put32(uint64_t aAddress, uint32_t aData)
     {
-        volatile auto pregister = reinterpret_cast<unsigned int*>(aAddress);
+        volatile auto pregister = reinterpret_cast<uint32_t*>(aAddress);
         *pregister = aData;
     }
 
-    unsigned int Get32(unsigned long aAddress)
+    uint32_t Get32(uint64_t aAddress)
     {
-        volatile auto pregister = reinterpret_cast<unsigned int*>(aAddress);
+        volatile auto pregister = reinterpret_cast<uint32_t*>(aAddress);
         return *pregister;
     }
 }
 
 namespace Timing
 {
-    void Delay(unsigned long aCount)
+    void Delay(uint64_t aCount)
     {
         while (aCount--)
         {

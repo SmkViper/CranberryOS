@@ -63,7 +63,7 @@ extern "C"
     /**
      * Kernel entry point
      */
-    void kmain(void)
+    void kmain()
     {
         CallStaticConstructors();
 

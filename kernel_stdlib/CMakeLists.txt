@@ -1,6 +1,10 @@
 # Manually adding the headers here, instead of in a CMakeLists.txt file in the include folder to keep
 # said folder "clean" and able to be copied around if needed.
-set(HEADER_LIST "include/exception")
+set(HEADER_LIST
+    "include/cstdint"
+    "include/exception"
+    "include/stdint.h"
+)
 
 add_library(kernel_stdlib
     ${HEADER_LIST}
