@@ -32,4 +32,14 @@ namespace Timing
     void Delay(uint64_t aCount);
 }
 
+namespace CPU
+{
+    /**
+     * Obtain the current exception level the CPU is running at
+     * 
+     * @return The current exception level (0 is user land, 1 is typical OS, 2 is hypervisor, 3 is secure/insecure worlds)
+     */
+    uint64_t GetExceptionLevel();
+}
+
 #endif // KERNEL_UTILS_H

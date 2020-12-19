@@ -1,4 +1,5 @@
 #include "MiniUart.h"
+#include "Utils.h"
 
 namespace
 {
@@ -78,6 +79,13 @@ extern "C"
         {
             MiniUART::SendString("SomeObject::SomeObject() was NOT called\r\n");
         }
+
+        // We don't currently have printf-like formatting, so we'll use a bit of fancy math and multiple send commands
+        MiniUART::SendString("Current exception level: ");
+        const auto exceptionLevel = CPU::GetExceptionLevel();
+        const auto levelChar = static_cast<char>('0' + exceptionLevel);
+        MiniUART::Send(levelChar);
+        MiniUART::SendString("\r\n");
         
         bool done = false;
         while(!done)

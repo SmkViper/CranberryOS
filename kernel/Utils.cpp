@@ -27,3 +27,18 @@ namespace Timing
         }
     }
 }
+
+namespace CPU
+{
+    uint64_t GetExceptionLevel()
+    {
+        uint64_t CurrentELValue = 0;
+        asm ("mrs %0, CurrentEL"
+            :"=r"(CurrentELValue) // output
+            : // no inputs
+            : // no clobbered registers
+        );
+        // CurrentEL register stores the exception level in bits 3 and 4, so shift away the lower two bits
+        return CurrentELValue >> 2;
+    }
+}
