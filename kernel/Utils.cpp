@@ -38,7 +38,7 @@ namespace CPU
             : // no inputs
             : // no clobbered registers
         );
-        // CurrentEL register stores the exception level in bits 3 and 4, so shift away the lower two bits
+        // CurrentEL register stores the exception level in bits 2 and 3, so shift away the lower two bits
         // and mask the rest
         return (CurrentELValue >> 2) & 0x3;
     }
