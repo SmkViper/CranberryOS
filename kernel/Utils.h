@@ -37,7 +37,11 @@ namespace CPU
     /**
      * Obtain the current exception level the CPU is running at
      * 
-     * @return The current exception level (0 is user land, 1 is typical OS, 2 is hypervisor, 3 is secure/insecure worlds)
+     * @return The current exception level
+     *         0 - user land
+     *         1 - OS level
+     *         2 - hypervisor
+     *         3 - firmware (secure/insecure world switching)
      */
     uint64_t GetExceptionLevel();
 }
