@@ -3,7 +3,9 @@
 #ifndef KERNEL_ARM_SYSTEM_REGISTERS_H
 #define KERNEL_ARM_SYSTEM_REGISTERS_H
 
-// SCTLR_EL1 register flags - See D10.2.100 in the AArch64 manual
+///////////////////////////////////////////////////////////////////////////////
+// SCTLR_EL1 register flags - See D10.2.100 in the ARMv8 manual
+///////////////////////////////////////////////////////////////////////////////
 
 // Some bits are reserved, set to 1, in ARMv8.0, which we set here
 #define SCTLR_RESERVED_FLAGS    (1 << 29) | (1 << 28) | (1 << 23) | (1 << 22) | (1 << 20) | (1 << 11)
@@ -22,7 +24,9 @@
                              SCTLR_DCACHE_DISABLED | \
                              SCTLR_MMU_DISABLED)
 
-// HCR_EL2 register flags - See D10.2.45 in the AArch64 manual
+///////////////////////////////////////////////////////////////////////////////
+// HCR_EL2 register flags - See D10.2.45 in the ARMv8 manual
+///////////////////////////////////////////////////////////////////////////////
 
 // Some bits are reserved, but none are set to 1, so this one is simple
 #define HCR_EL2_RESERVED_FLAGS  0
@@ -33,7 +37,9 @@
 #define HCR_EL2_INIT_VALUE  (HCR_EL2_RESERVED_FLAGS | \
                              HCR_EL2_EL1_IS_AARCH64)
 
-// SPSR_EL2 register flags - See C5.2.19 in the AArch64 manual
+///////////////////////////////////////////////////////////////////////////////
+// SPSR_EL2 register flags - See C5.2.19 in the ARMv8 manual
+///////////////////////////////////////////////////////////////////////////////
 
 // Some bits are reserved, but none are set to 0, so this one is simple
 #define SPSR_EL2_RESERVED_FLAGS                 0
@@ -50,5 +56,39 @@
                              SPSR_EL2_IRQ_MASK | \
                              SPSR_EL2_FIQ_MASK | \
                              SPSR_EL2_EL1_USES_OWN_SP)
+
+///////////////////////////////////////////////////////////////////////////////
+// CPTR_EL2 register flags - See D10.2.30 in the ARMv8 manual
+///////////////////////////////////////////////////////////////////////////////
+
+// Some bits are reserved, set to 1, which we set here
+#define CPTR_EL2_RESERVED_FLAGS             (1 << 13) | (1 << 12) | (1 << 9) | 0xFF
+#define CPTR_EL2_DISABLE_SEV_FP_SIMD_TRAPS  (1 << 10)
+
+// Allow EL2 and non-secure EL1 and EL0 to access SEV, floating-point, and SIMD registers (won't trap to EL2)
+#define CPTR_EL2_INIT_VALUE (CPTR_EL2_RESERVED_FLAGS | \
+                             CPTR_EL2_DISABLE_SEV_FP_SIMD_TRAPS)
+
+///////////////////////////////////////////////////////////////////////////////
+// HSTR_EL2 register flags - See D10.2.47 in the ARMv8 manual
+///////////////////////////////////////////////////////////////////////////////
+
+// Some bits are reserved, but none are set to 0, so this one is simple
+#define HSTR_EL2_RESERVED_FLAGS 0
+
+// Allow non-secure EL1 and EL0 access all coprocessor registers (won't trap to EL2)
+#define HSTR_EL2_INIT_VALUE     HSTR_EL2_RESERVED_FLAGS
+
+///////////////////////////////////////////////////////////////////////////////
+// CPACR_EL1 register flags - See D10.2.29 in the ARMv8 manual
+///////////////////////////////////////////////////////////////////////////////
+
+// Some bits are reserved, but none are set to 0, so this one is simple
+#define CPACR_EL1_RESERVED_FLAGS            0
+#define CPACR_EL1_DISABLE_SVE_FP_SIMD_TRAPS (3 << 20)
+
+// Allow EL1 and EL0 to use SVE, floating-point, and SIMD registers (won't trap to EL1)
+#define CPACR_EL1_INIT_VALUE    (CPACR_EL1_RESERVED_FLAGS | \
+                                 CPACR_EL1_DISABLE_SVE_FP_SIMD_TRAPS)
 
 #endif // KERNEL_ARM_SYSTEM_REGISTERS_H

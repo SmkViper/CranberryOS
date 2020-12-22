@@ -14,6 +14,15 @@
     ldr     \xreg1, =SPSR_EL2_INIT_VALUE
     msr     spsr_el2, \xreg1
 
+    // Disable all traps so that EL2, EL1, and EL0 can access the coprocessor,
+    // floating point, and SIMD instructions and registers
+    ldr     \xreg1, =CPTR_EL2_INIT_VALUE
+    msr     cptr_el2, \xreg1
+    ldr     \xreg1, =HSTR_EL2_INIT_VALUE
+    msr     hstr_el2, \xreg1
+    ldr     \xreg1, =CPACR_EL1_INIT_VALUE
+    msr     cpacr_el1, \xreg1
+
     // Overwrite the exception return address with the location of the first 1
     // label past this instruction, and then return to it (in EL1)
     adr     \xreg1, 1f
