@@ -6,6 +6,7 @@ add_executable(kernel8.elf
     Main.cpp
     MiniUart.h MiniUart.cpp
     Start.S
+    UnitTests.h UnitTests.cpp
     Utils.h Utils.cpp
 )
 set_target_properties(kernel8.elf PROPERTIES LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${LINKER_SCRIPT}")
