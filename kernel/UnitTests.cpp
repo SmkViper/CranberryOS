@@ -141,6 +141,25 @@ namespace
     }
 
     /**
+     * Test to make sure floating point instructions are enabled and working
+     */
+    void FloatingPointTest()
+    {
+        // Some slightly complicated code to avoid compiler doing it ahead of time, and motivate it to use
+        // the floating point instructions and registers that can trap if not set up right
+        const float leftValues[] = {1.5f, 2.6f, 3.7f, 4.8f};
+        const float divisor = 2.0f;
+        const float expectedValues[] = {0.75f, 1.3f, 1.85f, 2.4f};
+
+        auto success = true;
+        for (int i = 0; (i < 4) && success; ++i)
+        {
+            success = (expectedValues[i] == (leftValues[i] / divisor));
+        }
+        EmitTestResult(success, "Floating point instructions");
+    }
+
+    /**
      * Test to make sure SIMD (NEON) instructions are enabled and working
      */
     void SIMDTest()
@@ -180,6 +199,7 @@ namespace UnitTests
         StaticCConstructorTest();
         StaticCppConstructorTest();
         ExceptionLevelTest();
+        FloatingPointTest();
         SIMDTest();
     }
 

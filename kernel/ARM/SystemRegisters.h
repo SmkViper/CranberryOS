@@ -62,8 +62,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // Some bits are reserved, set to 1, which we set here
-#define CPTR_EL2_RESERVED_FLAGS             (1 << 13) | (1 << 12) | (1 << 9) | 0xFF
-#define CPTR_EL2_DISABLE_SEV_FP_SIMD_TRAPS  (1 << 10)
+#define CPTR_EL2_RESERVED_FLAGS             (1 << 13) | (1 << 12) | (1 << 9) | (1 << 8) | 0xFF
+#define CPTR_EL2_DISABLE_SEV_FP_SIMD_TRAPS  (0 << 10)
 
 // AArch64: Allow EL2 and non-secure EL1 and EL0 to access SEV, floating-point, and SIMD registers (won't trap to EL2)
 #define CPTR_EL2_INIT_VALUE (CPTR_EL2_RESERVED_FLAGS | \
@@ -75,6 +75,8 @@
 
 // Some bits are reserved, but none are set to 0, so this one is simple
 #define HSTR_EL2_RESERVED_FLAGS 0
+// Access to coprocessor registers are set by bits [15:0], set to 1 to trap, 0 to not trap. So just leave everything
+// zeroed to not trap
 
 // AArch32: Allow non-secure EL1 and EL0 access all coprocessor registers (won't trap to EL2)
 #define HSTR_EL2_INIT_VALUE     HSTR_EL2_RESERVED_FLAGS
