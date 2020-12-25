@@ -164,20 +164,20 @@ namespace
      */
     void SIMDTest()
     {
-        // TODO BROKEN
-        // Compiler is generating instructions to use the q0 register, which is trapping. So we're missing a trap disable
-        // flag somewhere. (Also why is it using q0? That seems to be an AArch32 NEON register...)
         alignas(128) const float leftValues[] = {1.5f, 2.6f, 3.7f, 4.8f};
         alignas(128) const float rightValues[] = {5.5f, 6.6f, 7.7f, 8.8f};
         alignas(128) float results[] = {0.0f, 0.0f, 0.0f, 0.0f};
-        float* presults = results; // compiler warns on register size if we don't decay the array to a pointer
+        // If results is just passed to the inline assembler the compiler can't handle it as an output parameter for
+        // an unknown reason (gives a value size warning and a "don't know how to handle tied indirect register
+        // inputs" error). Decaying the array to a pointer resolves the issues.
+        float* presults = results;
 
         asm volatile(
             "ld1 {v0.4s}, [%[src1]], #16 \n" // load four floats from src1 into v0
             "ld1 {v1.4s}, [%[src2]], #16 \n" // load four floats from src2 into v1
             "fadd v0.4s, v0.4s, v1.4s \n" // add v0 to v1 and put the results in v0
             "st1 {v0.4s}, [%[dst]], #16 \n" // extract four floats from v0 and put them into dst
-            : [dst] "=r" (presults) // output
+            : [dst] "+r" (presults) // output
             : [src1] "r" (leftValues), [src2] "r" (rightValues) // inputs
             : "memory", "v0", "v1" // clobbered registers
         );
