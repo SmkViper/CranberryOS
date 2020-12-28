@@ -1,0 +1,18 @@
+#ifndef __KERNEL_STDLIB_NEW__
+#define __KERNEL_STDLIB_NEW__
+
+/**
+ * Return memory to the memory system
+ * 
+ * @param __apBlock pointer to the block to return
+ */
+void operator delete(void* __apBlock) noexcept;
+
+/**
+ * Return an array allocated block to the memory system
+ * 
+ * @param __apBlock pointer to the first element to return
+ */
+void operator delete[](void* __apBlock) noexcept;
+
+#endif // __KERNEL_STDLIB_NEW__

@@ -3,7 +3,9 @@
 set(HEADER_LIST
     "include/cstdint"
     "include/exception"
+    "include/new"
     "include/stdint.h"
+    "include/typeinfo"
 )
 
 add_library(kernel_stdlib

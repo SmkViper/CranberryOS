@@ -5,7 +5,9 @@ add_executable(kernel8.elf
     Exceptions.cpp
     Main.cpp
     MiniUart.h MiniUart.cpp
+    Print.h Print.cpp
     Start.S
+    TypeInfo.cpp
     UnitTests.h UnitTests.cpp
     Utils.h Utils.cpp
 )
@@ -17,6 +19,7 @@ target_link_libraries(kernel8.elf PRIVATE kernel_stdlib)
 
 # Bring in each sub folder that we need (they have their own CMakeLists.txt files that will add appropriate
 # information to the targets)
+add_subdirectory(ARM)
 add_subdirectory(Peripherals)
 
 # GPU can't read elf files, so we have to extract the contents out to an img file so it can blindly load the file and

@@ -1,0 +1,92 @@
+#ifndef __KERNEL_STDLIB_TYPEINFO__
+#define __KERNEL_STDLIB_TYPEINFO__
+
+// TODO
+// Just the basics for now
+
+namespace std
+{
+    class type_info
+    {
+    public:
+        /**
+         * Copy constructor - deleted
+         * 
+         * @param __aOther type_info to copy
+         */
+        type_info(const type_info& __aOther) = delete;
+
+        /**
+         * Destructor
+         */
+        virtual ~type_info() = default;
+
+        /**
+         * Assignment operator - deleted
+         * 
+         * @param __aOther type_info to copy
+         * 
+         * @return This type info
+         */
+        type_info operator=(const type_info& __aOther) = delete;
+
+        /**
+         * Obtains the implementation-defined name of the type
+         */
+        const char* name() const
+        {
+            return __pName;
+        }
+
+        /**
+         * Checks to see if this type_info precedes the other type in collation order
+         * 
+         * @param __aOther Other type_info to compare with
+         * 
+         * @return If this type_info precedes the other one
+         */
+        bool before(const type_info& __aOther) const
+        {
+            // we assume the names are merged and a pointer compare will work
+            return __pName < __aOther.__pName;
+        }
+
+        /**
+         * Compares this type_info with another, return if they are equal
+         * 
+         * @param __aOther type_info to compare with
+         * 
+         * @return True if they are the same
+         */
+        bool operator==(const type_info& __aOther) const
+        {
+            // we assume the names are merged and a pointer compare will work
+            return __pName == __aOther.__pName;
+        }
+
+        /**
+         * Compares this type_info with another, return if they are not equal
+         * 
+         * @param __aOther type_info to compare with
+         * 
+         * @return True if they are the not the same
+         */
+        bool operator!=(const type_info& __aOther) const
+        {
+            return !operator==(__aOther);
+        }
+
+    protected:
+        /**
+         * Constructor
+         * 
+         * @param __apName The type name
+         */
+        explicit type_info(const char* __apName): __pName{__apName} {}
+
+    private:
+        const char* __pName;
+    };
+}
+
+#endif // __KERNEL_STDLIB_TYPEINFO__

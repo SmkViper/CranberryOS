@@ -1,4 +1,5 @@
 #include "MiniUart.h"
+#include "Print.h"
 #include "UnitTests.h"
 #include "Utils.h"
 
@@ -54,6 +55,8 @@ extern "C"
 
         MiniUART::Init();
         UnitTests::Run();
+
+        Print::FormatToMiniUART("Test format with no args");
 
         MiniUART::SendString("Hello, World! Type 'q' to \"exit\"\r\n");
 
