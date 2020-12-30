@@ -30,7 +30,19 @@ namespace __cxxabiv1
         explicit __class_type_info(const char* __apName)
             : type_info{__apName}
         {}
+
+        /**
+         * Destructor
+         * 
+         * NOTE: Intentionally NOT =default inside the definition because that
+         * confuses the compiler since it will be looking for the first
+         * virtual, non-inline function to designate as a "key function".
+         */
+        virtual ~__class_type_info();
     };
+
+    // Define OUTSIDE class so compiler can find the vtable
+    __class_type_info::~__class_type_info() = default;
 
     class __si_class_type_info: public __class_type_info
     {
@@ -47,5 +59,19 @@ namespace __cxxabiv1
             : __class_type_info{__apName}
             , __base_type{__apBase}
         {}
+
+        /**
+         * Destructor
+         * 
+         * NOTE: Intentionally NOT =default inside the definition because that
+         * confuses the compiler since it will be looking for the first
+         * virtual, non-inline function to designate as a "key function".
+         */
+        virtual ~__si_class_type_info();
     };
+
+    // Define OUTSIDE class so compiler can find the vtable
+    __si_class_type_info::~__si_class_type_info() = default;
 }
+
+namespace abi = __cxxabiv1;

@@ -23,7 +23,7 @@ set(CMAKE_C_COMPILER_TARGET ${triple})
 set(CMAKE_CXX_COMPILER_TARGET ${triple})
 
 set(CMAKE_C_FLAGS           "-ffreestanding -nostdinc -nostdlib -mtune=cortex-a53+nosimd" CACHE INTERNAL "")
-set(CMAKE_CXX__FLAGS        "<CMAKE_C_FLAGS>" CACHE INTERNAL "")
+set(CMAKE_CXX__FLAGS        "<CMAKE_C_FLAGS>" -nostdinc++ CACHE INTERNAL "")
 
 # Aborted attempt to get clang to run lld as the linker, but it seemed to refuce to pass the target triple through, resulting in
 # errors related to trying to link as a x86-64 elf, not the arm one.

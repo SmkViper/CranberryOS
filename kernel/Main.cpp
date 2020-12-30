@@ -56,7 +56,7 @@ extern "C"
         MiniUART::Init();
         UnitTests::Run();
 
-        Print::FormatToMiniUART("Test format with no args");
+        Print::FormatToMiniUART("Test format with no args\r\n");
 
         MiniUART::SendString("Hello, World! Type 'q' to \"exit\"\r\n");
 
