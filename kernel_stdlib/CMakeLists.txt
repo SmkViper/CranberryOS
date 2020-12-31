@@ -5,7 +5,9 @@ set(HEADER_LIST
     "include/exception"
     "include/new"
     "include/stdint.h"
+    "include/type_traits"
     "include/typeinfo"
+    "include/utility"
 )
 
 add_library(kernel_stdlib

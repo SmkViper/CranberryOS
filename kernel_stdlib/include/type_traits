@@ -1,0 +1,255 @@
+#ifndef __KERNEL_STDLIB_TYPE_TRAITS__
+#define __KERNEL_STDLIB_TYPE_TRAITS__
+
+// TODO
+// Just the basics for now
+
+namespace std
+{
+    /**
+     * Wraps a static constant of the specified type
+     */
+    template<class __T, __T __value>
+    struct integral_constant
+    {
+        using value_type = __T;
+        using type = integral_constant;
+
+        static constexpr __T value = __value;
+
+        /**
+         * Cast operator that obtains the contained value
+         * 
+         * @return The contained value
+         */
+        constexpr operator __T() const noexcept {return value;}
+
+        /**
+         * Invoke operator that obtains the contained value
+         * 
+         * @return The contained value
+         */
+        constexpr __T operator()() const noexcept {return value;}
+    };
+
+    /**
+     * Helpers for bool constants
+     */
+    template<bool __value>
+    using bool_constant = std::integral_constant<bool, __value>;
+
+    using true_type = std::bool_constant<true>;
+    using false_type = std::bool_constant<false>;
+
+    /**
+     * Checks to see if two types are the same
+     */
+    template<class __T, class __U>
+    struct is_same: std::false_type {};
+    template<class __T>
+    struct is_same<__T, __T>: std::true_type {};
+
+    /**
+     * Checks to see if two types are the same - helper
+     */
+    template<class __T, class __U>
+    inline constexpr bool is_same_v = std::is_same<__T, __U>::value;
+
+    /**
+     * Checks to see if the type is a const type
+     */
+    template<class __T>
+    struct is_const: public std::false_type {};
+    template<class __T>
+    struct is_const<const __T>: public std::true_type {};
+
+    /**
+     * Checks to see if the type is a const type - helper
+     */
+    template<class __T>
+    inline constexpr bool is_const_v = std::is_const<__T>::value;
+
+    /**
+     * Checks to see if the type is a reference
+     */
+    template<class __T>
+    struct is_reference: public std::false_type {};
+    template<class __T>
+    struct is_reference<__T&>: public std::true_type {};
+    template<class __T>
+    struct is_reference<__T&&>: public std::true_type {};
+
+    /**
+     * Checks to see if the type is a reference - helper
+     */
+    template<class __T>
+    inline constexpr bool is_reference_v = std::is_reference<__T>::value;
+
+    /**
+     * Checks to see if the type is an lvalue reference
+     */
+    template<class __T>
+    struct is_lvalue_reference: public std::false_type {};
+    template<class __T>
+    struct is_lvalue_reference<__T&>: public std::true_type {};
+
+    /**
+     * Checks to see if the type is an lvalue reference - helper
+     */
+    template<class __T>
+    inline constexpr bool is_lvalue_reference_v = std::is_lvalue_reference<__T>::value;
+
+    /**
+     * Checks to see if the type is an array
+     */
+    template<class __T>
+    struct is_array: public std::false_type {};
+    template<class __T>
+    struct is_array<__T[]>: public std::true_type {};
+    template<class __T, uint64_t __size> // TODO - change to size_t
+    struct is_array<__T[__size]>: public std::true_type {};
+
+    /**
+     * Checks to see if the type is an array - helper
+     */
+    template<class __T>
+    inline constexpr bool is_array_v = std::is_array<__T>::value;
+
+    /**
+     * Checks to see if the type is a function (std::function, lambdas, functors, and pointers to
+     * functions do not count)
+     * 
+     * Note: This relies on function and reference types being the only kinds of types that cannot
+     * be const-qualified
+     */
+    template<class __T>
+    struct is_function: public std::bool_constant<!std::is_const_v<const __T> && !std::is_reference_v<__T>> {};
+
+    template<class __T>
+    inline constexpr bool is_function_v = std::is_function<__T>::value;
+    /**
+     * Removes any reference qualifier from the type
+     */
+    template<class __T>
+    struct remove_reference {using type = __T;};
+    template<class __T>
+    struct remove_reference<__T&> {using type = __T;};
+    template<class __T>
+    struct remove_reference<__T&&> {using type = __T;};
+
+    /**
+     * Removes any reference qualifier from the type - helper
+     */
+    template<class __T>
+    using remove_reference_t = typename std::remove_reference<__T>::type;
+
+    /**
+     * Removes the array extent from the type, if it is an array type
+     */
+    template<class __T>
+    struct remove_extent {using type = __T;};
+    template<class __T>
+    struct remove_extent<__T[]> {using type = __T;};
+    template<class __T, uint64_t __size> // TODO - change to size_t
+    struct remove_extent<__T[__size]> {using type = __T;};
+
+    /**
+     * Removes the array extent from the type, if it is an array type - helper
+     */
+    template<class __T>
+    using remove_extent_t = typename std::remove_extent<__T>::type;
+
+    /**
+     * Removes the topmost vc-qualifiers from the type
+     */
+    template<class __T>
+    struct remove_cv {using type = __T;};
+    template<class __T>
+    struct remove_cv<const __T> {using type = __T;};
+    template<class __T>
+    struct remove_cv<volatile __T> {using type = __T;};
+    template<class __T>
+    struct remove_cv<const volatile __T> {using type = __T;};
+
+    /**
+     * Removes the topmost vc-qualifiers from the type
+     */
+    template<class __T>
+    using remove_cv_t = typename std::remove_cv<__T>::type;
+
+    // Do not use directly
+    namespace __detail
+    {
+        // Tiny helper to add the type using statement to anything derived from it
+        template<class __T>
+        struct type_identity {using type = __T;};
+
+        // Pair of overloads to attempt to add a pointer to __T. If a pointer cannot be added to
+        // __T, then the int overload will be removed from the overload set, leaving the vararg
+        // overload, resulting in the return type being a non-pointer. If a pointer can be added
+        // to __T, then overload resolution will pick the int version, since it's a better match
+        // for the dummy int parameter passed by add_pointer
+        template<class __T>
+        auto __try_add_pointer(int) -> type_identity<typename std::remove_reference_t<__T>*>;
+        template<class __T>
+        auto __try_add_pointer(...) -> type_identity<__T>;
+    }
+
+    /**
+     * Attempts to add a pointer to the specified type. If the type is a reference, then it's a
+     * pointer to the referenced type. If a pointer to the type cannot be obtained, then it will
+     * just be the type itself
+     */
+    template<class __T>
+    struct add_pointer: public decltype(__detail::__try_add_pointer<__T>(0)) {};
+
+    /**
+     * Attempts to add a pointer to the specified type - helper
+     */
+    template<class __T>
+    using add_pointer_t = typename std::add_pointer<__T>::type;
+
+    /**
+     * Resolves to either the first or second type based on a bool condition
+     */
+    template<bool __test, class __T, class __F>
+    struct conditional {using type = __T;};
+    template<class __T, class __F>
+    struct conditional<false, __T, __F> {using type = __F;};
+
+    /**
+     * Resolves to either the first or second type based on a bool condition - helper
+     */
+    template<bool __test, class __T, class __F>
+    using conditional_t = typename std::conditional<__test, __T, __F>::type;
+
+    /**
+     * Decays the type, removing references, converting arrays to pointers, converting functions
+     * to pointers, and removing top level cv qualifiers
+     */
+    template<class __T>
+    struct decay
+    {
+    private:
+        using __t_no_ref = std::remove_reference_t<__T>;
+    public:
+        using type = std::conditional_t<
+            std::is_array_v<__t_no_ref>,
+            std::remove_extent_t<__t_no_ref>*,
+            std::conditional_t<
+                std::is_function_v<__t_no_ref>,
+                std::add_pointer_t<__t_no_ref>,
+                std::remove_cv_t<__t_no_ref>
+            >
+        >;
+    };
+
+    /**
+     * Decays the type, removing references, converting arrays to pointers, converting functions
+     * to pointers, and removing top level cv qualifiers - helper
+     */
+    template<class __T>
+    using decay_t = typename decay<__T>::type;
+}
+
+#endif // __KERNEL_STDLIB_TYPE_TRAITS__

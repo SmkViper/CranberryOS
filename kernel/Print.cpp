@@ -7,52 +7,17 @@ namespace Print
     namespace Detail
     {
         /**
-         * A functor base class for outputting a character somewhere, since we don't have an allocator for a
-         * std::function implementation
+         * Write out a single character to the output - overridden by implementation
+         * 
+         * @param aChar The character to write
+         * 
+         * @return True on success
          */
-        class OutputFunctorBase
+        bool MiniUARTOutputFunctor::WriteCharImpl(const char aChar)
         {
-        public:
-            /**
-             * Copy constructor
-             * 
-             * @param aOther Functor to copy
-             */
-            OutputFunctorBase(const OutputFunctorBase& aOther) = delete;
-
-            /**
-             * Destructor
-             */
-            virtual ~OutputFunctorBase() = default;
-
-            /**
-             * Assignment operator
-             * 
-             * @param aOther Functor to copy
-             * 
-             * @return This functor
-             */
-            OutputFunctorBase& operator=(const OutputFunctorBase& aOther) = delete;
-
-            /**
-             * Write out a single character to the output
-             * 
-             * @param aChar The character to write
-             * 
-             * @return True on success
-             */
-            bool WriteChar(const char aChar) { return WriteCharImpl(aChar); }
-
-        private:
-            /**
-             * Write out a single character to the output - overridden by implementation
-             * 
-             * @param aChar The character to write
-             * 
-             * @return True on success
-             */
-            virtual bool WriteCharImpl(char aChar) = 0;
-        };
+            MiniUART::Send(aChar);
+            return true;
+        }
 
         /**
          * Output the data this wrapper holds to the given functor - overriden by implementation
@@ -68,16 +33,132 @@ namespace Print
         }
 
         /**
-         * Formats the string and sends it to MiniUART
+         * Output the data this wrapper holds to the given functor - overriden by implementation
+         * 
+         * @param aOutput The functor to use for outputting
+         * 
+         * @return True on success
+         */
+        bool DataWrapper<const char*>::OutputDataImpl(OutputFunctorBase& arOutput) const
+        {
+            auto success = true;
+            if (pWrappedData != nullptr) // we'll output null strings as nothing, "successfully"
+            {
+                auto pcurChar = pWrappedData;
+                while (success && (*pcurChar != '\0'))
+                {
+                    success = arOutput.WriteChar(*pcurChar);
+                    ++pcurChar;
+                }
+            }
+            return success;
+        }
+
+        /**
+         * Formats the string and sends it to the given output
          * 
          * @param apFormatString The format string, following the std::format syntax
+         * @param arOutput The output to send to
          * @param apDataArray First element in an array of elements to substitute into the format string
          * @param aDataCount Number of items in the data array
          */
-        void FormatToMiniUARTImpl(const char* const apFormatString, const DataWrapperBase* const /*apDataArray*/, const uint32_t /*aDataCount*/)
+        void FormatImpl(const char* const apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** const apDataArray, const uint32_t aDataCount)
         {
-            // TODO
-            MiniUART::SendString(apFormatString);
+            enum class ParseState
+            {
+                OutputCharacter,
+                OpenBrace,
+                CloseBrace,
+            };
+
+            if (apFormatString)
+            {
+                auto success = true;
+                auto pcurChar = apFormatString;
+                auto curState = ParseState::OutputCharacter;
+                auto curDataElement = 0u;
+
+                while (success && (*pcurChar != '\0'))
+                {
+                    auto writeChar = true;
+                    switch (curState)
+                    {
+                    case ParseState::OutputCharacter:
+                        if (*pcurChar == '{')
+                        {
+                            curState = ParseState::OpenBrace;
+                            writeChar = false;
+                        }
+                        else if (*pcurChar == '}')
+                        {
+                            curState = ParseState::CloseBrace;
+                            writeChar = false;
+                        }
+                        break;
+
+                    case ParseState::OpenBrace:
+                        if (*pcurChar == '{')
+                        {
+                            // was an escaped open brace, so output the brace
+                            curState = ParseState::OutputCharacter;
+                        }
+                        else if (*pcurChar == '}')
+                        {
+                            if (curDataElement < aDataCount)
+                            {
+                                // no need to null check the contents of apDataArray, since it's generated by functions
+                                // that fill it with pointers to stack values
+                                success = apDataArray[curDataElement]->OutputData(arOutput);
+                            }
+                            else
+                            {
+                                // TODO
+                                // throw exception - invalid. For now, we output a placeholder
+                                success = arOutput.WriteChar('{');
+                                success = success && DataWrapper<decltype(curDataElement)>{curDataElement}.OutputData(arOutput);
+                                success = success && arOutput.WriteChar('}');
+                            }
+                            
+                            ++curDataElement;
+                            curState = ParseState::OutputCharacter;
+                            writeChar = false;
+                        }
+                        else
+                        {
+                            // TODO
+                            // throw exception - invalid
+                            writeChar = false;
+                        }
+                        
+                        break;
+
+                    case ParseState::CloseBrace:
+                        if (*pcurChar == '}')
+                        {
+                            // was an escaped close brace, so output the brace
+                            curState = ParseState::OutputCharacter;
+                        }
+                        else
+                        {
+                            // TODO
+                            // throw exception - invalid
+                            writeChar = false;
+                        }
+                        break;
+
+                    default:
+                        // TODO
+                        // assert - unexpected state
+                        break;
+                    }
+
+                    if (writeChar)
+                    {
+                        success = arOutput.WriteChar(*pcurChar);
+                    }
+                    ++pcurChar;
+                }
+            }
         }
     }
 }

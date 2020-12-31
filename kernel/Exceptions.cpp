@@ -95,4 +95,15 @@ extern "C"
         // TODO
         return _URC_CONTINUE_UNWIND;
     }
+
+    /**
+     * Resume propagation of an existing exception, e.g. after executing cleanup code in a partially unwound stack. It is called at the
+     * end of a landing pad that performed cleanup, but did not resume normal execution, and causes unwinding to proceed further.
+     * 
+     * @param apExceptionObject Pointer to the information needed for processing the exception
+     */
+    void _Unwind_Resume(_Unwind_Exception* /*apExceptionObject*/)
+    {
+        // TODO
+    }
 }

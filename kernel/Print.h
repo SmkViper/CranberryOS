@@ -2,13 +2,79 @@
 #define KERNEL_PRINT_H
 
 #include <cstdint>
+#include <type_traits>
+#include <utility>
 
 namespace Print
 {
     // implementation details, do not use directly
     namespace Detail
     {
-        class OutputFunctorBase;
+        /**
+         * A functor base class for outputting a character somewhere, since we don't have an allocator for a
+         * std::function implementation
+         */
+        class OutputFunctorBase
+        {
+        public:
+            /**
+             * Copy constructor
+             * 
+             * @param aOther Functor to copy
+             */
+            OutputFunctorBase(const OutputFunctorBase& aOther) = delete;
+
+            /**
+             * Destructor
+             */
+            virtual ~OutputFunctorBase() = default;
+
+            /**
+             * Assignment operator
+             * 
+             * @param aOther Functor to copy
+             * 
+             * @return This functor
+             */
+            OutputFunctorBase& operator=(const OutputFunctorBase& aOther) = delete;
+
+            /**
+             * Write out a single character to the output
+             * 
+             * @param aChar The character to write
+             * 
+             * @return True on success
+             */
+            bool WriteChar(const char aChar) { return WriteCharImpl(aChar); }
+
+        protected:
+            /**
+             * Default constructor
+             */
+            OutputFunctorBase() = default;
+
+        private:
+            /**
+             * Write out a single character to the output - overridden by implementation
+             * 
+             * @param aChar The character to write
+             * 
+             * @return True on success
+             */
+            virtual bool WriteCharImpl(char aChar) = 0;
+        };
+
+        class MiniUARTOutputFunctor: public OutputFunctorBase
+        {
+        public:
+            /**
+             * Default constructor
+             */
+            MiniUARTOutputFunctor() = default;
+
+        private:
+            bool WriteCharImpl(char aChar) override;
+        };
 
         /**
          * Base we can pass to our output function that will output the data it holds to a given functor
@@ -83,15 +149,32 @@ namespace Print
              * 
              * @param aData Data to wrap
              */
-            explicit DataWrapper(uint32_t aData): WrappedData{aData} {}
+            explicit DataWrapper(const uint32_t aData): WrappedData{aData} {}
 
         private:
             bool OutputDataImpl(OutputFunctorBase& arOutput) const override;
 
-            uint32_t WrappedData;
+            uint32_t WrappedData = 0u;
         };
 
-        void FormatToMiniUARTImpl(const char* apFormatString, const DataWrapperBase* apDataArray, uint32_t aDataCount);
+        template<>
+        class DataWrapper<const char*>: public DataWrapperBase
+        {
+        public:
+            /**
+             * Wraps the specified data
+             * 
+             * @param aData Data to wrap
+             */
+            explicit DataWrapper(const char* const apData): pWrappedData{apData} {}
+
+        private:
+            bool OutputDataImpl(OutputFunctorBase& arOutput) const override;
+
+            const char* pWrappedData = nullptr;
+        };
+
+        void FormatImpl(const char* apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** apDataArray, uint32_t aDataCount);
     }
 
     /**
@@ -108,7 +191,8 @@ namespace Print
      */
     inline void FormatToMiniUART(const char* apFormatString)
     {
-        Detail::FormatToMiniUARTImpl(apFormatString, nullptr, 0u);
+        Detail::MiniUARTOutputFunctor output;
+        Detail::FormatImpl(apFormatString, output, nullptr, 0u);
     }
 
     /**
@@ -124,18 +208,20 @@ namespace Print
      * @param apFormatString The format string, following the std::format syntax
      * @param aArgs The arguments to substitute into the string
      */
-    template<typename FirstArgType, typename... ArgTypes>
-    void FormatToMiniUART(const char* apFormatString, FirstArgType&& aFirstArg, ArgTypes&&... aArgs)
+    template<typename FirstArgType, typename... TailArgTypes>
+    void FormatToMiniUART(const char* apFormatString, FirstArgType&& aFirstArg, TailArgTypes&&... aArgs)
     {
-        // Lambda used so we can convert ArgTypes to wrapped arguments, and then convert those to an array of pointers
-        // to base. This basically lets us make sure the temporary wrappers last long enough for the call.
-        auto outputArgs = [apFormatString] (const Detail::DataWrapper<ArgTypes>&... aWrappedArgs)
+        // Lambda used so we can convert TailArgTypes to wrapped arguments, and then convert those to an array of
+        // pointers to base. This basically lets us make sure the temporary wrappers last long enough for the call.
+        auto outputArgs = [apFormatString] (const auto&... aWrappedArgs)
         {
-            const Detail::DataWrapperBase* baseArgs[] = {aWrappedArgs...};
-            Detail::FormatToMiniUARTImpl(apFormatString, baseArgs, sizeof...(ArgTypes));
+            const Detail::DataWrapperBase* baseArgs[] = {&aWrappedArgs...};
+            Detail::MiniUARTOutputFunctor output;
+            Detail::FormatImpl(apFormatString, output, baseArgs, sizeof...(TailArgTypes) + 1);
         };
 
-        outputArgs(Detail::DataWrapper<FirstArgType>(aFirstArg), Detail::DataWrapper<ArgTypes>(aArgs)...);
+        outputArgs(Detail::DataWrapper<std::decay_t<FirstArgType>>{std::forward<FirstArgType>(aFirstArg)},
+            Detail::DataWrapper<std::decay_t<TailArgTypes>>{std::forward<TailArgTypes>(aArgs)}...);
     }
 }
 

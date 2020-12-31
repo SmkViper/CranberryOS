@@ -58,6 +58,9 @@ extern "C"
 
         Print::FormatToMiniUART("Test format with no args\r\n");
 
+        const char* pdecayedString = "decayed string";
+        Print::FormatToMiniUART("Test with {} values - integer, {}, and {}\r\n", 3u, "string", pdecayedString);
+
         MiniUART::SendString("Hello, World! Type 'q' to \"exit\"\r\n");
 
         bool done = false;

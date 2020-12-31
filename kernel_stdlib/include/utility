@@ -1,0 +1,52 @@
+#ifndef __KERNEL_STDLIB_UTILITY__
+#define __KERNEL_STDLIB_UTILITY__
+
+#include <type_traits>
+
+// TODO
+// Just the basics for now
+
+namespace std
+{
+    /**
+     * Indicates an object can be moved from so move constructors/operators can be invoked
+     * 
+     * @param __aValue Value to be moved from
+     * 
+     * @return The given value as an rvalue
+     */
+    template<class __T>
+    constexpr std::remove_reference_t<__T>&& move(__T&& __aValue) noexcept
+    {
+        return static_cast<std::remove_reference_t<__T>&&>(__aValue);
+    }
+
+    /**
+     * Forwards the given value as an lvalue or rvalue depending on the forwarding reference type - version for lvalue
+     * 
+     * @param __aValue Value to forward
+     * 
+     * @return The value to forward
+     */
+    template<class __T>
+    constexpr __T&& forward(std::remove_reference_t<__T>& __aValue) noexcept
+    {
+        return static_cast<__T&&>(__aValue);
+    }
+
+    /**
+     * Forwards the given value as an lvalue or rvalue depending on the forwarding reference type - version for rvalue
+     * 
+     * @param __aValue Value to forward
+     * 
+     * @return The value to forward
+     */
+    template<class __T>
+    constexpr __T&& forward(std::remove_reference_t<__T>&& __aValue) noexcept
+    {
+        static_assert(!std::is_lvalue_reference_v<__T>, "Unexpected lvalue type for forward of rvalue");
+        return static_cast<__T&&>(__aValue);
+    }
+}
+
+#endif // __KERNEL_STDLIB_UTILITY__
