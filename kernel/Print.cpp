@@ -28,8 +28,35 @@ namespace Print
          */
         bool DataWrapper<uint32_t>::OutputDataImpl(OutputFunctorBase& arOutput) const
         {
-            // TODO
-            return arOutput.WriteChar('?');
+            auto success = true;
+            if (WrappedData == 0)
+            {
+                success = arOutput.WriteChar('0');
+            }
+            else
+            {
+                // TODO
+                // We'll need to make this more generic with various integer sizes, signed/unsigned, bases, etc
+
+                // Stores each base-10 digit, from least to most significant
+                static constexpr auto maxDigits = 10;
+                uint8_t digits[maxDigits] = {0};
+                auto numberOfDigits = 0u;
+
+                auto remainingValue = WrappedData;
+                while ((remainingValue > 0) && (numberOfDigits < maxDigits))
+                {
+                    digits[numberOfDigits] = remainingValue % 10;
+                    remainingValue /= 10;
+                    ++numberOfDigits;
+                }
+
+                for (auto curDigit = 0u; (curDigit < numberOfDigits) && success; ++curDigit)
+                {
+                    success = arOutput.WriteChar('0' + digits[numberOfDigits - curDigit - 1]);
+                }
+            }
+            return success;
         }
 
         /**
