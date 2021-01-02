@@ -65,7 +65,7 @@ namespace Print
             virtual bool WriteCharImpl(char aChar) = 0;
         };
 
-        class MiniUARTOutputFunctor: public OutputFunctorBase
+        class MiniUARTOutputFunctor final: public OutputFunctorBase
         {
         public:
             /**
@@ -76,6 +76,49 @@ namespace Print
         private:
             bool WriteCharImpl(char aChar) override;
         };
+
+        template<std::size_t BufferSize>
+        class StaticBufferOutputFunctor final: public OutputFunctorBase
+        {
+        public:
+            /**
+             * Constructor with a buffer
+             * 
+             * @param apBuffer Buffer to write to - assumed to be BufferSize in size and non-null
+             */
+            explicit StaticBufferOutputFunctor(char* apBuffer): pBuffer{apBuffer} {}
+
+            /**
+             * Obtains the number of characters written to the buffer
+             * 
+             * @return Number of characters written
+             */
+            std::size_t GetCharsWritten() const {return CurWritePos;}
+
+        private:
+            /**
+             * Write out a single character to the output - overridden by implementation
+             * 
+             * @param aChar The character to write
+             * 
+             * @return True on success
+             */
+            bool WriteCharImpl(char aChar) override
+            {
+                auto success = (CurWritePos < BufferSize);
+                if (success)
+                {
+                    pBuffer[CurWritePos] = aChar;
+                    ++CurWritePos;
+                }
+                return success;
+            }
+
+            char* pBuffer = nullptr;
+            std::size_t CurWritePos = 0u;
+        };
+        template<std::size_t BufferSize>
+        StaticBufferOutputFunctor(char (&arBuffer)[BufferSize]) -> StaticBufferOutputFunctor<BufferSize>;
 
         /**
          * Base we can pass to our output function that will output the data it holds to a given functor
@@ -175,25 +218,49 @@ namespace Print
             const char* pWrappedData = nullptr;
         };
 
-        void FormatImpl(const char* apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** apDataArray, std::size_t aDataCount);
-    }
+        template<>
+        class DataWrapper<char*>: public DataWrapper<const char*>
+        {
+        public:
+            using DataWrapper<const char*>::DataWrapper;
+        };
 
-    /**
-     * Format the given string and data, passing it to MiniUART. The format string follows a subset of the
-     * std::format specification.
-     * 
-     * - Regular characters (except '{' and '}') are output as-is
-     * - "{{" and "}}" are escape sequences for '{' and '}' respectively
-     * - Data elements are output in-order, whenever a "{}" pair is found
-     * 
-     * Indexing and format specifications are not currently supported
-     * 
-     * @param apFormatString The format string, following the std::format syntax
-     */
-    inline void FormatToMiniUART(const char* apFormatString)
-    {
-        Detail::MiniUARTOutputFunctor output;
-        Detail::FormatImpl(apFormatString, output, nullptr, 0u);
+        void FormatImpl(const char* apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** apDataArray, std::size_t aDataCount);
+
+        /**
+         * Helper to output format string using the given output functor
+         * 
+         * @param apFormatString String to output
+         * @param arOutput Functor to send the string to
+         */
+        inline void FormatVararg(const char* apFormatString, OutputFunctorBase& arOutput)
+        {
+            FormatImpl(apFormatString, arOutput, nullptr, 0u);
+        }
+
+        /**
+         * Helper to output format string using the given output functor
+         * 
+         * @param apFormatString String to output
+         * @param arOutput Functor to send the string to
+         * @param aFirstArg The first argument to substitute
+         * @param aArgs The remaining arguments to substitute
+         */
+        template<typename FirstArgType, typename... TailArgTypes>
+        void FormatVararg(const char* apFormatString, OutputFunctorBase& arOutput, FirstArgType&& aFirstArg, TailArgTypes&&... aArgs)
+        {
+            // Lambda used so we can convert FirstArgType and TailArgTypes to wrapped arguments, and then convert those
+            // to an array of pointers to base. This basically lets us make sure the temporary wrappers last long
+            // enough for the call.
+            auto outputArgs = [apFormatString, &arOutput] (const auto&... aWrappedArgs)
+            {
+                const Detail::DataWrapperBase* baseArgs[] = {&aWrappedArgs...};
+                FormatImpl(apFormatString, arOutput, baseArgs, sizeof...(TailArgTypes) + 1 /* +1 for FirstArgType*/);
+            };
+
+            outputArgs(Detail::DataWrapper<std::decay_t<FirstArgType>>{std::forward<FirstArgType>(aFirstArg)},
+                Detail::DataWrapper<std::decay_t<TailArgTypes>>{std::forward<TailArgTypes>(aArgs)}...);
+        }
     }
 
     /**
@@ -209,20 +276,36 @@ namespace Print
      * @param apFormatString The format string, following the std::format syntax
      * @param aArgs The arguments to substitute into the string
      */
-    template<typename FirstArgType, typename... TailArgTypes>
-    void FormatToMiniUART(const char* apFormatString, FirstArgType&& aFirstArg, TailArgTypes&&... aArgs)
+    template<typename... ArgTypes>
+    void FormatToMiniUART(const char* apFormatString, ArgTypes&&... aArgs)
     {
-        // Lambda used so we can convert TailArgTypes to wrapped arguments, and then convert those to an array of
-        // pointers to base. This basically lets us make sure the temporary wrappers last long enough for the call.
-        auto outputArgs = [apFormatString] (const auto&... aWrappedArgs)
-        {
-            const Detail::DataWrapperBase* baseArgs[] = {&aWrappedArgs...};
-            Detail::MiniUARTOutputFunctor output;
-            Detail::FormatImpl(apFormatString, output, baseArgs, sizeof...(TailArgTypes) + 1);
-        };
+        Detail::MiniUARTOutputFunctor output;
+        Detail::FormatVararg(apFormatString, output, std::forward<ArgTypes>(aArgs)...);
+    }
 
-        outputArgs(Detail::DataWrapper<std::decay_t<FirstArgType>>{std::forward<FirstArgType>(aFirstArg)},
-            Detail::DataWrapper<std::decay_t<TailArgTypes>>{std::forward<TailArgTypes>(aArgs)}...);
+    /**
+     * Format the given string and data, passing it to MiniUART. The format string follows a subset of the
+     * std::format specification.
+     * 
+     * - Regular characters (except '{' and '}') are output as-is
+     * - "{{" and "}}" are escape sequences for '{' and '}' respectively
+     * - Data elements are output in-order, whenever a "{}" pair is found
+     * 
+     * Indexing and format specifications are not currently supported
+     * 
+     * @param arBuffer Buffer to write to
+     * @param apFormatString The format string, following the std::format syntax
+     * @param aArgs The arguments to substitute into the string
+     */
+    template<std::size_t BufferSize, typename... ArgTypes>
+    void FormatToBuffer(char (&arBuffer)[BufferSize], const char* apFormatString, ArgTypes&&... aArgs)
+    {
+        Detail::StaticBufferOutputFunctor output{arBuffer};
+        Detail::FormatVararg(apFormatString, output, std::forward<ArgTypes>(aArgs)...);
+
+        const auto charsWritten = output.GetCharsWritten();
+        const auto zeroPos = (charsWritten < BufferSize) ? charsWritten : (BufferSize - 1);
+        arBuffer[zeroPos] = '\0';
     }
 }
 

@@ -1,10 +1,11 @@
 #include "UnitTests.h"
 
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 #include <utility>
 
-#include "MiniUart.h"
+#include "Print.h"
 #include "Utils.h"
 
 // TODO
@@ -16,38 +17,20 @@ namespace
     // Test "framework"
     ///////////////////////////////////////////////////////////////////////////
 
-    /**
-     * Output a test failure message to MiniUART
-     * 
-     * @param apMessage The message to output along with the FAIL tag
-     */
-    void TestFailed(const char* const apMessage)
-    {
-        // We don't have printf yet, so this is a bit wonky
-        MiniUART::Send('[');
-        MiniUART::SendString("\x1b[31m"); // Set red color
-        MiniUART::SendString("FAIL");
-        MiniUART::SendString("\x1b[m"); // Return to defaults
-        MiniUART::Send(']');
-        MiniUART::SendString(apMessage);
-        MiniUART::SendString("\r\n");
-    }
+    // TODO
+    // Make into some sort of terminal output library to control colors, positions, etc.
 
     /**
-     * Output a test passed message to MiniUART
+     * Formats a colored string for terminal output
      * 
-     * @param apMessage The message to output along with the PASS tag
+     * @param arBuffer Buffer to output to
+     * @param apString The string to output
+     * @param aColor The color the string should be (terminal escape sequence color)
      */
-    void TestPassed(const char* const apMessage)
+    template<std::size_t BufferSize>
+    void FormatColoredString(char (&arBuffer)[BufferSize], const char* const apString, const uint32_t aColor)
     {
-        // We don't have printf yet, so this is a bit wonky
-        MiniUART::Send('[');
-        MiniUART::SendString("\x1b[32m"); // Set green color
-        MiniUART::SendString("PASS");
-        MiniUART::SendString("\x1b[m"); // Return to defaults
-        MiniUART::Send(']');
-        MiniUART::SendString(apMessage);
-        MiniUART::SendString("\r\n");
+        Print::FormatToBuffer(arBuffer, "\x1b[{}m{}\x1b[m", aColor, apString);
     }
 
     /**
@@ -56,16 +39,18 @@ namespace
      * @param aResult The result of the test
      * @param apMessage The message to emit
      */
-    void EmitTestResult(bool aResult, const char* apMessage)
+    void EmitTestResult(const bool aResult, const char* const apMessage)
     {
+        char passFailMessage[32];
         if (aResult)
         {
-            TestPassed(apMessage);
+            FormatColoredString(passFailMessage, "PASS", 32 /*green*/);
         }
         else
         {
-            TestFailed(apMessage);
+            FormatColoredString(passFailMessage, "FAIL", 31 /*red*/);
         }
+        Print::FormatToMiniUART("[{}] {}\r\n", passFailMessage, apMessage);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -123,6 +108,29 @@ namespace
     static_assert(UINT64_MAX == 18446744073709551615ULL, "Unexpected uint64 maximum");
 
     static_assert(UINT64_MAX == 18446744073709551615ULL, "Unexpected uintptr maximum");
+
+    ///////////////////////////////////////////////////////////////////////////
+    // cstring tests
+    ///////////////////////////////////////////////////////////////////////////
+
+    void StrcmpEqualTest()
+    {
+        EmitTestResult(strcmp("Hello", "Hello") == 0, "strcmp equality");
+    }
+
+    void StrcmpLTTest()
+    {
+        EmitTestResult(strcmp("ABC", "BCD") < 0, "strcmp less than");
+        EmitTestResult(strcmp("ABC", "ACD") < 0, "strcmp less than - partial");
+        EmitTestResult(strcmp("ABC", "ABCD") < 0, "strcmp less than - differing lengths");
+    }
+
+    void StrcmpGTTest()
+    {
+        EmitTestResult(strcmp("BCD", "ABC") > 0, "strcmp greater than");
+        EmitTestResult(strcmp("ACD", "ABC") > 0, "strcmp greater than - partial");
+        EmitTestResult(strcmp("ABCD", "ABC") > 0, "strcmp greater than - differing lengths");
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // type_traits tests
@@ -272,6 +280,121 @@ namespace
         {
             EmitTestResult(aDest.MoveCount == 1, "std::forward rvalue move");
         });
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Print.h tests
+    ///////////////////////////////////////////////////////////////////////////
+
+    // We can't really "test" output to MiniUART (since we can't read what we output) but we can test the buffer output
+
+    /**
+     * Ensure printing to a buffer with no arguments works
+     */
+    void PrintNoArgsTest()
+    {
+        const char expectedOutput[] = "Hello World";
+        char buffer[256];
+        Print::FormatToBuffer(buffer, expectedOutput);
+
+        EmitTestResult(strcmp(buffer, expectedOutput) == 0, "Print::FormatToBuffer with no args");
+    }
+
+    /**
+     * Ensure printing to a buffer with no arguments and a too-small buffer works
+     */
+    void PrintNoArgsTruncatedBufferTest()
+    {
+        const char expectedOutput[] = "Hello World";
+        char buffer[5];
+        Print::FormatToBuffer(buffer, expectedOutput);
+
+        EmitTestResult(strcmp(buffer, "Hell") == 0, "Print::FormatToBuffer with no args and a too-small buffer");
+    }
+
+    /**
+     * Ensure printing to a buffer with string arguments (both raw string and pointer) works
+     */
+    void PrintStringArgsTest()
+    {
+        const char* pstringPointer = "Again";
+        char buffer[256];
+        Print::FormatToBuffer(buffer, "Hello {} {}", "World", pstringPointer);
+        EmitTestResult(strcmp(buffer, "Hello World Again") == 0, "Print::FormatToBuffer with string arguments");
+    }
+
+    /**
+     * Ensure printing to a buffer with string arguments (both raw string and pointer) and a too-small buffer works
+     */
+    void PrintStringArgsTruncatedBufferTest()
+    {
+        const char* pstringPointer = "Again";
+        char buffer[8];
+        Print::FormatToBuffer(buffer, "Hello {} {}", "World", pstringPointer);
+        EmitTestResult(strcmp(buffer, "Hello W") == 0, "Print::FormatToBuffer with string arguments and a too-small buffer");
+    }
+
+    /**
+     * Ensure printing to a buffer with integer arguments works
+     */
+    void PrintIntegerArgsTest()
+    {
+        char buffer[256];
+        Print::FormatToBuffer(buffer, "Test {}, test {}", 1u, 102u);
+        EmitTestResult(strcmp(buffer, "Test 1, test 102") == 0, "Print::FormatToBuffer with integer arguments");
+    }
+
+    /**
+     * Ensure printing to a buffer with integer arguments and a too-small buffer works
+     */
+    void PrintIntegerArgsTruncatedBufferTest()
+    {
+        char buffer[15];
+        Print::FormatToBuffer(buffer, "Test {}, test {}", 1u, 102u);
+        EmitTestResult(strcmp(buffer, "Test 1, test 1") == 0, "Print::FormatToBuffer with integer arguments");
+    }
+
+    /**
+     * Ensure escaped braces are printed
+     */
+    void PrintEscapedBracesTest()
+    {
+        char buffer[256];
+        Print::FormatToBuffer(buffer, "Open {{ close }}");
+        EmitTestResult(strcmp(buffer, "Open { close }") == 0, "Print::FormatToBuffer escaped braces");
+    }
+
+    /**
+     * Ensure mismatched braces are handled
+     */
+    void PrintMismatchedBracesTest()
+    {
+        char buffer[256];
+        Print::FormatToBuffer(buffer, "Close } some other text");
+        EmitTestResult(strcmp(buffer, "Close ") == 0, "Print::FormatToBuffer mismatched close brace");
+
+        Print::FormatToBuffer(buffer, "Open { some other text");
+        EmitTestResult(strcmp(buffer, "Open ") == 0, "Print::FormatToBuffer mismatched open brace");
+    }
+
+    /**
+     * Ensure invalid brace contents are handled
+     */
+    void PrintInvalidBraceContentsTest()
+    {
+        char buffer[256];
+        Print::FormatToBuffer(buffer, "Hello {some bad text} world", "bad");
+        EmitTestResult(strcmp(buffer, "Hello bad world") == 0, "Print::FormatToBuffer invalid brace contents");
+    }
+
+    /**
+     * Ensure out of range braces are handled
+     */
+    void PrintOutOfRangeBracesTest()
+    {
+        char buffer[256];
+        Print::FormatToBuffer(buffer, "Hello {} world {} again", "new");
+        EmitTestResult(strcmp(buffer, "Hello new world {1} again") == 0, "Print::FormatToBuffer out of range braces");
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -425,6 +548,20 @@ namespace UnitTests
 
         StdMoveTest();
         StdForwardTest();
+        StrcmpEqualTest();
+        StrcmpLTTest();
+        StrcmpGTTest();
+
+        PrintNoArgsTest();
+        PrintNoArgsTruncatedBufferTest();
+        PrintStringArgsTest();
+        PrintStringArgsTruncatedBufferTest();
+        PrintIntegerArgsTest();
+        PrintIntegerArgsTruncatedBufferTest();
+        PrintEscapedBracesTest();
+        PrintMismatchedBracesTest();
+        PrintInvalidBraceContentsTest();
+        PrintOutOfRangeBracesTest();
     }
 
     void RunPostStaticDestructors()

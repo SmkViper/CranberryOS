@@ -56,7 +56,10 @@ extern "C"
         MiniUART::Init();
         UnitTests::Run();
 
-        Print::FormatToMiniUART("Test format with no args\r\n");
+        char outputBuffer[256];
+
+        Print::FormatToBuffer(outputBuffer, "Test format with no args\r\n");
+        MiniUART::SendString(outputBuffer);
 
         const char* pdecayedString = "decayed string";
         Print::FormatToMiniUART("Test with 3 values - integer {}, {}, and {}\r\n", 204u, "string", pdecayedString);

@@ -3,10 +3,12 @@
 set(HEADER_LIST
     "include/cstddef"
     "include/cstdint"
+    "include/cstring"
     "include/exception"
     "include/new"
     "include/stddef.h"
     "include/stdint.h"
+    "include/string.h"
     "include/type_traits"
     "include/typeinfo"
     "include/utility"
