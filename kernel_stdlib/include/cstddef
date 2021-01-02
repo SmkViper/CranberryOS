@@ -1,0 +1,19 @@
+#ifndef __KERNEL_STDLIB_CSTDDEF__
+#define __KERNEL_STDLIB_CSTDDEF__
+
+#include "stddef.h"
+
+namespace std
+{
+    using ::size_t;
+    using ::ptrdiff_t;
+
+    using nullptr_t = decltype(nullptr);
+
+    using ::max_align_t;
+
+    // TODO
+    // std::byte
+}
+
+#endif // __KERNEL_STDLIB_CSTDDEF__

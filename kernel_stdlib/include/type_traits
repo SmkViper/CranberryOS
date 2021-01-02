@@ -1,6 +1,8 @@
 #ifndef __KERNEL_STDLIB_TYPE_TRAITS__
 #define __KERNEL_STDLIB_TYPE_TRAITS__
 
+#include <cstddef>
+
 // TODO
 // Just the basics for now
 
@@ -106,7 +108,7 @@ namespace std
     struct is_array: public std::false_type {};
     template<class __T>
     struct is_array<__T[]>: public std::true_type {};
-    template<class __T, uint64_t __size> // TODO - change to size_t
+    template<class __T, std::size_t __size>
     struct is_array<__T[__size]>: public std::true_type {};
 
     /**
@@ -150,7 +152,7 @@ namespace std
     struct remove_extent {using type = __T;};
     template<class __T>
     struct remove_extent<__T[]> {using type = __T;};
-    template<class __T, uint64_t __size> // TODO - change to size_t
+    template<class __T, std::size_t __size>
     struct remove_extent<__T[__size]> {using type = __T;};
 
     /**

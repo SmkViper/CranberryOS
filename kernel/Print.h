@@ -1,6 +1,7 @@
 #ifndef KERNEL_PRINT_H
 #define KERNEL_PRINT_H
 
+#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 #include <utility>
@@ -174,7 +175,7 @@ namespace Print
             const char* pWrappedData = nullptr;
         };
 
-        void FormatImpl(const char* apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** apDataArray, uint32_t aDataCount);
+        void FormatImpl(const char* apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** apDataArray, std::size_t aDataCount);
     }
 
     /**

@@ -62,7 +62,7 @@ namespace Print
          * @param apDataArray First element in an array of elements to substitute into the format string
          * @param aDataCount Number of items in the data array
          */
-        void FormatImpl(const char* const apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** const apDataArray, const uint32_t aDataCount)
+        void FormatImpl(const char* const apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** const apDataArray, const std::size_t aDataCount)
         {
             enum class ParseState
             {
