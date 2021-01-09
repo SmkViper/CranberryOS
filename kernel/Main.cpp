@@ -1,5 +1,8 @@
+#include "ExceptionVectorHandlers.h"
+#include "IRQ.h"
 #include "MiniUart.h"
 #include "Print.h"
+#include "Timer.h"
 #include "UnitTests.h"
 #include "Utils.h"
 
@@ -54,6 +57,11 @@ extern "C"
         CallStaticConstructors();
 
         MiniUART::Init();
+        irq_vector_init();
+        Timer::Init();
+        ExceptionVectors::EnableInterruptController();
+        enable_irq();
+
         UnitTests::Run();
 
         char outputBuffer[256];

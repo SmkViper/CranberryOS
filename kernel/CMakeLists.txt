@@ -3,10 +3,14 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${CMAKE_CURRENT_SOURCE_
 
 add_executable(kernel8.elf
     Exceptions.cpp
+    ExceptionVectorHandlers.h ExceptionVectorHandlers.cpp
+    ExceptionVectors.S
+    IRQ.h IRQ.S
     Main.cpp
     MiniUart.h MiniUart.cpp
     Print.h Print.cpp
     Start.S
+    Timer.h Timer.cpp
     TypeInfo.cpp
     UnitTests.h UnitTests.cpp
     Utils.h Utils.cpp

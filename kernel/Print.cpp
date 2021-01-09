@@ -2,6 +2,50 @@
 
 #include "MiniUart.h"
 
+namespace
+{
+    /**
+     * Output an integer to the specified output
+     * 
+     * @param aValue The value to output
+     * @param aOutput The functor to use for outputting
+     * 
+     * @return True on success
+     */
+    bool OutputInteger(const uint64_t aValue, Print::Detail::OutputFunctorBase& arOutput)
+    {
+        auto success = true;
+        if (aValue == 0)
+        {
+            success = arOutput.WriteChar('0');
+        }
+        else
+        {
+            // TODO
+            // We'll need to make this more generic with various integer sizes, signed/unsigned, bases, etc
+
+            // Stores each base-10 digit, from least to most significant
+            static constexpr auto maxDigits = 32; // should be more than enough for 64 bit values
+            uint8_t digits[maxDigits] = {0};
+            auto numberOfDigits = 0u;
+
+            auto remainingValue = aValue;
+            while ((remainingValue > 0) && (numberOfDigits < maxDigits))
+            {
+                digits[numberOfDigits] = remainingValue % 10;
+                remainingValue /= 10;
+                ++numberOfDigits;
+            }
+
+            for (auto curDigit = 0u; (curDigit < numberOfDigits) && success; ++curDigit)
+            {
+                success = arOutput.WriteChar('0' + digits[numberOfDigits - curDigit - 1]);
+            }
+        }
+        return success;
+    }
+}
+
 namespace Print
 {
     namespace Detail
@@ -28,35 +72,19 @@ namespace Print
          */
         bool DataWrapper<uint32_t>::OutputDataImpl(OutputFunctorBase& arOutput) const
         {
-            auto success = true;
-            if (WrappedData == 0)
-            {
-                success = arOutput.WriteChar('0');
-            }
-            else
-            {
-                // TODO
-                // We'll need to make this more generic with various integer sizes, signed/unsigned, bases, etc
+            return OutputInteger(WrappedData, arOutput);
+        }
 
-                // Stores each base-10 digit, from least to most significant
-                static constexpr auto maxDigits = 10;
-                uint8_t digits[maxDigits] = {0};
-                auto numberOfDigits = 0u;
-
-                auto remainingValue = WrappedData;
-                while ((remainingValue > 0) && (numberOfDigits < maxDigits))
-                {
-                    digits[numberOfDigits] = remainingValue % 10;
-                    remainingValue /= 10;
-                    ++numberOfDigits;
-                }
-
-                for (auto curDigit = 0u; (curDigit < numberOfDigits) && success; ++curDigit)
-                {
-                    success = arOutput.WriteChar('0' + digits[numberOfDigits - curDigit - 1]);
-                }
-            }
-            return success;
+        /**
+         * Output the data this wrapper holds to the given functor - overriden by implementation
+         * 
+         * @param aOutput The functor to use for outputting
+         * 
+         * @return True on success
+         */
+        bool DataWrapper<uint64_t>::OutputDataImpl(OutputFunctorBase& arOutput) const
+        {
+            return OutputInteger(WrappedData, arOutput);
         }
 
         /**

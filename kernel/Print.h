@@ -202,6 +202,23 @@ namespace Print
         };
 
         template<>
+        class DataWrapper<uint64_t> final: public DataWrapperBase
+        {
+        public:
+            /**
+             * Wraps the specified data
+             * 
+             * @param aData Data to wrap
+             */
+            explicit DataWrapper(const uint64_t aData): WrappedData{aData} {}
+
+        private:
+            bool OutputDataImpl(OutputFunctorBase& arOutput) const override;
+
+            uint64_t WrappedData = 0u;
+        };
+
+        template<>
         class DataWrapper<const char*>: public DataWrapperBase
         {
         public:
