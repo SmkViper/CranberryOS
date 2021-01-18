@@ -44,6 +44,11 @@ namespace
             (*pcurFunc)();
         }
     }
+
+    constexpr const char* testArray[] = {
+        "String 1",
+        "String 2"
+    };
 }
 
 // Called from assembly, so don't mangle the name
@@ -63,14 +68,6 @@ extern "C"
         enable_irq();
 
         UnitTests::Run();
-
-        char outputBuffer[256];
-
-        Print::FormatToBuffer(outputBuffer, "Test format with no args\r\n");
-        MiniUART::SendString(outputBuffer);
-
-        const char* pdecayedString = "decayed string";
-        Print::FormatToMiniUART("Test with 3 values - integer {}, {}, and {}\r\n", 204u, "string", pdecayedString);
 
         MiniUART::SendString("Hello, World! Type 'q' to \"exit\"\r\n");
 

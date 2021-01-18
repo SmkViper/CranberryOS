@@ -18,44 +18,42 @@
 
 // Helper to save off all processor state before handling the exception
 .macro kernel_entry
-    sub     sp, sp, #SAVE_FRAME_SIZE    // Make sure we have enough space on the stack for the registers
-    stp     x0, x1, [sp, #16 * 0]       // Store x0 and x1 to the stack pointer, offset by 0 (each is 8 bytes)
-    stp     x2, x3, [sp, #16 * 1]       // Store x2 and x3 to the stack pointer, offset by 16 (each is 8 bytes)
-    stp     x4, x5, [sp, #16 * 2]       // etc...
-    stp     x6, x7, [sp, #16 * 3]
-    stp     x8, x9, [sp, #16 * 4]
-    stp     x10, x11, [sp, #16 * 5]
-    stp     x12, x13, [sp, #16 * 6]
-    stp     x14, x15, [sp, #16 * 7]
-    stp     x16, x17, [sp, #16 * 8]
-    stp     x18, x19, [sp, #16 * 9]
-    stp     x20, x21, [sp, #16 * 10]
-    stp     x22, x23, [sp, #16 * 11]
-    stp     x24, x25, [sp, #16 * 12]
-    stp     x26, x27, [sp, #16 * 13]
-    stp     x28, x29, [sp, #16 * 14]
-    str     x30, [sp, #16 * 15]
+    stp     x29, x30, [sp, #-16]!   // Store x29 and x30 to the stack, adjusting the sp by -16
+    stp     x27, x28, [sp, #-16]!   // Store x27 and x28 to the stack, adjusting the sp by -16
+    stp     x25, x26, [sp, #-16]!   // etc...
+    stp     x23, x24, [sp, #-16]!
+    stp     x21, x22, [sp, #-16]!
+    stp     x19, x20, [sp, #-16]!
+    stp     x17, x18, [sp, #-16]!
+    stp     x15, x16, [sp, #-16]!
+    stp     x13, x14, [sp, #-16]!
+    stp     x11, x12, [sp, #-16]!
+    stp     x9, x10, [sp, #-16]!
+    stp     x7, x8, [sp, #-16]!
+    stp     x5, x6, [sp, #-16]!
+    stp     x3, x4, [sp, #-16]!
+    stp     x1, x2, [sp, #-16]!
+    str     x0, [sp, #-16]!
     .endm
 
 // Helper to restore processor state after handling the exception, returning to exception source
 .macro kernel_exit
-    ldp     x0, x1, [sp, #16 * 0]       // Load x0 and x1 from the stack pointer, offset by 0 (each is 8 bytes)
-    ldp     x2, x3, [sp, #16 * 1]       // Load x2 and x3 from the stack pointer, offset by 16 (each is 8 bytes)
-    ldp     x4, x5, [sp, #16 * 2]       // etc...
-    ldp     x6, x7, [sp, #16 * 3]
-    ldp     x8, x9, [sp, #16 * 4]
-    ldp     x10, x11, [sp, #16 * 5]
-    ldp     x12, x13, [sp, #16 * 6]
-    ldp     x14, x15, [sp, #16 * 7]
-    ldp     x16, x17, [sp, #16 * 8]
-    ldp     x18, x19, [sp, #16 * 9]
-    ldp     x20, x21, [sp, #16 * 10]
-    ldp     x22, x23, [sp, #16 * 11]
-    ldp     x24, x25, [sp, #16 * 12]
-    ldp     x26, x27, [sp, #16 * 13]
-    ldp     x28, x29, [sp, #16 * 14]
-    ldr     x30, [sp, #16 * 15]
-    add     sp, sp, #SAVE_FRAME_SIZE    // Restore the old stack pointer value
+    ldr     x0, [sp], #16       // Load x0 from the stack, adjusting the sp by 16
+    ldp     x1, x2, [sp], #16   // Load x1 and x2 from the stack, ajusting the sp by 16
+    ldp     x3, x4, [sp], #16   // Load x3 and x4 from the stack, ajusting the sp by 16
+    ldp     x5, x6, [sp], #16   // etc...
+    ldp     x7, x8, [sp], #16
+    ldp     x9, x10, [sp], #16
+    ldp     x11, x12, [sp], #16
+    ldp     x13, x14, [sp], #16
+    ldp     x15, x16, [sp], #16
+    ldp     x17, x18, [sp], #16
+    ldp     x19, x20, [sp], #16
+    ldp     x21, x22, [sp], #16
+    ldp     x23, x24, [sp], #16
+    ldp     x25, x26, [sp], #16
+    ldp     x27, x28, [sp], #16
+    ldp     x29, x30, [sp], #16
     eret
     .endm
 

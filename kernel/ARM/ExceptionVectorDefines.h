@@ -3,8 +3,6 @@
 #ifndef KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H
 #define KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H
 
-#define SAVE_FRAME_SIZE     31 * 8     // Size of all registers we need to save (x0 - x30, 8 bytes each)
-
 // Various values passed to the "invalid exception" handler so it knows which one triggered
 
 #define SYNC_INVALID_EL1t       0

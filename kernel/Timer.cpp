@@ -15,7 +15,7 @@ namespace Timer
 {
     void Init()
     {
-        CurTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::ControlStatus);
+        CurTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
         CurTimerValue += IntervalC;
         MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, CurTimerValue);
     }

@@ -44,11 +44,11 @@ extern "C"
      * @param aESR The contents of the ESR register
      * @param aReturnAddress The address the exception occurred at
      */
-    void show_invalid_entry_message(int32_t aType, uint64_t aESR, uint64_t aReturnAddress)
+    void show_invalid_entry_message(int64_t aType, uint64_t aESR, uint64_t aReturnAddress)
     {
         // TODO
         // Format ESR and address as hex once we have support for that
-        Print::FormatToMiniUART("{}, ESR: {}, address: {}\r\n", ExceptionTypeNames[aType], aESR, aReturnAddress);
+        Print::FormatToMiniUART("{}:\r\n\tESR: {}\r\n\tAddress: {}\r\n", ExceptionTypeNames[aType], aESR, aReturnAddress);
     }
 
     /**
