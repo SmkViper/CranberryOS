@@ -67,7 +67,12 @@ extern "C"
         ExceptionVectors::EnableInterruptController();
         enable_irq();
 
-        UnitTests::Run();
+        // TODO
+        // Tests currently crash on real hardware due to unaligned access (pointers to strings being dereferenced into
+        // a 'x' register, which requires higher alignment than 1). -mno-unaligned-access does not seem to fix the
+        // problem. The issue _should_ go away once we support virtual memory.
+        // The tests work on QEMU, so this can be uncommented for QEMU runs to ensure certain things work.
+        //UnitTests::Run();
 
         MiniUART::SendString("Hello, World! Type 'q' to \"exit\"\r\n");
 
