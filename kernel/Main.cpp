@@ -63,7 +63,6 @@ extern "C"
 
         MiniUART::Init();
         irq_vector_init();
-        Timer::Init();
         ExceptionVectors::EnableInterruptController();
         enable_irq();
 
@@ -74,14 +73,32 @@ extern "C"
         // The tests work on QEMU, so this can be uncommented for QEMU runs to ensure certain things work.
         //UnitTests::Run();
 
-        MiniUART::SendString("Hello, World! Type 'q' to \"exit\"\r\n");
+        MiniUART::SendString("Hello, World!\r\n\tq = \"exit\" the kernel\r\n\tl = run a local timer\r\n\tg = run a global timer\r\n");
 
+        // TODO
+        // Figure out how to stop the timers
+        
         bool done = false;
         while(!done)
         {
             const auto valueEntered = MiniUART::Receive();
             MiniUART::Send(valueEntered); // always echo it to the user
-            done = (valueEntered == 'q');
+            switch (valueEntered)
+            {
+            case 'q':
+                done = true;
+                break;
+
+            case 'l':
+                LocalTimer::Init();
+                break;
+
+            case 'g':
+                // TODO
+                // QEMU doesn't emulate this seems like, so it won't work there. Ideally we'd detect the timers available
+                Timer::Init();
+                break;
+            }
         }
 
         MiniUART::SendString("\r\nExiting... (sending CPU into an infinite loop)\r\n");

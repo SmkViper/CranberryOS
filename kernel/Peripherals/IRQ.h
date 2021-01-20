@@ -27,6 +27,12 @@ namespace MemoryMappedIO
         constexpr uintptr_t InterruptDisable2 =     PeripheralBaseAddr + 0xB220;
         // Disables basic interrupts
         constexpr uintptr_t BasicInterruptDisable = PeripheralBaseAddr + 0xB224;
+
+        // Below sourced from:
+        // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
+
+        // Shows which interrupts are pending for Core0
+        constexpr uintptr_t Core0IRQSource =        LocalPeripheralBaseAddr + 0x0060;
     }
 }
 

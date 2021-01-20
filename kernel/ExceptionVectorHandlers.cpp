@@ -33,6 +33,10 @@ namespace
     static constexpr uint32_t SystemTimerIRQ1 = 1 << 1;
     // Timer IRQ2 is reserved by GPU
     static constexpr uint32_t SystemTimerIRQ3 = 1 << 3;
+
+    // Sourced from:
+    // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
+    static constexpr uint32_t LocalTimerIRQ = 1u << 11;
 }
 
 extern "C"
@@ -56,21 +60,41 @@ extern "C"
      */
     void handle_irq()
     {
-        const auto irqPending1 = MemoryMappedIO::Get32(MemoryMappedIO::IRQ::IRQPending1);
-
         // TODO
         // Multiple flags can be set at the same time, so we'll want to handle them all
-        switch (irqPending1)
-        {
-        case SystemTimerIRQ1:
-            Timer::HandleIRQ();
-            break;
 
-        default:
-            // TODO
-            // Format pending as hex once we have support for that
-            Print::FormatToMiniUART("Unknown pending IRQ: {}\r\n", irqPending1);
-            break;
+        const auto irqPending1 = MemoryMappedIO::Get32(MemoryMappedIO::IRQ::IRQPending1);
+        if (irqPending1 != 0)
+        {
+            switch (irqPending1)
+            {
+            case SystemTimerIRQ1:
+                Timer::HandleIRQ();
+                break;
+
+            default:
+                // TODO
+                // Format pending as hex once we have support for that
+                Print::FormatToMiniUART("Unknown pending IRQ: {}\r\n", irqPending1);
+                break;
+            }
+        }
+
+        const auto core0IRQPending = MemoryMappedIO::Get32(MemoryMappedIO::IRQ::Core0IRQSource);
+        if (core0IRQPending != 0)
+        {
+            switch (core0IRQPending)
+            {
+            case LocalTimerIRQ:
+                LocalTimer::HandleIRQ();
+                break;
+
+            default:
+                // TODO
+                // Format pending as hex once we have support for that
+                Print::FormatToMiniUART("Unknown pending Core 0 IRQ: {}\r\n", core0IRQPending);
+                break;
+            }
         }
     }
 }
