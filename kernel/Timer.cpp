@@ -7,9 +7,10 @@
 
 namespace
 {
-    constexpr uint32_t IntervalC = 200'000;
-    constexpr uint32_t LocalIntervalC = 9'600'000; // local timer seems to run faster, so higher interval for testing
-    uint32_t CurTimerValue = 0;
+    Timer::CallbackFunctionPtr pGlobalTimerCallback = nullptr;
+    const void* pGlobalTimerParam = nullptr;
+    LocalTimer::CallbackFunctionPtr pLocalTimerCallback = nullptr;
+    const void* pLocalTimerParam = nullptr;
 
     // Local timer documentation: https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
     
@@ -27,19 +28,23 @@ namespace Timer
     // it matches one, then it triggers an interrupt. So basic operation of this timer is to set the compare register
     // to the value we want to trigger on, then update the comparison register when we get the interrupt.
 
-    void Init()
+    void RegisterCallback(const uint32_t aInterval, const CallbackFunctionPtr apCallback, const void* const apParam)
     {
-        CurTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
-        CurTimerValue += IntervalC;
-        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, CurTimerValue);
+        pGlobalTimerCallback = apCallback;
+        pGlobalTimerParam = apParam;
+
+        const auto curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
+        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + aInterval);
     }
 
     void HandleIRQ()
     {
-        CurTimerValue += IntervalC;
-        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, CurTimerValue);
+        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, 0u); // make sure we don't trigger again
         MemoryMappedIO::Put32(MemoryMappedIO::Timer::ControlStatus, 1 << 1); // clearing the compare 1 signal
-        Print::FormatToMiniUART("Timer interrupt received\r\n");
+        if (pGlobalTimerCallback != nullptr)
+        {
+            pGlobalTimerCallback(pGlobalTimerParam);
+        }
     }
 }
 
@@ -48,16 +53,26 @@ namespace LocalTimer
     // The local timer counts its value down to 0, and triggers an interrupt when it resets at 0. We then have to clear
     // the interrupt bit so that the timer will re-trigger again.
 
-    void Init()
+    void RegisterCallback(const uint32_t aInterval, const CallbackFunctionPtr apCallback, const void* const apParam)
     {
+        pLocalTimerCallback = apCallback;
+        pLocalTimerParam = apParam;
+
         MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 
-            LocalIntervalC | LocalTimerControlEnableInterrupt | LocalTimerControlEnableTimer
+            aInterval | LocalTimerControlEnableInterrupt | LocalTimerControlEnableTimer
         );
     }
 
     void HandleIRQ()
     {
+        // writing zero clears the enable and interrupt flags, so we shouldn't trigger another callback
+        MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 0);
+
         MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ClearAndReload, LocalTimerClearInterruptAck);
-        Print::FormatToMiniUART("Local timer interrupt received\r\n");
+        
+        if (pLocalTimerCallback != nullptr)
+        {
+            pLocalTimerCallback(pLocalTimerParam);
+        }
     }
 }

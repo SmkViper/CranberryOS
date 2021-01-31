@@ -45,10 +45,18 @@ namespace
         }
     }
 
-    constexpr const char* testArray[] = {
-        "String 1",
-        "String 2"
-    };
+    constexpr uint32_t GlobalTimerIntervalC = 200'000;
+    constexpr uint32_t LocalTimerIntervalC = 9'600'000; // local timer seems to run faster, so higher interval for testing
+
+    /**
+     * Callback for timers
+     * 
+     * @param apParam The parameter given to RegisterCallback
+     */
+    void TimerCallback(const void* apParam)
+    {
+        Print::FormatToMiniUART("Timer callback: {}\r\n", static_cast<const char*>(apParam));
+    }
 }
 
 // Called from assembly, so don't mangle the name
@@ -75,9 +83,6 @@ extern "C"
 
         MiniUART::SendString("Hello, World!\r\n\tq = \"exit\" the kernel\r\n\tl = run a local timer\r\n\tg = run a global timer\r\n");
 
-        // TODO
-        // Figure out how to stop the timers
-        
         bool done = false;
         while(!done)
         {
@@ -90,13 +95,13 @@ extern "C"
                 break;
 
             case 'l':
-                LocalTimer::Init();
+                LocalTimer::RegisterCallback(LocalTimerIntervalC, TimerCallback, "LOCAL");
                 break;
 
             case 'g':
                 // TODO
                 // QEMU doesn't emulate this seems like, so it won't work there. Ideally we'd detect the timers available
-                Timer::Init();
+                Timer::RegisterCallback(GlobalTimerIntervalC, TimerCallback, "GLOBAL");
                 break;
             }
         }
