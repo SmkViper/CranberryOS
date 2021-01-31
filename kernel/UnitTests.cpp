@@ -113,6 +113,19 @@ namespace
     // cstring tests
     ///////////////////////////////////////////////////////////////////////////
 
+    void MemsetTest()
+    {
+        char charArray[4] = {'a', 'b', 'c', 'd'};
+        uint32_t intArray[4] = {10u, 15u, 20u, 25u};
+
+        EmitTestResult(memset(charArray, 0u, 2u) == charArray, "memset char array return value");
+        EmitTestResult((charArray[0] == 0u) && (charArray[1] == 0u) && (charArray[2] == 'c') && (charArray[3] == 'd'), "memset fills partial char array");
+
+        EmitTestResult(memset(intArray, 1u, sizeof(uint32_t) * 2) == intArray, "memset int array return value");
+        constexpr auto expectedInt = (1u << 24u) | (1u << 16u) | (1u << 8u) | 1u;
+        EmitTestResult((intArray[0] == expectedInt) && (intArray[1] == expectedInt) && (intArray[2] == 20u) && (intArray[3] == 25u), "memset fills partial int array");
+    }
+
     void StrcmpEqualTest()
     {
         EmitTestResult(strcmp("Hello", "Hello") == 0, "strcmp equality");
@@ -340,8 +353,27 @@ namespace
     void PrintIntegerArgsTest()
     {
         char buffer[256];
-        Print::FormatToBuffer(buffer, "Test {}, test {}", 1u, 102u);
-        EmitTestResult(strcmp(buffer, "Test 1, test 102") == 0, "Print::FormatToBuffer with integer arguments");
+        Print::FormatToBuffer(buffer, "Test {}, test {}, test {}", 1u, 102u, 0u);
+        EmitTestResult(strcmp(buffer, "Test 1, test 102, test 0") == 0, "Print::FormatToBuffer with integer arguments");
+
+        Print::FormatToBuffer(buffer, "Format Test {:}", 1u);
+        EmitTestResult(strcmp(buffer, "Format Test 1") == 0, "Print::FormatToBuffer with integer arguments and empty format string");
+
+        constexpr auto testBinaryNumber = 0b1100'1010u;
+        Print::FormatToBuffer(buffer, "Binary Test {:b} {:B}", testBinaryNumber, testBinaryNumber);
+        EmitTestResult(strcmp(buffer, "Binary Test 0b11001010 0B11001010") == 0, "Print::FormatToBuffer with integer arguments and binary format string");
+
+        constexpr auto testOctalNumber = 0123u;
+        Print::FormatToBuffer(buffer, "Octal Test {:o} {:o}", testOctalNumber, 0u);
+        EmitTestResult(strcmp(buffer, "Octal Test 0123 0") == 0, "Print::FormatToBuffer with integer arguments and octal format string");
+
+        constexpr auto testDecimalNumber = 123u;
+        Print::FormatToBuffer(buffer, "Decimal Test {:d}", testDecimalNumber, testDecimalNumber);
+        EmitTestResult(strcmp(buffer, "Decimal Test 123") == 0, "Print::FormatToBuffer with integer arguments and decimal format string");
+
+        constexpr auto testHexNumber = 0x11ff89abu;
+        Print::FormatToBuffer(buffer, "Hex Test {:x} {:X}", testHexNumber, testHexNumber);
+        EmitTestResult(strcmp(buffer, "Hex Test 0x11ff89ab 0X11FF89AB") == 0, "Print::FormatToBuffer with integer arguments and hex format string");
     }
 
     /**
@@ -351,7 +383,7 @@ namespace
     {
         char buffer[15];
         Print::FormatToBuffer(buffer, "Test {}, test {}", 1u, 102u);
-        EmitTestResult(strcmp(buffer, "Test 1, test 1") == 0, "Print::FormatToBuffer with integer arguments");
+        EmitTestResult(strcmp(buffer, "Test 1, test 1") == 0, "Print::FormatToBuffer with integer arguments and a too-small buffer");
     }
 
     /**
@@ -548,6 +580,7 @@ namespace UnitTests
 
         StdMoveTest();
         StdForwardTest();
+        MemsetTest();
         StrcmpEqualTest();
         StrcmpLTTest();
         StrcmpGTTest();

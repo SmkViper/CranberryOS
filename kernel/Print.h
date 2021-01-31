@@ -155,21 +155,23 @@ namespace Print
             /**
              * Output the data this wrapper holds to the given functor
              * 
+             * @param aFormat The format character to use for formatting
              * @param aOutput The functor to use for outputting
              * 
              * @return True on success
              */
-            bool OutputData(OutputFunctorBase& arOutput) const { return OutputDataImpl(arOutput); }
+            bool OutputData(char aFormat, OutputFunctorBase& arOutput) const { return OutputDataImpl(aFormat, arOutput); }
 
         private:
             /**
              * Output the data this wrapper holds to the given functor - overriden by implementation
              * 
+             * @param aFormat The format character to use for formatting
              * @param aOutput The functor to use for outputting
              * 
              * @return True on success
              */
-            virtual bool OutputDataImpl(OutputFunctorBase& arOutput) const = 0;
+            virtual bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const = 0;
         };
 
         template<typename Type>
@@ -196,7 +198,7 @@ namespace Print
             explicit DataWrapper(const uint32_t aData): WrappedData{aData} {}
 
         private:
-            bool OutputDataImpl(OutputFunctorBase& arOutput) const override;
+            bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
             uint32_t WrappedData = 0u;
         };
@@ -213,7 +215,7 @@ namespace Print
             explicit DataWrapper(const uint64_t aData): WrappedData{aData} {}
 
         private:
-            bool OutputDataImpl(OutputFunctorBase& arOutput) const override;
+            bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
             uint64_t WrappedData = 0u;
         };
@@ -230,7 +232,7 @@ namespace Print
             explicit DataWrapper(const char* const apData): pWrappedData{apData} {}
 
         private:
-            bool OutputDataImpl(OutputFunctorBase& arOutput) const override;
+            bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
             const char* pWrappedData = nullptr;
         };

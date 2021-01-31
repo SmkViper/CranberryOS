@@ -50,9 +50,7 @@ extern "C"
      */
     void show_invalid_entry_message(int64_t aType, uint64_t aESR, uint64_t aReturnAddress)
     {
-        // TODO
-        // Format ESR and address as hex once we have support for that
-        Print::FormatToMiniUART("{}:\r\n\tESR: {}\r\n\tAddress: {}\r\n", ExceptionTypeNames[aType], aESR, aReturnAddress);
+        Print::FormatToMiniUART("{}:\r\n\tESR: {:x}\r\n\tAddress: {:x}\r\n", ExceptionTypeNames[aType], aESR, aReturnAddress);
     }
 
     /**
@@ -73,9 +71,7 @@ extern "C"
                 break;
 
             default:
-                // TODO
-                // Format pending as hex once we have support for that
-                Print::FormatToMiniUART("Unknown pending IRQ: {}\r\n", irqPending1);
+                Print::FormatToMiniUART("Unknown pending IRQ: {:x}\r\n", irqPending1);
                 break;
             }
         }
@@ -90,9 +86,7 @@ extern "C"
                 break;
 
             default:
-                // TODO
-                // Format pending as hex once we have support for that
-                Print::FormatToMiniUART("Unknown pending Core 0 IRQ: {}\r\n", core0IRQPending);
+                Print::FormatToMiniUART("Unknown pending Core 0 IRQ: {:x}\r\n", core0IRQPending);
                 break;
             }
         }
