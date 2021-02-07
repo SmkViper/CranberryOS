@@ -30,6 +30,13 @@ namespace Timing
      * @param aCount Value to count down to 0 (cycle count)
      */
     void Delay(uint64_t aCount);
+
+    /**
+     * Obtain the current clock frequency in hertz
+     * 
+     * @return The current clock frequency in Hz
+     */
+    uint32_t GetSystemCounterClockFrequencyHz();
 }
 
 namespace CPU
