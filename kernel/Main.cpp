@@ -152,8 +152,8 @@ extern "C"
 
         MiniUART::SendString("Hello, World!\r\n\tq = \"exit\" the kernel\r\n\tl = run a local timer\r\n\tg = run a global timer\r\n");
 
-        LocalCountdownData localTimerTest(clockFrequencyHz);
-        GlobalCountdownData globalTimerTest(clockFrequencyHz);
+        LocalCountdownData localTimerTest(1000); // #TODO: correct time on QEMU, far too fast on hardware
+        GlobalCountdownData globalTimerTest(1000); // #TODO: correct time on hardware, not emulated on QEMU
 
         bool done = false;
         while(!done)

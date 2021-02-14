@@ -11,11 +11,11 @@ namespace Timer
      * Set up the timer to fire after a certain amount of time and trigger the specified callback. Any existing
      * callback will be overwritten.
      * 
-     * @param aInterval Amount of time to pass until the callback fires (TODO: See what unit this in)
+     * @param aIntervalMS Amount of time to pass until the callback fires in milliseconds
      * @param apCallback Function to triggers when the interrupt fires
      * @param apParam Parameter to send to the function
      */
-    void RegisterCallback(uint32_t aInterval, CallbackFunctionPtr apCallback, const void* apParam);
+    void RegisterCallback(uint32_t aIntervalMS, CallbackFunctionPtr apCallback, const void* apParam);
 
     /**
      * Handle an interrupt from the timer
@@ -31,12 +31,11 @@ namespace LocalTimer
      * Set up the timer to fire after a certain amount of time and trigger the specified callback. Any existing
      * callback will be overwritten.
      * 
-     * @param aInterval Amount of time to pass until the callback fires (TODO: See what unit this in, it's a smaller
-     * unit of time than the global timer)
+     * @param aInterval Amount of time to pass until the callback fires in milliseconds
      * @param apCallback Function to triggers when the interrupt fires
      * @param apParam Parameter to send to the function
      */
-    void RegisterCallback(uint32_t aInterval, CallbackFunctionPtr apCallback, const void* apParam);
+    void RegisterCallback(uint32_t aIntervalMS, CallbackFunctionPtr apCallback, const void* apParam);
 
     /**
      * Handle an interrupt from the timer
