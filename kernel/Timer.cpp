@@ -24,6 +24,30 @@ namespace
 
     // Have to save this off so we can access it and set up the global timer to re-fire
     uint32_t GlobalTimerInterval = 0u;
+
+    /**
+     * "Sanitizes" the frequency reported by the system counter clock so it can be used to set up the local timer
+     * 
+     * @param aFrequency The frequency to sanitize
+     * @return The sanitized frequency
+     */
+    uint64_t SanitizeLocalTimerFrequency(const uint64_t aFrequency)
+    {
+        auto retVal = aFrequency;
+        // QEMU seems to not report the correct clock frequency, at least in respect to trying to use this frequency to
+        // set up a local timer. So to get the local timer working for both QEMU and real hardware, we're going to
+        // "detect" the presence of QEMU by seeing if the reported frequency here is higher than we expect. If it is,
+        // fake the clock frequency with a hardcoded value that matches QEMU's local timer speed
+        //
+        // #TODO: Figure out if there's a better way to handle this
+        if (aFrequency > 50'000'000)
+        {
+            Print::FormatToMiniUART("[\x1b[33mWARN\x1b[m] Excessive clock frequency {}Hz, faking hard-coded clock\n", aFrequency);
+            // fake 19.2MHz crystal clock
+            retVal = 19'200'000;
+        }
+        return retVal;
+    }
 }
 
 namespace Timer
@@ -77,23 +101,15 @@ namespace LocalTimer
         pLocalTimerCallback = apCallback;
         pLocalTimerParam = apParam;
 
-        // #TODO: Investigate QEMU timer register and speed and hardware instant trigger
-        // OSDev wiki claims the timer operates at a 38.4MHz frequency, which matches the QA7 documentation specifying
-        // that the clock here ticks on every crystal clock edge with the crystal clock running at 19.2MHz.
-        // The real hardware reports 19.2MHz via the system counter clock frequency register, so the below code works
-        // on real hardware (with one minor issue mentioned later). However QEMU reports the wrong system counter clock
-        // frequency (a much faster 62.5MHz) which is strangely consistent. This results in the timer firing too slowly
-        // in QEMU. QEMU itself seems to hard-code the interrupt at the expected 38.4MHz frequency however, so if we
-        // want to bodge in a QEMU detection method and hard code the ticksPerMS, then we could get a consistent
-        // counter for both.
-        // Source: https://wiki.osdev.org/ARM_Local_Timer
-        //
-        // Additionaly, for some reason, the hardware will instantly fire off an interrupt after the control status
-        // register is written, rather than waiting for the countdown. QEMU does not appear to have this issue, so more
+        // #TODO: Investigate hardware instant trigger
+        // For some reason, the hardware will instantly fire off an interrupt after the control status register is
+        // written, rather than waiting for the countdown. QEMU does not appear to have this behavior, so more
         // investigation needs to be done as to why the hardware is behaving this way.
 
-        // We get one clock tick on every edge, so tick frequency is twice that of the reported clock frequency
-        const auto ticksPerSecond = (Timing::GetSystemCounterClockFrequencyHz() * 2u);
+        // This timer ticks on every crystal clock edge - which is why we double the clock frequency to find the number
+        // of ticks per second. (See QA7 documentation, section 4.11)
+
+        const auto ticksPerSecond = (SanitizeLocalTimerFrequency(Timing::GetSystemCounterClockFrequencyHz()) * 2u);
         const auto ticksPerMS = ticksPerSecond / 1000u;
         const auto intervalTicks = aIntervalMS * ticksPerMS;
 
