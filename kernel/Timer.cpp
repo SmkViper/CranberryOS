@@ -20,6 +20,10 @@ namespace
 
     // Clear & reload flags
     constexpr uint32_t LocalTimerClearInterruptAck = 1u << 31;
+    constexpr uint32_t LocalTimerReload = 1u << 30;
+
+    // Have to save this off so we can access it and set up the global timer to re-fire
+    uint32_t GlobalTimerInterval = 0u;
 }
 
 namespace Timer
@@ -40,41 +44,58 @@ namespace Timer
         // #TODO: Figure out where this is specified, or if it can be (or needs to be) read at runtime from a device
         // tree or similar structure
 
-        const auto intervalTicks = aIntervalMS * 1000;
+        GlobalTimerInterval = aIntervalMS * 1000;
 
         const auto curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
-        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + intervalTicks);
+        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + GlobalTimerInterval);
     }
 
     void HandleIRQ()
     {
-        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, 0u); // make sure we don't trigger again
         MemoryMappedIO::Put32(MemoryMappedIO::Timer::ControlStatus, 1 << 1); // clearing the compare 1 signal
+        auto fireAgain = false;
         if (pGlobalTimerCallback != nullptr)
         {
-            pGlobalTimerCallback(pGlobalTimerParam);
+            fireAgain = pGlobalTimerCallback(pGlobalTimerParam);
+        }
+        if (fireAgain)
+        {
+            const auto curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
+            MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + GlobalTimerInterval);
         }
     }
 }
 
 namespace LocalTimer
 {
-    // The local timer counts its value down to 0, and triggers an interrupt when it resets at 0. We then have to clear
-    // the interrupt bit so that the timer will re-trigger again.
+    // The local timer counts its value down to 0, and triggers an interrupt when it reaches 0 before reloading the
+    // counter value and counting down again. So once we set the trigger value, it will trigger periodically until
+    // disabled.
 
     void RegisterCallback(const uint32_t aIntervalMS, const CallbackFunctionPtr apCallback, const void* const apParam)
     {
         pLocalTimerCallback = apCallback;
         pLocalTimerParam = apParam;
 
-        // OSDev wiki claims the timer operates at a 38.5MHz frequency, and testing in QEMU bears this out, as giving
-        // it a countdown value of 38'500'000 results in a 1 second timer tick on QEMU. However on hardware it fires
-        // almost instantly, so something is wrong either in the math or in how we're setting up the interrupt
+        // #TODO: Investigate QEMU timer register and speed and hardware instant trigger
+        // OSDev wiki claims the timer operates at a 38.4MHz frequency, which matches the QA7 documentation specifying
+        // that the clock here ticks on every crystal clock edge with the crystal clock running at 19.2MHz.
+        // The real hardware reports 19.2MHz via the system counter clock frequency register, so the below code works
+        // on real hardware (with one minor issue mentioned later). However QEMU reports the wrong system counter clock
+        // frequency (a much faster 62.5MHz) which is strangely consistent. This results in the timer firing too slowly
+        // in QEMU. QEMU itself seems to hard-code the interrupt at the expected 38.4MHz frequency however, so if we
+        // want to bodge in a QEMU detection method and hard code the ticksPerMS, then we could get a consistent
+        // counter for both.
         // Source: https://wiki.osdev.org/ARM_Local_Timer
         //
-        // #TODO: Figure out why hardware is firing instantly instead of matching QEMU
+        // Additionaly, for some reason, the hardware will instantly fire off an interrupt after the control status
+        // register is written, rather than waiting for the countdown. QEMU does not appear to have this issue, so more
+        // investigation needs to be done as to why the hardware is behaving this way.
 
-        const auto intervalTicks = aIntervalMS * 38'400;
+        // We get one clock tick on every edge, so tick frequency is twice that of the reported clock frequency
+        const auto ticksPerSecond = (Timing::GetSystemCounterClockFrequencyHz() * 2u);
+        const auto ticksPerMS = ticksPerSecond / 1000u;
+        const auto intervalTicks = aIntervalMS * ticksPerMS;
 
         MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 
             intervalTicks | LocalTimerControlEnableInterrupt | LocalTimerControlEnableTimer
@@ -83,14 +104,16 @@ namespace LocalTimer
 
     void HandleIRQ()
     {
-        // writing zero clears the enable and interrupt flags, so we shouldn't trigger another callback
-        MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 0);
-
         MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ClearAndReload, LocalTimerClearInterruptAck);
-        
+        auto fireAgain = false;
         if (pLocalTimerCallback != nullptr)
         {
-            pLocalTimerCallback(pLocalTimerParam);
+            fireAgain = pLocalTimerCallback(pLocalTimerParam);
+        }
+        if (!fireAgain)
+        {
+            // writing zero clears the enable and interrupt flags, so we shouldn't trigger another callback
+            MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 0);
         }
     }
 }

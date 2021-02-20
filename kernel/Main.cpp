@@ -86,16 +86,13 @@ namespace
         uint32_t RemainingIntervals = 0;
     };
 
-    void CountdownCallback(const void* apParam)
+    bool CountdownCallback(const void* apParam)
     {
         const auto pconstCountdown = static_cast<const BaseCountdownData*>(apParam);
         const auto pcountdown = const_cast<BaseCountdownData*>(pconstCountdown); // UB unless we know the original is non-const (which we do)
         pcountdown->DecrementRemainingIntervals();
         Print::FormatToMiniUART("Countdown: {}\r\n", pcountdown->GetRemainingIntervals());
-        if (pcountdown->GetRemainingIntervals() != 0)
-        {
-            pcountdown->RegisterCallback();
-        }
+        return pcountdown->GetRemainingIntervals() != 0;
     }
 
     class LocalCountdownData: public BaseCountdownData
@@ -152,7 +149,7 @@ extern "C"
 
         MiniUART::SendString("Hello, World!\r\n\tq = \"exit\" the kernel\r\n\tl = run a local timer\r\n\tg = run a global timer\r\n");
 
-        LocalCountdownData localTimerTest(1000); // #TODO: correct time on QEMU, far too fast on hardware
+        LocalCountdownData localTimerTest(1000); // #TODO: too slow on QEMU, first callback fires immediately on hardware
         GlobalCountdownData globalTimerTest(1000); // #TODO: correct time on hardware, not emulated on QEMU
 
         bool done = false;
