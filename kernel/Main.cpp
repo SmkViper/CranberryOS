@@ -44,34 +44,10 @@ namespace
             (*pcurFunc)();
         }
     }
-
-    constexpr uint32_t GlobalTimerIntervalC = 200'000;
-    constexpr uint32_t LocalTimerIntervalC = 9'600'000; // local timer seems to run faster, so higher interval for testing
-
-    /**
-     * Callback for timers
-     * 
-     * @param apParam The parameter given to RegisterCallback
-     */
-    void TimerCallback(const void* apParam)
-    {
-        Print::FormatToMiniUART("Timer callback: {}\r\n", static_cast<const char*>(apParam));
-    }
-
+    
+    // #TODO: Cleanup and remove once we get something else using timers for testing and the like
     // Some hacky functions and classes for testing timers
-    // #TODO: Figure out how frequency maps to timer interval
-    // Having trouble figuring out the values to use for each type of timer. Just reading the clock
-    // timer hz and using that directly does not equal a 1 second "tick" on either QEMU or real
-    // hardware.
     // QEMU global timer: <QEMU does not implement>
-    // QEMU local timer: ~8.5 seconds for 5 "ticks"
-    // Hardware global timer: ~20 seconds for 1 "tick"
-    // Hardware local timer: effectively instant (overflow?)
-    // The online raspi3 tutorial github from bztsrc on github when using the global timer reads the
-    // "hz" system register and the current counter, then adds ((hz/1000)*microsec)/1000 to the
-    // current counter to time things in microseconds. But it does so using a while loop that reads
-    // the current counter system register until it equals or matches the desired value, not using an
-    // interrupt like we are.
 
     class BaseCountdownData
     {
@@ -149,7 +125,7 @@ extern "C"
 
         MiniUART::SendString("Hello, World!\r\n\tq = \"exit\" the kernel\r\n\tl = run a local timer\r\n\tg = run a global timer\r\n");
 
-        LocalCountdownData localTimerTest(1000); // #TODO: too slow on QEMU, first callback fires immediately on hardware
+        LocalCountdownData localTimerTest(1000); // #TODO: first callback fires immediately on hardware
         GlobalCountdownData globalTimerTest(1000); // #TODO: correct time on hardware, not emulated on QEMU
 
         bool done = false;
@@ -170,10 +146,10 @@ extern "C"
 
             case 'g':
                 // #TODO: Detect presence of QEMU and/or lack of global timer.
-                // The raspi3 tutorials from bztsrc on github detect this by reading the high and
-                // low memory mapped registers and seeing if they are 0. There might be a cleaner
-                // or "more correct" way using the device tree, but we need to be able to read that
-                // first
+                // The raspi3 tutorials from bztsrc on github detect this by reading the high and low memory mapped
+                // registers and seeing if they are 0. Experimentation shows that at least the current version of
+                // QEMU reports semi-sane values, dispite the global timer (or at least the interrupts) being non-
+                // operative. Might be able to detect the presence/absence of the timer via device tree parsing.
                 globalTimerTest.ResetRemainingIntervals(5);
                 globalTimerTest.RegisterCallback();
                 break;
