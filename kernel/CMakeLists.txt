@@ -7,8 +7,10 @@ add_executable(kernel8.elf
     ExceptionVectors.S
     IRQ.h IRQ.S
     Main.cpp
+    MemoryManager.h MemoryManager.cpp
     MiniUart.h MiniUart.cpp
     Print.h Print.cpp
+    Scheduler.h Scheduler.cpp Scheduler.S
     Start.S
     Timer.h Timer.cpp
     TypeInfo.cpp

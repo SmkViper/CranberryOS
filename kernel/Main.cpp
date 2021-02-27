@@ -2,6 +2,7 @@
 #include "IRQ.h"
 #include "MiniUart.h"
 #include "Print.h"
+#include "Scheduler.h"
 #include "Timer.h"
 #include "UnitTests.h"
 #include "Utils.h"
@@ -45,57 +46,24 @@ namespace
         }
     }
     
-    // #TODO: Cleanup and remove once we get something else using timers for testing and the like
-    // Some hacky functions and classes for testing timers
-    // QEMU global timer: <QEMU does not implement>
-
-    class BaseCountdownData
+    /**
+     * A simple "process" to illustate that the task scheduler is working
+     * 
+     * @param apArray The string to output, one character at a time
+     */
+    void Process(const void* const apArray)
     {
-    public:
-        void ResetRemainingIntervals(uint32_t aRemainingIntervals) { RemainingIntervals = aRemainingIntervals; }
-        uint32_t GetRemainingIntervals() const { return RemainingIntervals; }
-        void DecrementRemainingIntervals() { --RemainingIntervals; }
-
-        virtual void RegisterCallback() = 0;
-
-    private:
-        uint32_t RemainingIntervals = 0;
-    };
-
-    bool CountdownCallback(const void* apParam)
-    {
-        const auto pconstCountdown = static_cast<const BaseCountdownData*>(apParam);
-        const auto pcountdown = const_cast<BaseCountdownData*>(pconstCountdown); // UB unless we know the original is non-const (which we do)
-        pcountdown->DecrementRemainingIntervals();
-        Print::FormatToMiniUART("Countdown: {}\r\n", pcountdown->GetRemainingIntervals());
-        return pcountdown->GetRemainingIntervals() != 0;
+        const auto apString = reinterpret_cast<const char*>(apArray);
+        while (true)
+        {
+            for (auto curChar = 0; apString[curChar] != '\0'; ++curChar)
+            {
+                MiniUART::Send(apString[curChar]);
+                Timing::Delay(100000);
+            }
+        }
+        // Don't ever return, scheduler isn't expecting it
     }
-
-    class LocalCountdownData: public BaseCountdownData
-    {
-    public:
-        explicit LocalCountdownData(uint32_t aIntervalDuration) : IntervalDuration{aIntervalDuration} {}
-        void RegisterCallback() override
-        {
-            LocalTimer::RegisterCallback(IntervalDuration, CountdownCallback, static_cast<BaseCountdownData*>(this));
-        }
-
-    private:
-        uint32_t IntervalDuration = 0u;
-    };
-
-    class GlobalCountdownData: public BaseCountdownData
-    {
-    public:
-        explicit GlobalCountdownData(uint32_t aIntervalDuration) : IntervalDuration{aIntervalDuration} {}
-        void RegisterCallback() override
-        {
-            Timer::RegisterCallback(IntervalDuration, CountdownCallback, static_cast<BaseCountdownData*>(this));
-        }
-
-    private:
-        uint32_t IntervalDuration = 0u;
-    };
 }
 
 // Called from assembly, so don't mangle the name
@@ -110,6 +78,7 @@ extern "C"
 
         MiniUART::Init();
         irq_vector_init();
+        Scheduler::InitTimer();
         ExceptionVectors::EnableInterruptController();
         enable_irq();
 
@@ -123,38 +92,30 @@ extern "C"
         const auto clockFrequencyHz = Timing::GetSystemCounterClockFrequencyHz();
         Print::FormatToMiniUART("System clock freq: {}hz\r\n", clockFrequencyHz);
 
-        MiniUART::SendString("Hello, World!\r\n\tq = \"exit\" the kernel\r\n\tl = run a local timer\r\n\tg = run a global timer\r\n");
+        MiniUART::SendString("Hello, World!\r\n");
 
-        LocalCountdownData localTimerTest(1000); // #TODO: first callback fires immediately on hardware
-        GlobalCountdownData globalTimerTest(1000); // #TODO: correct time on hardware, not emulated on QEMU
-
-        bool done = false;
-        while(!done)
+        auto processCreated = Scheduler::CreateProcess(Process, "12345");
+        if (processCreated)
         {
-            const auto valueEntered = MiniUART::Receive();
-            MiniUART::Send(valueEntered); // always echo it to the user
-            switch (valueEntered)
+            processCreated = Scheduler::CreateProcess(Process, "abcde");
+            if (processCreated)
             {
-            case 'q':
-                done = true;
-                break;
-
-            case 'l':
-                localTimerTest.ResetRemainingIntervals(5);
-                localTimerTest.RegisterCallback();
-                break;
-
-            case 'g':
-                // #TODO: Detect presence of QEMU and/or lack of global timer.
-                // The raspi3 tutorials from bztsrc on github detect this by reading the high and low memory mapped
-                // registers and seeing if they are 0. Experimentation shows that at least the current version of
-                // QEMU reports semi-sane values, dispite the global timer (or at least the interrupts) being non-
-                // operative. Might be able to detect the presence/absence of the timer via device tree parsing.
-                globalTimerTest.ResetRemainingIntervals(5);
-                globalTimerTest.RegisterCallback();
-                break;
+                while (true)
+                {
+                    Scheduler::Schedule();
+                }
             }
+            else
+            {
+                MiniUART::SendString("Error while starting process 2");
+            }
+            
         }
+        else
+        {
+            MiniUART::SendString("Error while starting process 1");
+        }
+        
 
         MiniUART::SendString("\r\nExiting... (sending CPU into an infinite loop)\r\n");
 

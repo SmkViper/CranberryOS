@@ -1,6 +1,42 @@
 #ifndef __KERNEL_STDLIB_NEW__
 #define __KERNEL_STDLIB_NEW__
 
+#include <cstddef>
+
+/**
+ * Placement new (no allocation, constructs in place)
+ * 
+ * @param __aSize The size of memory to "allocate"
+ * @param __apBlock The pointer to the block to "allocate" into
+ * @return The "allocated" memory
+ */
+inline void* operator new(std::size_t /*__aSize*/, void* __apBlock) noexcept { return __apBlock; }
+
+/**
+ * Placement new for an array (no allocation, constructs in place)
+ * 
+ * @param __aSize The size of memory to "allocate"
+ * @param __apBlock The pointer to the block to "allocate" into
+ * @return The "allocated" memory
+ */
+inline void* operator new[](std::size_t __aSize, void* __apBlock) noexcept { return __apBlock; }
+
+/**
+ * Called by placement new if constructor throws an exception
+ * 
+ * @param __apPtr The "allocated" memory
+ * @param __apPlace The block that was to be "allocated" into
+ */
+inline void operator delete(void* __apPtr, void* __apPlace) noexcept {}
+
+/**
+ * Called by array placement new if constructor throws an exception
+ * 
+ * @param __apPtr The "allocated" memory
+ * @param __apPlace The block that was to be "allocated" into
+ */
+inline void operator delete[](void* __apPtr, void* __apPlace) noexcept {}
+
 /**
  * Return memory to the memory system
  * 
