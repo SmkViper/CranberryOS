@@ -5,8 +5,8 @@
 
 namespace Timer
 {
-    // Function returns whether to let the timer continue running or not
-    using CallbackFunctionPtr = bool(*)(const void* apParam);
+    // Triggered every timer tick
+    using CallbackFunctionPtr = void(*)(const void* apParam);
 
     /**
      * Set up the timer to fire repeatedly with a certain interval and trigger the specified callback. Any existing
@@ -26,8 +26,8 @@ namespace Timer
 
 namespace LocalTimer
 {
-    // Function returns whether to let the timer continue running or not
-    using CallbackFunctionPtr = bool(*)(const void* apParam);
+    // Triggered every timer tick
+    using CallbackFunctionPtr = void(*)(const void* apParam);
 
     /**
      * Set up the timer to fire repeatedly with a certain interval and trigger the specified callback. Any existing

@@ -6,6 +6,157 @@
 #include "MemoryManager.h"
 #include "Timer.h"
 
+// How the scheduler currently works:
+//
+// CopyProcess creates a new memory page and puts the task struct at the bottom of the page, with the stack pointer
+// pointing at a certain distance above it.
+//
+// 0xXXXXXXXX +--------------------+ ^
+//            | TaskStruct         | |
+//            +--------------------+ | One page
+//            |                    | |
+//            | Stack (grows down) | |
+// 0xXXXX1000 +--------------------+ v
+//
+// ScheduleImpl is called, either voluntarily or via timer
+// cpu_switch_to saves all callee-saved registers in the current task to the TaskStruct context member
+// cpu_switch_to "restores" all callee-saved registers for the new task, setting sp to 0xXXXX1000, the link register
+// to ret_from_create, x19 to the task's process function, and x20 to the process function parameter
+// cpu_switch_to returns, loading ret_from_create's address from the link register
+// ret_from_create reads from x19 and x20, and calls to the function in x19, passing it x20
+//
+// Eventually a timer interrupt happens, saving all registers + elr_el1 and spsr_el1 to the bottom of the current
+// task's stack
+//
+// 0xXXXXXXXX +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xXXXX1000 +----------------------+
+//
+// The current task is now handling an interrupt, and grows a little bit more on the stack to pick the task to resume
+//
+// 0xXXXXXXXX +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Stack (interrupt)    |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xXXXX1000 +----------------------+
+//
+// The interrupt picks a second new task to run, repeating the process performed for the first task to set up the
+// second new task. This task begins executing and growing its own stack. Note that execution is still in the timer
+// interrupt handler, but interrupts have been re-enabled at this point, so another timer can come in again.
+//
+// 0xXXXXXXXX +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Stack (interrupt)    |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xXXXX1000 +----------------------+
+//            |         ...          |
+// 0xYYYYYYYY +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            | Stack (grows down)   |
+// 0xYYYY1000 +----------------------+
+//
+// Another timer interrupt happens, and the process repeats to save off all the registers, elr_el1 and spsr_el1 at the
+// bottom of the second task's stack, and the interrupt stack for that task starts to grow
+//
+// 0xXXXXXXXX +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Stack (interrupt)    |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xXXXX1000 +----------------------+
+//            |         ...          |
+// 0xYYYYYYYY +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Stack (interrupt)    |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xYYYY1000 +----------------------+
+//
+// ScheduleImpl is now called, and notes that both tasks have their counter at 0. It then sets the counters to their
+// priority and picks the first task to run again. (Though it could pick either if their priorities were the same)
+// cpu_switch_to is called and it restores all the callee-saved registers from the first task context. The link
+// register now points at the end of the SwitchTo function, since that's what it was the last time this task was
+// running. The stack pointer also is set to point at the bottom of the first task's interrupt stack.
+// The TimerTick function now resumes execution, disabling interrupts again and returns to the interrupt handler,
+// collapsing the interrupt stack to 0.
+//
+// 0xXXXXXXXX +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xXXXX1000 +----------------------+
+//            |         ...          |
+// 0xYYYYYYYY +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Stack (interrupt)    |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xYYYY1000 +----------------------+
+//
+// The interrupt cleans up, restoring all the regsters that were saved from the stack, including the elr_el1 and
+// spsr_el1 registers. elr_el1 now points somewhere in the middle of the process function (wherever the interrupt)
+// originally happened. And sp now points at the bottom of the task's original stack
+//
+// 0xXXXXXXXX +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            | Stack (grows down)   |
+// 0xXXXX1000 +----------------------+
+//            |         ...          |
+// 0xYYYYYYYY +----------------------+
+//            | TaskStruct           |
+//            +----------------------+
+//            |                      |
+//            +----------------------+
+//            | Stack (interrupt)    |
+//            +----------------------+
+//            | Task saved registers |
+//            +----------------------+
+//            | Stack (grows down)   |
+// 0xYYYY1000 +----------------------+
+//
+// The eret instruction is executed, using the saved elr_el1 register to jump back to whatever the first task was doing
+
 namespace
 {
     struct CPUContext
@@ -66,7 +217,7 @@ namespace
 {
     constexpr auto TimerTickMSC = 200; // tick every 200ms
 
-    constexpr auto ThreadSizeC = 4096; // 4k stack size
+    constexpr auto ThreadSizeC = 4096; // 4k stack size (#TODO: Pull from page size?)
     constexpr auto NumberOfTasksC = 64u;
     TaskStruct InitTask; // task running kernel init
 
@@ -184,15 +335,14 @@ namespace
      * Triggered by the timer interrupt to schedule a new task
      * 
      * @param apParam The parameter registered for our callback
-     * @return True to register another timer tick, false to stop timer ticking
      */
-    bool TimerTick(const void* /*apParam*/)
+    void TimerTick(const void* /*apParam*/)
     {
         // Only switch task if the counter has run out and it hasn't been blocked
         --pCurrentTask->Counter;
         if ((pCurrentTask->Counter > 0) || (pCurrentTask->PreemptCount > 0))
         {
-            return true;
+            return;
         }
         pCurrentTask->Counter = 0;
 
@@ -206,8 +356,6 @@ namespace
 
         // And re-disable them before returning to the interrupt handler (which will deal with re-enabling them later)
         disable_irq();
-
-        return true;
     }
 }
 

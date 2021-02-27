@@ -77,16 +77,12 @@ namespace Timer
     void HandleIRQ()
     {
         MemoryMappedIO::Put32(MemoryMappedIO::Timer::ControlStatus, 1 << 1); // clearing the compare 1 signal
-        auto fireAgain = false;
-        if (pGlobalTimerCallback != nullptr)
-        {
-            fireAgain = pGlobalTimerCallback(pGlobalTimerParam);
-        }
-        if (fireAgain)
-        {
-            const auto curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
-            MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + GlobalTimerInterval);
-        }
+
+        // set up the timer to trigger again
+        const auto curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
+        MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + GlobalTimerInterval);
+        
+        pGlobalTimerCallback(pGlobalTimerParam);
     }
 }
 
@@ -121,15 +117,7 @@ namespace LocalTimer
     void HandleIRQ()
     {
         MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ClearAndReload, LocalTimerClearInterruptAck);
-        auto fireAgain = false;
-        if (pLocalTimerCallback != nullptr)
-        {
-            fireAgain = pLocalTimerCallback(pLocalTimerParam);
-        }
-        if (!fireAgain)
-        {
-            // writing zero clears the enable and interrupt flags, so we shouldn't trigger another callback
-            MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 0);
-        }
+        
+        pLocalTimerCallback(pLocalTimerParam);
     }
 }
