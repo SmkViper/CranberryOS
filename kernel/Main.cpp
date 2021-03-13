@@ -3,6 +3,7 @@
 #include "MiniUart.h"
 #include "Print.h"
 #include "Scheduler.h"
+#include "SystemCall.h"
 #include "Timer.h"
 #include "UnitTests.h"
 #include "Utils.h"
@@ -45,24 +46,75 @@ namespace
             (*pcurFunc)();
         }
     }
-    
+
     /**
-     * A simple "process" to illustate that the task scheduler is working
+     * A "user process" that just outputs the string it is given repeatedly
      * 
-     * @param apArray The string to output, one character at a time
+     * @param apArray The string to output
      */
-    void Process(const void* const apArray)
+    void UserProcess1(const void* apArray)
     {
-        const auto apString = reinterpret_cast<const char*>(apArray);
+        const char* pstring = reinterpret_cast<const char*>(apArray);
+        char buffer[] = {'\0', '\0'};
         while (true)
         {
-            for (auto curChar = 0; apString[curChar] != '\0'; ++curChar)
+            for (auto curIndex = 0u; pstring[curIndex] != '\0'; ++curIndex)
             {
-                MiniUART::Send(apString[curChar]);
+                buffer[0] = pstring[curIndex];
+                SystemCall::UARTWrite(buffer);
                 Timing::Delay(100000);
             }
         }
-        // Don't ever return, scheduler isn't expecting it
+    }
+
+    /**
+     * A user process that sets up two "user processes" to run in parallel (really threads, but still)
+     */
+    void UserProcess()
+    {
+        SystemCall::UARTWrite("User process started\r\n");
+        auto pstack = SystemCall::AllocatePage();
+        if (pstack == nullptr)
+        {
+            SystemCall::UARTWrite("Error while allocating stack for process 1\r\n");
+            return;
+        }
+        auto processID = SystemCall::CreateProcess(UserProcess1, "12345", pstack);
+        if (processID < 0)
+        {
+            SystemCall::UARTWrite("Error while creating process 1\r\n");
+            return;
+        }
+
+        pstack = SystemCall::AllocatePage();
+        if (pstack == nullptr)
+        {
+            SystemCall::UARTWrite("Error while allocating stack for process 2\r\n");
+            return;
+        }
+        processID = SystemCall::CreateProcess(UserProcess1, "abcd", pstack);
+        if (processID < 0)
+        {
+            SystemCall::UARTWrite("Error while creating process 2\r\n");
+            return;
+        }
+        SystemCall::Exit();
+    }
+    
+    /**
+     * Process trampoline which will move to user mode
+     * 
+     * @param apParam The parameter sent to the process
+     */
+    void KernelProcess(const void* const /*apParam*/)
+    {
+        Print::FormatToMiniUART("Kernel process started. EL {}\r\n", CPU::GetExceptionLevel());
+        const auto succeeded = Scheduler::MoveToUserMode(&UserProcess);
+        if (!succeeded)
+        {
+            MiniUART::SendString("Error while moving process to user mode\r\n");
+        }
+        // UserProcess will run after we return, now that we've set up our process as a user one
     }
 }
 
@@ -92,28 +144,17 @@ extern "C"
         const auto clockFrequencyHz = Timing::GetSystemCounterClockFrequencyHz();
         Print::FormatToMiniUART("System clock freq: {}hz\r\n", clockFrequencyHz);
 
-        MiniUART::SendString("Hello, World!\r\n");
-
-        auto processCreated = Scheduler::CreateProcess(Process, "12345");
-        if (processCreated)
+        const auto processID = Scheduler::CreateProcess(Scheduler::CreationFlags::KernelThreadC, KernelProcess, nullptr, nullptr);
+        if (processID >= 0)
         {
-            processCreated = Scheduler::CreateProcess(Process, "abcde");
-            if (processCreated)
+            while (true)
             {
-                while (true)
-                {
-                    Scheduler::Schedule();
-                }
+                Scheduler::Schedule();
             }
-            else
-            {
-                MiniUART::SendString("Error while starting process 2");
-            }
-            
         }
         else
         {
-            MiniUART::SendString("Error while starting process 1");
+            MiniUART::SendString("Error while starting kernel process");
         }
         
 

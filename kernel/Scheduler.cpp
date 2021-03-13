@@ -1,5 +1,6 @@
 #include "Scheduler.h"
 
+#include <cstring>
 #include <new>
 #include "ARM/SchedulerDefines.h"
 #include "IRQ.h"
@@ -15,7 +16,9 @@
 //            | TaskStruct         | |
 //            +--------------------+ | One page
 //            |                    | |
-//            | Stack (grows down) | |
+//            | Stack (grows up)   | |
+//            +--------------------+ |
+//            | ProcessState       | |
 // 0xXXXX1000 +--------------------+ v
 //
 // ScheduleImpl is called, either voluntarily or via timer
@@ -35,7 +38,9 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xXXXX1000 +----------------------+
 //
 // The current task is now handling an interrupt, and grows a little bit more on the stack to pick the task to resume
@@ -49,7 +54,9 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xXXXX1000 +----------------------+
 //
 // The interrupt picks a second new task to run, repeating the process performed for the first task to set up the
@@ -65,14 +72,18 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xXXXX1000 +----------------------+
 //            |         ...          |
 // 0xYYYYYYYY +----------------------+
 //            | TaskStruct           |
 //            +----------------------+
 //            |                      |
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xYYYY1000 +----------------------+
 //
 // Another timer interrupt happens, and the process repeats to save off all the registers, elr_el1 and spsr_el1 at the
@@ -87,7 +98,9 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xXXXX1000 +----------------------+
 //            |         ...          |
 // 0xYYYYYYYY +----------------------+
@@ -99,7 +112,9 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xYYYY1000 +----------------------+
 //
 // ScheduleImpl is now called, and notes that both tasks have their counter at 0. It then sets the counters to their
@@ -117,7 +132,9 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xXXXX1000 +----------------------+
 //            |         ...          |
 // 0xYYYYYYYY +----------------------+
@@ -129,7 +146,9 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xYYYY1000 +----------------------+
 //
 // The interrupt cleans up, restoring all the regsters that were saved from the stack, including the elr_el1 and
@@ -140,7 +159,9 @@
 //            | TaskStruct           |
 //            +----------------------+
 //            |                      |
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xXXXX1000 +----------------------+
 //            |         ...          |
 // 0xYYYYYYYY +----------------------+
@@ -152,13 +173,18 @@
 //            +----------------------+
 //            | Task saved registers |
 //            +----------------------+
-//            | Stack (grows down)   |
+//            | Stack (grows up)     |
+//            +----------------------+
+//            | ProcessState         |
 // 0xYYYY1000 +----------------------+
 //
 // The eret instruction is executed, using the saved elr_el1 register to jump back to whatever the first task was doing
 
 namespace
 {
+    // SPSR_EL1 bits - See section C5.2.18 in the ARMv8 manual
+    constexpr uint64_t PSRModeEL0tC = 0x00000000;
+
     struct CPUContext
     {
         // ARM calling conventions allow registers x0-x18 to be overwritten by a called function,
@@ -182,7 +208,8 @@ namespace
 
     enum class TaskState : int64_t
     {
-        Running
+        Running,
+        Zombie
     };
 
     struct TaskStruct
@@ -192,6 +219,18 @@ namespace
         int64_t Counter = 0; // decrements each timer tick. When reaches 0, another task will be scheduled
         int64_t Priority = 1; // copied to Counter when a task is scheduled, so higher priority will run for longer
         int64_t PreemptCount = 0; // If non-zero, task will not be preempted
+        void* pStack = nullptr; // pointer to the stack root so it can be cleaned up if necessary
+        uint64_t Flags = 0;
+    };
+
+    // Expected to match what is put on the stack via the kernel_entry macro in the exception handler so it can
+    // "restore" the processor state we want
+    struct ProcessState
+    {
+        uint64_t Registers[31] = {0u};
+        uint64_t StackPointer = 0u;
+        uint64_t ProgramCounter = 0u;
+        uint64_t ProcessorState = 0u;
     };
 
     static_assert(offsetof(TaskStruct, Context) == TASK_STRUCT_CONTEXT_OFFSET, "Unexpected offset of context in task struct");
@@ -200,7 +239,7 @@ namespace
 extern "C"
 {
     /**
-     * Return to the newly created task
+     * Return to the newly created task (Defined in ExceptionVectors.S)
      */
     extern void ret_from_create();
 
@@ -314,14 +353,13 @@ namespace
             foundTask = (largestCounter > 0);
             if (!foundTask)
             {
-                for (auto curTask = 0u; curTask < NumberOfTasksC; ++curTask)
+                for (const auto pcurTask : Tasks)
                 {
-                    const auto ptask = Tasks[curTask];
-                    if (ptask)
+                    if (pcurTask)
                     {
                         // Increment the counter by the priority, ensuring that we don't go above 2 * priority
                         // So the longer the task has been waiting, the higher the counter should be.
-                        ptask->Counter = (ptask->Counter / 1) + ptask->Priority;
+                        pcurTask->Counter = (pcurTask->Counter / 1) + pcurTask->Priority;
                     }
                 }
             }
@@ -357,6 +395,18 @@ namespace
         // And re-disable them before returning to the interrupt handler (which will deal with re-enabling them later)
         disable_irq();
     }
+
+    /**
+     * Extract the state memory from the stack for the given task
+     * 
+     * @param apTask Task to get the state for
+     * @return The process state for the task
+     */
+    void* GetTargetStateMemoryForTask(TaskStruct* apTask)
+    {
+        const auto state = reinterpret_cast<uintptr_t>(apTask) + ThreadSizeC - sizeof(ProcessState);
+        return reinterpret_cast<void*>(state);
+    }
 }
 
 extern "C"
@@ -384,27 +434,91 @@ namespace Scheduler
         ScheduleImpl();
     }
 
-    bool CreateProcess(ProcessFunctionPtr apProcessFn, const void* apParam)
+    int CreateProcess(const uint32_t aCreateFlags, ProcessFunctionPtr apProcessFn, const void* apParam, void* apStack)
     {
         // Make sure we don't get preempted in the middle of making a new task
         DisablePreemptingInScope disablePreempt;
 
         auto pmemory = reinterpret_cast<uint8_t*>(MemoryManager::GetFreePage());
-        auto pnewTask = new (pmemory) TaskStruct{};
-        if (pnewTask == nullptr)
+        if (pmemory == nullptr)
         {
-            return false;
+            return -1;
         }
+
+        auto pnewTask = new (pmemory) TaskStruct{};
+
+        const auto puninitializedState = reinterpret_cast<uint8_t*>(GetTargetStateMemoryForTask(pnewTask));
+        const auto pnewState = new (puninitializedState) ProcessState{};
+
+        if ((aCreateFlags & CreationFlags::KernelThreadC) == CreationFlags::KernelThreadC)
+        {
+            pnewTask->Context.x19 = reinterpret_cast<uint64_t>(apProcessFn);
+            pnewTask->Context.x20 = reinterpret_cast<uint64_t>(apParam);
+        }
+        else
+        {
+            // extract and clone the current processor state
+            const auto psourceState = reinterpret_cast<ProcessState*>(GetTargetStateMemoryForTask(pCurrentTask));
+            *pnewState = *psourceState;
+            pnewState->Registers[0] = 0; // make sure ret_from_create knows this is the new user process
+            pnewState->StackPointer = reinterpret_cast<uint64_t>(apStack) + ThreadSizeC;
+            pnewTask->pStack = apStack;
+        }
+
+        pnewTask->Flags = aCreateFlags;
         pnewTask->Priority = pCurrentTask->Priority;
         pnewTask->Counter = pnewTask->Priority;
         pnewTask->PreemptCount = 1; // disable preemption until schedule_tail
 
-        pnewTask->Context.x19 = reinterpret_cast<uint64_t>(apProcessFn);
-        pnewTask->Context.x20 = reinterpret_cast<uint64_t>(apParam);
+        
         pnewTask->Context.pc = reinterpret_cast<uint64_t>(ret_from_create);
-        pnewTask->Context.sp = reinterpret_cast<uint64_t>(pmemory + ThreadSizeC);
+        pnewTask->Context.sp = reinterpret_cast<uint64_t>(pnewState);
         const auto processID = NumberOfTasks++;
         Tasks[processID] = pnewTask;
+        return processID;
+    }
+
+    bool MoveToUserMode(UserModeFunctionPtr apUserModeFn)
+    {
+        const auto puninitializedState = reinterpret_cast<uint8_t*>(GetTargetStateMemoryForTask(pCurrentTask));
+        auto pstate = new (puninitializedState) ProcessState{};
+
+        static_assert(sizeof(UserModeFunctionPtr) == sizeof(uint64_t), "Unexpected pointer size");
+        pstate->ProgramCounter = reinterpret_cast<uint64_t>(apUserModeFn);
+        pstate->ProcessorState = PSRModeEL0tC;
+
+        const auto pstack = MemoryManager::GetFreePage();
+        if (pstack == nullptr)
+        {
+            pstate->~ProcessState();
+            return false;
+        }
+        pstate->StackPointer = reinterpret_cast<uint64_t>(pstack) + ThreadSizeC;
+        pCurrentTask->pStack = pstack;
         return true;
+    }
+
+    void ExitProcess()
+    {
+        {
+            // Make sure we don't get preempted in the middle of cleaning up the task
+            DisablePreemptingInScope disablePreempt;
+
+            // Flag the task as a zombie so it isn't rescheduled
+            for (const auto pcurTask : Tasks)
+            {
+                if (pcurTask == pCurrentTask)
+                {
+                    pcurTask->State = TaskState::Zombie;
+                    break;
+                }
+            }
+            if (pCurrentTask->pStack)
+            {
+                MemoryManager::FreePage(pCurrentTask->pStack);
+            }
+        }
+        // Won't ever return because a new task will be scheduled and this one is now flagged as a zombie
+        Schedule();
     }
 }

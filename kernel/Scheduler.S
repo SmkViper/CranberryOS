@@ -1,11 +1,5 @@
 #include "ARM/SchedulerDefines.h"
 
-.globl ret_from_create
-ret_from_create:
-    bl      schedule_tail
-    mov     x0, x20 // set up the parameter we're sending to the process function
-    blr     x19     // call the process function - should never return
-
 .globl cpu_switch_to
 cpu_switch_to:
     // x0 is the previous task pointer

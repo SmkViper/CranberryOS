@@ -3,6 +3,9 @@
 #ifndef KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H
 #define KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H
 
+#define STACK_FRAME_SIZE        272     // we store 17 pairs of 8 byte registers on the stack (17 * 8 * 2)
+#define STACK_X0_OFFSET         0       // x0 is stored on the top
+
 // Various values passed to the "invalid exception" handler so it knows which one triggered
 
 #define SYNC_INVALID_EL1t       0
@@ -24,5 +27,8 @@
 #define IRQ_INVALID_EL0_32      13
 #define FIQ_INVALID_EL0_32      14
 #define ERROR_INVALID_EL0_32    15
+
+#define SYNC_ERROR              16
+#define SYSCALL_ERROR           17
 
 #endif // KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H

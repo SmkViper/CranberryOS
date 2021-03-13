@@ -2,6 +2,17 @@
 
 extern "C"
 {
+    void* memcpy(void* apDest, const void* apSource, size_t aCount)
+    {
+        const auto pdestBytes = reinterpret_cast<char*>(apDest);
+        const auto psourceBytes = reinterpret_cast<const char*>(apSource);
+        for (auto curByte = 0; curByte < aCount; ++curByte)
+        {
+            pdestBytes[curByte] = psourceBytes[curByte];
+        }
+        return apDest;
+    }
+
     void* memset(void* const apDest, const int aChar, const size_t aCount)
     {
         const auto pdestBytes = reinterpret_cast<char*>(apDest);

@@ -12,6 +12,8 @@ add_executable(kernel8.elf
     Print.h Print.cpp
     Scheduler.h Scheduler.cpp Scheduler.S
     Start.S
+    SystemCall.h SystemCall.cpp SystemCall.S
+    SystemCallDefines.h
     Timer.h Timer.cpp
     TypeInfo.cpp
     UnitTests.h UnitTests.cpp

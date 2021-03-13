@@ -93,4 +93,14 @@
 #define CPACR_EL1_INIT_VALUE    (CPACR_EL1_RESERVED_FLAGS | \
                                  CPACR_EL1_DISABLE_SVE_FP_SIMD_TRAPS)
 
+///////////////////////////////////////////////////////////////////////////////
+// ESR_ELx register flags - See D10.2.39 in the ARMv8 manual
+///////////////////////////////////////////////////////////////////////////////
+
+// How far to shift the value in an ESR_ELx register to get at the exception class
+#define ESR_ELx_EC_SHIFT    26
+
+//Exception classes:
+#define ESR_ELx_EC_SVC64    0x15    // 0b010101 - exception caused by SVC instruction in AArch64 state
+
 #endif // KERNEL_ARM_SYSTEM_REGISTERS_H

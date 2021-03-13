@@ -6,6 +6,17 @@
 extern "C"
 {
     /**
+     * Copies bytes from source to destination
+     * 
+     * @param apDest Pointer to the memory to copy to
+     * @param apSource Pointer to memory to copy from
+     * @param aCount Number of bytes to copy
+     * 
+     * @return The destination pointer
+     */
+    void* memcpy(void* apDest, const void* apSource, size_t aCount);
+
+    /**
      * Fills the specified memory with the given value
      * 
      * @param apDest Pointer to the memory to fill
