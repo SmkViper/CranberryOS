@@ -1,7 +1,13 @@
 SECTIONS
 {
     /* Startup code needs to be at 0x80000, since the GPU just loads the file into ram and starts executing there */
-    . = 0x80000;
+    /*. = 0x80000;*/
+    /*
+        #TODO: Is this the right address? The code I'm looking at originally was at 0x0000 and then changed to this for
+        VM support where the kernel starts at this address. But the RPi loads at 0x80000, not 0, so is this still
+        valid? Right now this is causing a linker error where it complains we're ouside the available address space
+    */
+    . = 0xffff000000000000;
     /*
         Make sure .text.boot section is at the very front, and that the linker knows it is the root for doing garbage
         collection, since it's the entry point of the kernel.
@@ -52,6 +58,18 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
     }
+
+    /*
+        set up space for the page tables. For now we just assume we're mapping 1GB of memory. As such, since we can use
+        section mapping (i.e. 2mb sections instead of 4k pages) we don't need a Page Table Entry and can get by with
+        a Page Global Directory with one entry pointing at a single Page Upper Directory. This will also have a single
+        entry pointing at a single Page Middle Directory, which will then point at all 512 2mb sections.
+        That's 3 tables, each 4k in size (hence 3 * (1 << 12))
+    */
+    . = ALIGN(0x00001000);
+    pg_dir = .;
+    /* #TODO: This line is causing the linker to freeze if the starting address is 0x80000 for some reason */
+    .data.pgd : { . += (3 * (1 << 12)); }
     _end = .;
 
     /* strip out some general unimportant stuff we don't need */

@@ -2,6 +2,8 @@
 #define KERNEL_PERIPHERALS_BASE_H
 
 #include <cstdint>
+#include "../ARM/MMUDefines.h"
+#include "../MemoryManager.h"
 
 namespace MemoryMappedIO
 {
@@ -14,7 +16,7 @@ namespace MemoryMappedIO
      * range (the "bus address"), so to figure out the value to use in the kernel (the "physical address") just trim
      * the top byte add the resulting value to this
      */
-    constexpr uintptr_t PeripheralBaseAddr = 0x3F00'0000;
+    constexpr uintptr_t PeripheralBaseAddr = MemoryManager::KernalVirtualAddressStart + DEVICE_BASE;
 
     // Local peripheral information sourced from BCM2836 ARM-local peripheral documentation
     // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf

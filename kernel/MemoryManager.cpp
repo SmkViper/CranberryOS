@@ -1,14 +1,16 @@
 #include "MemoryManager.h"
 
 #include <cstdint>
+#include "ARM/MMUDefines.h"
 #include "Peripherals/Base.h"
 
 namespace MemoryManager
 {
     namespace
     {
-        constexpr auto PageSizeC = 1u << 12; // 4k pages
-        constexpr auto LowMemoryC = 2u * (1u << 21); // reserve 4mb of low memory, which is enough to cover our kernel, loaded at 0x8'0000
+        // #TODO: Pulling from macros for now, hopefully can clean this up a lot later
+        constexpr auto PageSizeC = PAGE_SIZE; // 4k pages
+        constexpr auto LowMemoryC = LOW_MEMORY; // reserve 4mb of low memory, which is enough to cover our kernel
         constexpr auto HighMemoryC = MemoryMappedIO::PeripheralBaseAddr; // don't run into any of the memory-mapped perhipherals
 
         constexpr auto PagingMemoryC = HighMemoryC - LowMemoryC;
@@ -20,7 +22,7 @@ namespace MemoryManager
     void* GetFreePage()
     {
         // Very simple for now, just find the first unused page and return it
-        for (auto curPage = 0u; curPage < PageCountC; ++curPage)
+        for (auto curPage = 0ull; curPage < PageCountC; ++curPage)
         {
             if (!PageInUse[curPage])
             {

@@ -1,8 +1,12 @@
 #ifndef KERNEL_MEMORY_MANAGER_H
 #define KERNEL_MEMORY_MANAGER_H
 
+#include <cstdint>
+#include "ARM/MMUDefines.h"
+
 namespace MemoryManager
 {
+    constexpr uintptr_t KernalVirtualAddressStart = VA_START;
     /**
      * Allocate a page of memory
      * 
