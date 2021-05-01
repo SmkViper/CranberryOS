@@ -1,7 +1,10 @@
 SECTIONS
 {
-    /* Startup code needs to be at 0x80000, since the GPU just loads the file into ram and starts executing there */
-    . = 0x80000;
+    /*
+        We're using a MMU, so while normally startup code needs to be at 0x80000, we actually want the linker to behave
+        as if we're at a much higher address, since that's what we're going to be mapping our memory to
+    */
+    . = 0xffff000000000000;
     /*
         Make sure .text.boot section is at the very front, and that the linker knows it is the root for doing garbage
         collection, since it's the entry point of the kernel.

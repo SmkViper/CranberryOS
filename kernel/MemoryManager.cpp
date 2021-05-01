@@ -11,7 +11,9 @@ namespace MemoryManager
         // #TODO: Pulling from macros for now, hopefully can clean this up a lot later
         constexpr auto PageSizeC = PAGE_SIZE; // 4k pages
         constexpr auto LowMemoryC = LOW_MEMORY; // reserve 4mb of low memory, which is enough to cover our kernel
-        constexpr auto HighMemoryC = MemoryMappedIO::PeripheralBaseAddr; // don't run into any of the memory-mapped perhipherals
+        // don't run into any of the memory-mapped perhipherals (NOT using the PeripheralBaseAddr because that's an
+        // absolute addr, and we want relative for our paging calculations)
+        constexpr auto HighMemoryC = DEVICE_BASE;
 
         constexpr auto PagingMemoryC = HighMemoryC - LowMemoryC;
         constexpr auto PageCountC = PagingMemoryC / PageSizeC;

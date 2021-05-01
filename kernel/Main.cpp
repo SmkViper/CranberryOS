@@ -121,6 +121,10 @@ namespace
 // Called from assembly, so don't mangle the name
 extern "C"
 {
+    // #TODO: Handle to the "global shared object" that clang apparently wants? Not sure what its for yet, but without
+    // it there are linker issues with it thinking the object is out of range
+    void* __dso_handle;
+
     /**
      * Kernel entry point
      */
