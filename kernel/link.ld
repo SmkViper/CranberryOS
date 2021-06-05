@@ -2,9 +2,12 @@ SECTIONS
 {
     /*
         We're using a MMU, so while normally startup code needs to be at 0x80000, we actually want the linker to behave
-        as if we're at a much higher address, since that's what we're going to be mapping our memory to
+        as if we're at a much higher address, since that's what we're going to be mapping our memory to. Instead of
+        having it be at 0xFFFF'0000'0000'0000 directly, we offset it at 0x80000 since our MMU is going to do a 1-1
+        mapping from physical to virtual addresses. So our start address of 0x80000 (dicated by the hardware) will end
+        up at 0xFFFF'0000'0008'0000 in virtual address space
     */
-    . = 0xffff000000000000;
+    . = 0xffff000000080000;
     /*
         Make sure .text.boot section is at the very front, and that the linker knows it is the root for doing garbage
         collection, since it's the entry point of the kernel.
