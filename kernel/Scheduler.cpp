@@ -425,7 +425,10 @@ namespace Scheduler
     void InitTimer()
     {
         // We're using a local timer instead of the global timer because it works on both QEMU and real hardware
-        LocalTimer::RegisterCallback(TimerTickMSC, TimerTick, nullptr);
+        //LocalTimer::RegisterCallback(TimerTickMSC, TimerTick, nullptr);
+        // #TODO: Local timer cannot be used until we figure out how to get the local peripheral addresses mapped in
+        // the mmu. Since they start at 0x4000'0000 they are out of range of our current single page mmu setup.
+        Timer::RegisterCallback(TimerTickMSC, TimerTick, nullptr);
     }
 
     void Schedule()
