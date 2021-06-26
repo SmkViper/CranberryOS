@@ -12,7 +12,23 @@ SECTIONS
         Make sure .text.boot section is at the very front, and that the linker knows it is the root for doing garbage
         collection, since it's the entry point of the kernel.
     */
-    .text : { KEEP(*(.text.boot)) *(.text .text.*) } /* code sections */
+    .text.boot : { KEEP(*(.text.boot))  } /* boot code section */
+
+    /*
+        As a hack until we can load programs via a file system, any file starting with "user" will be considered part
+        of the user process, and be put in this segment between user_begin and user_end. That way we can just memcpy
+        to "load" our process
+    */
+    . = ALIGN(0x00001000);
+    __user_start = .;
+    .text.user : { build/user* (.text) }
+    .rodata.user : { build/user* (.rodata) }
+    .data.user : { build/user* (.data) }
+    .bss.user : { build/user* (.bss) }
+    __user_end = .;
+
+    .text : { *(.text .text.*) } /* remaining code sections */
+
     .rodata : { *(.rodata .rodata.*) } /* read-only data sections */
 
     /* .init_array is a list of pointers to constructors for static variables - pointer alignment */

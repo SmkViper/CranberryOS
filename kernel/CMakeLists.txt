@@ -7,16 +7,19 @@ add_executable(kernel8.elf
     ExceptionVectors.S
     IRQ.h IRQ.S
     Main.cpp
-    MemoryManager.h MemoryManager.cpp
+    MemoryManager.h MemoryManager.cpp MemoryManager.S
     MiniUart.h MiniUart.cpp
     Print.h Print.cpp
     Scheduler.h Scheduler.cpp Scheduler.S
     Start.S
-    SystemCall.h SystemCall.cpp SystemCall.S
+    SystemCall.cpp
     SystemCallDefines.h
+    TaskStructs.h
     Timer.h Timer.cpp
     TypeInfo.cpp
     UnitTests.h UnitTests.cpp
+    user_Program.h user_Program.cpp
+    user_SystemCall.h user_SystemCall.cpp user_SystemCall.S
     Utils.h Utils.cpp
 )
 set_target_properties(kernel8.elf PROPERTIES LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${LINKER_SCRIPT}")

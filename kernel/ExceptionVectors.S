@@ -208,8 +208,8 @@ fiq_invalid_el0_32:
 error_invalid_el0_32:
     handle_invalid_entry    0, ERROR_INVALID_EL0_32
 
-.globl ret_from_create
-ret_from_create:
+.globl ret_from_fork
+ret_from_fork:
     bl      schedule_tail
     cbz     x19, ret_to_user    // if x19 is 0, then we're returning to a user process
     mov     x0, x20             // set up the parameter we're sending to the process function

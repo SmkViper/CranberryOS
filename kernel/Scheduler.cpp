@@ -5,6 +5,7 @@
 #include "ARM/SchedulerDefines.h"
 #include "IRQ.h"
 #include "MemoryManager.h"
+#include "TaskStructs.h"
 #include "Timer.h"
 
 // How the scheduler currently works:
@@ -185,44 +186,6 @@ namespace
     // SPSR_EL1 bits - See section C5.2.18 in the ARMv8 manual
     constexpr uint64_t PSRModeEL0tC = 0x00000000;
 
-    struct CPUContext
-    {
-        // ARM calling conventions allow registers x0-x18 to be overwritten by a called function,
-        // so we don't need to save those off
-        //
-        // #TODO: May need to save off additional registers (i.e. SIMD/FP registers?)
-        uint64_t x19 = 0;
-        uint64_t x20 = 0;
-        uint64_t x21 = 0;
-        uint64_t x22 = 0;
-        uint64_t x23 = 0;
-        uint64_t x24 = 0;
-        uint64_t x25 = 0;
-        uint64_t x26 = 0;
-        uint64_t x27 = 0;
-        uint64_t x28 = 0;
-        uint64_t fp = 0; // x29
-        uint64_t sp = 0;
-        uint64_t pc = 0; // x30
-    };
-
-    enum class TaskState : int64_t
-    {
-        Running,
-        Zombie
-    };
-
-    struct TaskStruct
-    {
-        CPUContext Context;
-        TaskState State = TaskState::Running;
-        int64_t Counter = 0; // decrements each timer tick. When reaches 0, another task will be scheduled
-        int64_t Priority = 1; // copied to Counter when a task is scheduled, so higher priority will run for longer
-        int64_t PreemptCount = 0; // If non-zero, task will not be preempted
-        void* pStack = nullptr; // pointer to the stack root so it can be cleaned up if necessary
-        uint64_t Flags = 0;
-    };
-
     // Expected to match what is put on the stack via the kernel_entry macro in the exception handler so it can
     // "restore" the processor state we want
     struct ProcessState
@@ -233,15 +196,15 @@ namespace
         uint64_t ProcessorState = 0u;
     };
 
-    static_assert(offsetof(TaskStruct, Context) == TASK_STRUCT_CONTEXT_OFFSET, "Unexpected offset of context in task struct");
+    static_assert(offsetof(Scheduler::TaskStruct, Context) == TASK_STRUCT_CONTEXT_OFFSET, "Unexpected offset of context in task struct");
 }
 
 extern "C"
 {
     /**
-     * Return to the newly created task (Defined in ExceptionVectors.S)
+     * Return to the newly forked task (Defined in ExceptionVectors.S)
      */
-    extern void ret_from_create();
+    extern void ret_from_fork();
 
     /**
      * Switch the CPU from running the previous task to the next task
@@ -249,7 +212,7 @@ extern "C"
      * @param apPrev The previously running task
      * @param apNext The new task to resume
      */
-    extern void cpu_switch_to(TaskStruct* apPrev, TaskStruct* apNext);
+    extern void cpu_switch_to(Scheduler::TaskStruct* apPrev, Scheduler::TaskStruct* apNext);
 }
 
 namespace
@@ -258,10 +221,10 @@ namespace
 
     constexpr auto ThreadSizeC = 4096; // 4k stack size (#TODO: Pull from page size?)
     constexpr auto NumberOfTasksC = 64u;
-    TaskStruct InitTask; // task running kernel init
+    Scheduler::TaskStruct InitTask; // task running kernel init
 
-    TaskStruct* pCurrentTask = &InitTask;
-    TaskStruct* Tasks[NumberOfTasksC] = {&InitTask, nullptr};
+    Scheduler::TaskStruct* pCurrentTask = &InitTask;
+    Scheduler::TaskStruct* Tasks[NumberOfTasksC] = {&InitTask, nullptr};
     auto NumberOfTasks = 1;
 
     /**
@@ -312,7 +275,7 @@ namespace
      * 
      * @param apNextTask The next task to run
      */
-    void SwitchTo(TaskStruct* const apNextTask)
+    void SwitchTo(Scheduler::TaskStruct* const apNextTask)
     {
         if (pCurrentTask == apNextTask)
         {
@@ -342,7 +305,7 @@ namespace
             for (auto curTask = 0u; curTask < NumberOfTasksC; ++curTask)
             {
                 const auto ptask = Tasks[curTask];
-                if (ptask && (ptask->State == TaskState::Running) && (ptask->Counter > largestCounter))
+                if (ptask && (ptask->State == Scheduler::TaskState::Running) && (ptask->Counter > largestCounter))
                 {
                     largestCounter = ptask->Counter;
                     taskToResume = curTask;
@@ -402,7 +365,7 @@ namespace
      * @param apTask Task to get the state for
      * @return The process state for the task
      */
-    void* GetTargetStateMemoryForTask(TaskStruct* apTask)
+    void* GetTargetStateMemoryForTask(Scheduler::TaskStruct* apTask)
     {
         const auto state = reinterpret_cast<uintptr_t>(apTask) + ThreadSizeC - sizeof(ProcessState);
         return reinterpret_cast<void*>(state);
@@ -437,12 +400,12 @@ namespace Scheduler
         ScheduleImpl();
     }
 
-    int CreateProcess(const uint32_t aCreateFlags, ProcessFunctionPtr apProcessFn, const void* apParam, void* apStack)
+    int CopyProcess(const uint32_t aCloneFlags, ProcessFunctionPtr apProcessFn, const void* apParam)
     {
         // Make sure we don't get preempted in the middle of making a new task
         DisablePreemptingInScope disablePreempt;
 
-        auto pmemory = reinterpret_cast<uint8_t*>(MemoryManager::GetFreePage());
+        auto pmemory = reinterpret_cast<uint8_t*>(MemoryManager::AllocateKernelPage());
         if (pmemory == nullptr)
         {
             return -1;
@@ -453,7 +416,7 @@ namespace Scheduler
         const auto puninitializedState = reinterpret_cast<uint8_t*>(GetTargetStateMemoryForTask(pnewTask));
         const auto pnewState = new (puninitializedState) ProcessState{};
 
-        if ((aCreateFlags & CreationFlags::KernelThreadC) == CreationFlags::KernelThreadC)
+        if ((aCloneFlags & CreationFlags::KernelThreadC) == CreationFlags::KernelThreadC)
         {
             pnewTask->Context.x19 = reinterpret_cast<uint64_t>(apProcessFn);
             pnewTask->Context.x20 = reinterpret_cast<uint64_t>(apParam);
@@ -463,41 +426,42 @@ namespace Scheduler
             // extract and clone the current processor state
             const auto psourceState = reinterpret_cast<ProcessState*>(GetTargetStateMemoryForTask(pCurrentTask));
             *pnewState = *psourceState;
-            pnewState->Registers[0] = 0; // make sure ret_from_create knows this is the new user process
-            pnewState->StackPointer = reinterpret_cast<uint64_t>(apStack) + ThreadSizeC;
-            pnewTask->pStack = apStack;
+            pnewState->Registers[0] = 0; // make sure ret_from_fork knows this is the new user process
+            MemoryManager::CopyVirtualMemory(*pnewTask, *pCurrentTask);
         }
 
-        pnewTask->Flags = aCreateFlags;
+        pnewTask->Flags = aCloneFlags;
         pnewTask->Priority = pCurrentTask->Priority;
         pnewTask->Counter = pnewTask->Priority;
         pnewTask->PreemptCount = 1; // disable preemption until schedule_tail
 
-        
-        pnewTask->Context.pc = reinterpret_cast<uint64_t>(ret_from_create);
+        pnewTask->Context.pc = reinterpret_cast<uint64_t>(ret_from_fork);
         pnewTask->Context.sp = reinterpret_cast<uint64_t>(pnewState);
         const auto processID = NumberOfTasks++;
         Tasks[processID] = pnewTask;
         return processID;
     }
 
-    bool MoveToUserMode(UserModeFunctionPtr apUserModeFn)
+    bool MoveToUserMode(const void* const apStart, const std::size_t aSize, uintptr_t aPC)
     {
         const auto puninitializedState = reinterpret_cast<uint8_t*>(GetTargetStateMemoryForTask(pCurrentTask));
         auto pstate = new (puninitializedState) ProcessState{};
 
-        static_assert(sizeof(UserModeFunctionPtr) == sizeof(uint64_t), "Unexpected pointer size");
-        pstate->ProgramCounter = reinterpret_cast<uint64_t>(apUserModeFn);
+        pstate->ProgramCounter = aPC;
         pstate->ProcessorState = PSRModeEL0tC;
+        // We'll be basically reserving two pages of memory for the process for now. One for the code, and one for the
+        // stack. The stack pointer won't be pre-allocated, as we'll allow the interrupt to trap access and map the
+        // page for us, hence why we can just blindly set StackPointer here.
+        pstate->StackPointer = 2 * PAGE_SIZE;
 
-        const auto pstack = MemoryManager::GetFreePage();
-        if (pstack == nullptr)
+        const auto pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, 0);
+        if (pcodePage == nullptr)
         {
             pstate->~ProcessState();
             return false;
         }
-        pstate->StackPointer = reinterpret_cast<uint64_t>(pstack) + ThreadSizeC;
-        pCurrentTask->pStack = pstack;
+        memcpy(pcodePage, apStart, aSize);
+        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.pPageGlobalDirectory);
         return true;
     }
 
@@ -515,10 +479,6 @@ namespace Scheduler
                     pcurTask->State = TaskState::Zombie;
                     break;
                 }
-            }
-            if (pCurrentTask->pStack)
-            {
-                MemoryManager::FreePage(pCurrentTask->pStack);
             }
         }
         // Won't ever return because a new task will be scheduled and this one is now flagged as a zombie
