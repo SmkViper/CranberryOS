@@ -1,6 +1,7 @@
 #ifndef KERNEL_TASK_STRUCTS_H
 #define KERNEL_TASK_STRUCTS_H
 
+#include <cstddef>
 #include <cstdint>
 
 namespace Scheduler
@@ -32,7 +33,7 @@ namespace Scheduler
         Zombie
     };
 
-    constexpr std::size_t MaxProcessPagesCS = 16;
+    constexpr std::size_t MaxProcessPagesCS = 16u;
 
     // #TODO: We really should have the idea of "physical address" vs "kernel virtual address" vs "user virtual
     // address" as types to avoid mixing them up on accident

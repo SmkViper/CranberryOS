@@ -14,12 +14,9 @@ namespace
         "ERROR_INVALID_EL1t",
 
         "SYNC_INVALID_EL1h",
-        "IRQ_INVALID_EL1h",
         "FIQ_INVALID_EL1h",
         "ERROR_INVALID_EL1h",
 
-        "SYNC_INVALID_EL0_64",
-        "IRQ_INVALID_EL0_64",
         "FIQ_INVALID_EL0_64",
         "ERROR_INVALID_EL0_64",
 
@@ -30,6 +27,7 @@ namespace
 
         "SYNC_ERROR",
         "SYSCALL_ERROR",
+        "DATA_ABORT_ERROR"
     };
 
     // Timer IRQ0 is reserved by GPU

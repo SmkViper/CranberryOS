@@ -1,10 +1,13 @@
 #ifndef KERNEL_SCHEDULER_H
 #define KERNEL_SCHEDULER_H
 
+#include <cstddef>
 #include <cstdint>
 
 namespace Scheduler
 {
+    struct TaskStruct;
+
     /**
      * Initializes the scheduler on the CPU timer
      */
@@ -46,6 +49,13 @@ namespace Scheduler
      * Exit the current process, cleaning up anything that needs to be (does not return)
      */
     void ExitProcess();
+
+    /**
+     * Obtains the currently running task
+     * 
+     * @return The currently running task
+     */
+    TaskStruct& GetCurrentTask();
 }
 
 #endif // KERNEL_SCHEDULER_H

@@ -105,5 +105,6 @@
 
 //Exception classes:
 #define ESR_ELx_EC_SVC64    0x15    // 0b010101 - exception caused by SVC instruction in AArch64 state
+#define ESR_ELx_EC_DABT_LOW 0x24    // 0b100100 - data abort from a lower exception level
 
 #endif // KERNEL_ARM_SYSTEM_REGISTERS_H

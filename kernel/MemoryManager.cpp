@@ -4,6 +4,7 @@
 #include <cstring>
 #include "ARM/MMUDefines.h"
 #include "Peripherals/Base.h"
+#include "Scheduler.h"
 #include "TaskStructs.h"
 
 // Functions defined in MemoryManager.S
@@ -209,8 +210,18 @@ extern "C"
 {
     int do_mem_abort(uintptr_t aAddress, uintptr_t aESR)
     {
-        // #TODO_IMPLEMENT: Break compliation here since going to check in temporarily. Also need to do the calling of
-        // this function in the synchronous exception handler
-        TODO;
+        const auto dataFaultStatusCode = aESR & 0b11'1111;
+        // Translation faults are: 100, 101, 110, and 111 depending on the level
+        if ((dataFaultStatusCode & 0b11'1100) == 0b100)
+        {
+            const auto pnewPage = MemoryManager::GetFreePage();
+            if (pnewPage == nullptr)
+            {
+                return -1;
+            }
+            MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMaskC, pnewPage);
+            return 0;
+        }
+        return -1;
     }
 }

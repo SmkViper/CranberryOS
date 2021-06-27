@@ -484,4 +484,9 @@ namespace Scheduler
         // Won't ever return because a new task will be scheduled and this one is now flagged as a zombie
         Schedule();
     }
+
+    TaskStruct& GetCurrentTask()
+    {
+        return *pCurrentTask;
+    }
 }
