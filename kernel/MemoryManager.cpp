@@ -7,6 +7,9 @@
 #include "Scheduler.h"
 #include "TaskStructs.h"
 
+// #TODO_TEMP_DEBUG: Remove
+#include "Print.h"
+
 // Functions defined in MemoryManager.S
 extern "C"
 {
@@ -95,6 +98,11 @@ namespace MemoryManager
                 const auto pnextLevelTable = GetFreePage();
                 const auto newEntry = reinterpret_cast<uintptr_t>(pnextLevelTable) | MM_TYPE_PAGE_TABLE;
                 ptable[index] = newEntry;
+
+                // #TODO_TEMP_DEBUG: Output some information for debugging
+                Print::FormatToMiniUART("Added page at {:x} to table {:x} at index {}\r\n",
+                    reinterpret_cast<uintptr_t>(pnextLevelTable), aTableVirtualAddress, index);
+
                 return pnextLevelTable;
             }
             return reinterpret_cast<void*>(ptable[index] & PageMaskC);
@@ -115,6 +123,10 @@ namespace MemoryManager
             const auto index = (aUserVirtualAddress >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
             const auto entry = reinterpret_cast<uintptr_t>(apPhysicalPage) | MMU_PTE_FLAGS;
             ptable[index] = entry;
+
+            // #TODO_TEMP_DEBUG: Output some information for debugging
+            Print::FormatToMiniUART("Mapped user address {:x} at physical address {:x} to\r\n\ttable {:x} at index {}\r\n",
+                aUserVirtualAddress, reinterpret_cast<uintptr_t>(apPhysicalPage), aTableVirtualAddress, index);
         }
 
         /**
@@ -129,8 +141,12 @@ namespace MemoryManager
             if (arTask.MemoryState.pPageGlobalDirectory == nullptr)
             {
                 arTask.MemoryState.pPageGlobalDirectory = GetFreePage();
-                ++arTask.MemoryState.KernelPagesCount;
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = arTask.MemoryState.pPageGlobalDirectory;
+                ++arTask.MemoryState.KernelPagesCount;
+
+                // #TODO_TEMP_DEBUG: Output some information for debugging
+                Print::FormatToMiniUART("Allocated page global directory at {:x}\r\n",
+                    reinterpret_cast<uintptr_t>(arTask.MemoryState.pPageGlobalDirectory));
             }
 
             const auto ppageGlobalDirectory = arTask.MemoryState.pPageGlobalDirectory;
@@ -138,27 +154,27 @@ namespace MemoryManager
             const auto ppageUpperDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageGlobalDirectory) + VA_START, PGD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
-                ++arTask.MemoryState.KernelPagesCount;
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageUpperDirectory;
+                ++arTask.MemoryState.KernelPagesCount;
             }
 
             const auto ppageMiddleDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageUpperDirectory) + VA_START, PUD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
-                ++arTask.MemoryState.KernelPagesCount;
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageMiddleDirectory;
+                ++arTask.MemoryState.KernelPagesCount;
             }
 
             const auto ppageTableEntry = MapTable(reinterpret_cast<uintptr_t>(ppageMiddleDirectory) + VA_START, PMD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
-                ++arTask.MemoryState.KernelPagesCount;
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageTableEntry;
+                ++arTask.MemoryState.KernelPagesCount;
             }
 
             MapTableEntry(reinterpret_cast<uintptr_t>(ppageTableEntry) + VA_START, aVirtualAddress, apPhysicalPage);
-            ++arTask.MemoryState.UserPagesCount;
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{apPhysicalPage, aVirtualAddress};
+            ++arTask.MemoryState.UserPagesCount;
         }
     }
 
@@ -180,6 +196,11 @@ namespace MemoryManager
         {
             return nullptr;
         }
+
+        // #TODO_TEMP_DEBUG: Output some information for debugging
+        Print::FormatToMiniUART("Mapping user {:x} virtual address to {:x} physical address\r\n\t(via AllocateUserPage())\r\n",
+            aVirtualAddress, reinterpret_cast<uintptr_t>(pphysicalPage));
+
         MapPage(arTask, aVirtualAddress, pphysicalPage);
         // map the physical page to the kernel address space
         return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + VA_START);
@@ -201,6 +222,8 @@ namespace MemoryManager
 
     void SetPageGlobalDirectory(const void* const apNewPGD)
     {
+        // #TODO_TEMP_DEBUG: Output some information for debugging
+        Print::FormatToMiniUART("Setting PGD to {:x}\r\n", reinterpret_cast<uintptr_t>(apNewPGD));
         set_pgd(apNewPGD);
     }
 }
@@ -219,6 +242,11 @@ extern "C"
             {
                 return -1;
             }
+
+            // #TODO_TEMP_DEBUG: Output some information for debugging
+            Print::FormatToMiniUART("Mapping user {:x} virtual address to {:x} physical address\r\n\t(via do_mem_abort())\r\n",
+                aAddress & MemoryManager::PageMaskC, reinterpret_cast<uintptr_t>(pnewPage));
+
             MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMaskC, pnewPage);
             return 0;
         }

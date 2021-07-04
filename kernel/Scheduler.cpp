@@ -283,6 +283,7 @@ namespace
         }
         const auto pprevTask = pCurrentTask;
         pCurrentTask = apNextTask;
+        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.pPageGlobalDirectory);
         cpu_switch_to(pprevTask, apNextTask);
     }
 
@@ -444,8 +445,8 @@ namespace Scheduler
 
     bool MoveToUserMode(const void* const apStart, const std::size_t aSize, uintptr_t aPC)
     {
-        const auto puninitializedState = reinterpret_cast<uint8_t*>(GetTargetStateMemoryForTask(pCurrentTask));
-        auto pstate = new (puninitializedState) ProcessState{};
+        // We expect the state to have been constructed by CopyProcess before getting here
+        const auto pstate = reinterpret_cast<ProcessState*>(GetTargetStateMemoryForTask(pCurrentTask));
 
         pstate->ProgramCounter = aPC;
         pstate->ProcessorState = PSRModeEL0tC;

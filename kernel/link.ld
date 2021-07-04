@@ -21,10 +21,13 @@ SECTIONS
     */
     . = ALIGN(0x00001000);
     __user_start = .;
-    .text.user : { build/user* (.text) }
-    .rodata.user : { build/user* (.rodata) }
-    .data.user : { build/user* (.data) }
-    .bss.user : { build/user* (.bss) }
+    .text.user : {
+        CMakeFiles/kernel8.elf.dir/user_* (.text)
+        *(.text.user)
+    }
+    .rodata.user : { CMakeFiles/kernel8.elf.dir/user_* (.rodata.*) }
+    .data.user : { CMakeFiles/kernel8.elf.dir/user_* (.data) }
+    .bss.user : { CMakeFiles/kernel8.elf.dir/user_* (.bss) }
     __user_end = .;
 
     .text : { *(.text .text.*) } /* remaining code sections */
