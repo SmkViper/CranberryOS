@@ -63,10 +63,6 @@ namespace
         const auto size = reinterpret_cast<uintptr_t>(&__user_end) - reinterpret_cast<uintptr_t>(pbegin);
         const auto processOffset = reinterpret_cast<uintptr_t>(&User::Process) - reinterpret_cast<uintptr_t>(pbegin);
 
-        // #TODO_TEMP_DEBUG: Output some information for debugging
-        Print::FormatToMiniUART("User segment start: {:x}\r\nUser segment size: {:x}\r\nUser::Process() offset: {:x}\r\n",
-            reinterpret_cast<uintptr_t>(pbegin), size, processOffset);
-
         const auto succeeded = Scheduler::MoveToUserMode(pbegin, size, processOffset);
         if (!succeeded)
         {

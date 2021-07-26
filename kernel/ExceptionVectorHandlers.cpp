@@ -59,8 +59,7 @@ extern "C"
      */
     void handle_irq()
     {
-        // TODO
-        // Multiple flags can be set at the same time, so we'll want to handle them all
+        // #TODO: Multiple flags can be set at the same time, so we'll want to handle them all
 
         const auto irqPending1 = MemoryMappedIO::Get32(MemoryMappedIO::IRQ::IRQPending1);
         if (irqPending1 != 0)
@@ -76,7 +75,7 @@ extern "C"
                 break;
             }
         }
-
+        /* #TODO: Local core IRQs cannot be used until we figure out how to map in the local peripheral addresses
         const auto core0IRQPending = MemoryMappedIO::Get32(MemoryMappedIO::IRQ::Core0IRQSource);
         if (core0IRQPending != 0)
         {
@@ -91,6 +90,7 @@ extern "C"
                 break;
             }
         }
+        */
     }
 }
 
