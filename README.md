@@ -17,7 +17,7 @@ The repository is set up for editing with VSCode and the CMake Tools extension f
 ### QEMU
 Run QEMU with the following command:
 
-`qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial null -serial stdio`
+`qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio`
 
 (Assuming this is run from the `build\kernel` folder which contains the kernel image file)
 
