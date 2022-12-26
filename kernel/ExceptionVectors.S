@@ -158,6 +158,8 @@ sync_el0_64:
     lsr     x24, x25, #ESR_ELx_EC_SHIFT     // shift the value to get the exception class
     cmp     x24, #ESR_ELx_EC_SVC64          // see if it is a SVC instruction from AArch64
     b.eq    el0_svc
+    cmp     x24, #ESR_ELx_EC_DABT_LOW       // see if it is a data abort in EL0
+    b.eq    el0_da
     handle_invalid_entry    0, SYNC_ERROR  // some unknown synchronous EL0 exception happened
 
 // Setting up some aliases for ease of reading
@@ -181,6 +183,18 @@ invalid_sys:
 ret_from_syscall:
     bl      disable_irq
     str     x0, [sp, #STACK_X0_OFFSET]          // store x0 onto the stack since it will be bashed by kernel_exit
+    kernel_exit 0
+
+el0_da:
+    bl      enable_irq
+    mrs     x0, far_el1     // load the faulting virtual address into argument 1
+    mrs     x1, esr_el1     // load the syndrome information for the fault into argument 2
+    bl      do_mem_abort
+    cmp     x0, 0           // did do_mem_abort succeed?
+    b.eq    1f
+    handle_invalid_entry 0, DATA_ABORT_ERROR
+1:
+    bl disable_irq
     kernel_exit 0
 
 irq_el0_64:
@@ -208,8 +222,8 @@ fiq_invalid_el0_32:
 error_invalid_el0_32:
     handle_invalid_entry    0, ERROR_INVALID_EL0_32
 
-.globl ret_from_create
-ret_from_create:
+.globl ret_from_fork
+ret_from_fork:
     bl      schedule_tail
     cbz     x19, ret_to_user    // if x19 is 0, then we're returning to a user process
     mov     x0, x20             // set up the parameter we're sending to the process function

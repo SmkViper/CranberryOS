@@ -1,10 +1,13 @@
 #ifndef KERNEL_SCHEDULER_H
 #define KERNEL_SCHEDULER_H
 
+#include <cstddef>
 #include <cstdint>
 
 namespace Scheduler
 {
+    struct TaskStruct;
+
     /**
      * Initializes the scheduler on the CPU timer
      */
@@ -25,29 +28,34 @@ namespace Scheduler
     /**
      * Create a new process with the specified function and parameter
      * 
-     * @param aCreateFlags Process creation flags
+     * @param aCloneFlags Process clone flags
      * @param apProcessFn The process function to schedule (unused for user processes)
      * @param apParam The parameter to pass to the function (unused for user processes)
-     * @param apStack The stack pointer for the new process (unused for kernel processes)
      * @return The created process ID, or a negative value on failure
      */
-    int32_t CreateProcess(uint32_t aCreateFlags, ProcessFunctionPtr apProcessFn, const void* apParam, void* apStack);
-
-    using UserModeFunctionPtr = void(*)();
+    int32_t CopyProcess(uint32_t aCloneFlags, ProcessFunctionPtr apProcessFn, const void* apParam);
 
     /**
-     * Sets this task up as a user process starting at the specified function. Function will be called when calling
-     * kernel process function returns (thereby handing control back to ret_from_create)
+     * Sets this task up as a user process with the specified memory block and starting point
      * 
-     * @param apUserModeFn The function to start executing in user mode
+     * @param apStart Start of the memory block to copy
+     * @param aSize Size of the memory block to copy
+     * @param aPC Where to start executing (offset from aStart)
      * @return True on success
      */
-    bool MoveToUserMode(UserModeFunctionPtr apUserModeFn);
+    bool MoveToUserMode(const void* apStart, std::size_t aSize, uintptr_t aPC);
 
     /**
      * Exit the current process, cleaning up anything that needs to be (does not return)
      */
     void ExitProcess();
+
+    /**
+     * Obtains the currently running task
+     * 
+     * @return The currently running task
+     */
+    TaskStruct& GetCurrentTask();
 }
 
 #endif // KERNEL_SCHEDULER_H
