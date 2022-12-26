@@ -85,6 +85,11 @@ start_kmain:
     // Update the table translation register to point at our page directory
     adrp    x0, pg_dir
     msr     ttbr1_el1, x0
+    // Set ttbr0 to the same page table. At the moment it's an identity table, so we should be ok to reuse it. It's
+    // needed, however, because otherwise the PC pointing at the "br x2" instruction after we turn on the MMU will
+    // fault because the PC register is still pointing in the lower half. (For some reason, real hardware does not seem
+    // to need this - perhaps due to instruction caches that QEMU isn't emulating?)
+    msr     ttbr0_el1, x0
 
     // Set up the translation control register for stage 1 of the EL1/0 translation regime
     ldr     x0, =(TCR_VALUE)
