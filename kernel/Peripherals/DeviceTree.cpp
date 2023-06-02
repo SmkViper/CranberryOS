@@ -243,6 +243,176 @@ namespace DeviceTree
         }
 
         /**
+         * Pretty-prints an unknown value type
+         * 
+         * @param apValue Property value data
+         * @param aLen Length of the value data
+         */
+        void PrettyPrintUnknownValue(uint8_t const* const apValue, size_t aLen)
+        {
+            // Make it pretty clear we don't know what format this is in with <? ?> so it isn't confused with data that
+            // might normally be presented as bytes
+            MiniUART::SendString("<?");
+            auto pcurValueByte = apValue;
+            for (auto curByte = 0; curByte != aLen; ++curByte, ++pcurValueByte)
+            {
+                Print::FormatToMiniUART(" {:x}", *pcurValueByte);
+            }
+            MiniUART::SendString(" ?>");
+        }
+
+        /**
+         * Pretty-prints an unsigned 32-bit integer type
+         * 
+         * @param apValue Property value data
+         * @param aLen Length of the value data
+         */
+        void PrettyPrintUInt32(uint8_t const* const apValue, size_t aLen)
+        {
+            if (aLen != sizeof(uint32_t))
+            {
+                PrettyPrintUnknownValue(apValue, aLen);
+            }
+            else
+            {
+                uint32_t value = 0;
+                std::memcpy(&value, apValue, sizeof(value));
+                value = BEToNative(value);
+                Print::FormatToMiniUART("<{}>", value);
+            }
+        }
+
+        /**
+         * Pretty-prints an unsigned 32-bit integer type
+         * 
+         * @param apValue Property value data
+         * @param aLen Length of the value data
+         */
+        void PrettyPrintUInt64(uint8_t const* const apValue, size_t aLen)
+        {
+            if (aLen != sizeof(uint64_t))
+            {
+                PrettyPrintUnknownValue(apValue, aLen);
+            }
+            else
+            {
+                uint64_t value = 0;
+                std::memcpy(&value, apValue, sizeof(value));
+                value = BEToNative(value);
+                Print::FormatToMiniUART("<{}>", value);
+            }
+        }
+
+        /**
+         * Pretty-prints a string type
+         * 
+         * @param apValue Property value data
+         * @param aLen Length of the value data
+         */
+        void PrettyPrintString(uint8_t const* const apValue, size_t aLen)
+        {
+            if (aLen != (std::strlen(reinterpret_cast<char const*>(apValue)) + 1))
+            {
+                PrettyPrintUnknownValue(apValue, aLen);
+            }
+            else
+            {
+                Print::FormatToMiniUART("\"{}\"", reinterpret_cast<char const*>(apValue));
+            }
+        }
+
+        /**
+         * Pretty-prints a phandle type
+         * 
+         * @param apValue Property value data
+         * @param aLen Length of the value data
+         */
+        void PrettyPrintPHandle(uint8_t const* const apValue, size_t aLen)
+        {
+            // These are just visually 32-bit unsigned integers
+            PrettyPrintUInt32(apValue, aLen);
+        }
+
+        /**
+         * Pretty-prints a string list type
+         * 
+         * @param apValue Property value data
+         * @param aLen Length of the value data
+         */
+        void PrettyPrintStringList(uint8_t const* const apValue, size_t aLen)
+        {
+            char const* pcurString = reinterpret_cast<char const*>(apValue);
+            size_t curOffset = 0;
+            while (curOffset < aLen)
+            {
+                Print::FormatToMiniUART("{}\"{}\"", (curOffset == 0) ? "" : ", ", pcurString);
+                auto const lengthPlusTerminator = std::strlen(pcurString) + 1;
+                curOffset += lengthPlusTerminator;
+                pcurString += lengthPlusTerminator;
+            }
+            if (curOffset != aLen)
+            {
+                MiniUART::SendString(", <BAD STRING LIST>");
+            }
+        }
+
+        /**
+         * Tries to pretty-print known property values
+         * 
+         * @param apName Name of the property
+         * @param apValue Property data
+         * @param aLen Length of the property data
+         */
+        void PrettyPrintValue(char const* const apName, uint8_t const* const apValue, size_t aLen)
+        {
+            // #TODO: For now we're just handling the common stuff (there's like a better way to do this too)
+            if (strcmp(apName, "compatible") == 0)
+            {
+                PrettyPrintStringList(apValue, aLen);
+            }
+            else if (strcmp(apName, "model") == 0)
+            {
+                PrettyPrintString(apValue, aLen);
+            }
+            else if (strcmp(apName, "phandle") == 0)
+            {
+                PrettyPrintPHandle(apValue, aLen);
+            }
+            else if (strcmp(apName, "status") == 0)
+            {
+                PrettyPrintString(apValue, aLen);
+            }
+            else if (strcmp(apName, "#address-cells") == 0)
+            {
+                PrettyPrintUInt32(apValue, aLen);
+            }
+            else if (strcmp(apName, "#size-cells") == 0)
+            {
+                PrettyPrintUInt32(apValue, aLen);
+            }
+            // #TODO: reg - see section 2.3.6
+            else if (strcmp(apName, "virtual-reg") == 0)
+            {
+                PrettyPrintUInt32(apValue, aLen);
+            }
+            // #TODO: ranges - see section 2.3.8
+            // #TODO: dma-ranges - see section 2.3.9
+            // dma-coherent is always empty, so we won't see it
+            else if (strcmp(apName, "name") == 0)
+            {
+                PrettyPrintString(apValue, aLen);
+            }
+            else if (strcmp(apName, "device-type") == 0)
+            {
+                PrettyPrintString(apValue, aLen);
+            }
+            else
+            {
+                PrettyPrintUnknownValue(apValue, aLen);
+            }
+        }
+
+        /**
          * Outputs a property with its extra data
          * 
          * @param aHeader Header containing offsets and other information
@@ -270,12 +440,10 @@ namespace DeviceTree
             }
             else
             {
-                MiniUART::SendString(" = <");
-                for (auto curByte = 0; curByte != dataHeader.len; ++curByte, ++pendPtr)
-                {
-                    Print::FormatToMiniUART(" {:x}", *pendPtr);
-                }
-                MiniUART::SendString(">;\r\n");
+                MiniUART::SendString(" = ");
+                PrettyPrintValue(pname, pendPtr, dataHeader.len);
+                pendPtr += dataHeader.len;
+                MiniUART::SendString(";\r\n");
             }
             return AlignPointer(pendPtr, 4);
         }
