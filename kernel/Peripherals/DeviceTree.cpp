@@ -29,6 +29,13 @@ namespace DeviceTree
             uint32_t size_dt_struct = 0; // Length in bytes of the structs block
         };
 
+        // From DeviceTree specification, section 5.3.2
+        struct fdt_reserve_entry
+        {
+            uint64_t address = 0; // start of the reserved block
+            uint64_t size = 0; // size of the reserved block
+        };
+
         /**
          * Converts a big-endian number to native endian (for our kernel)
          * 
@@ -50,6 +57,18 @@ namespace DeviceTree
         {
             return BEToNative(static_cast<uint16_t>((aBigEndianNumber & 0xFFFF0000) >> 16)) |
                 (BEToNative(static_cast<uint16_t>(aBigEndianNumber & 0x0000FFFF)) << 16);
+        }
+
+        /**
+         * Converts a big-endian number to native endian (for our kernel)
+         * 
+         * @param aBigEndianNumber The number to convert
+         * @return The converted number
+         */
+        constexpr uint64_t BEToNative(uint64_t const aBigEndianNumber)
+        {
+            return BEToNative(static_cast<uint32_t>((aBigEndianNumber & 0xFFFF'FFFF'0000'0000) >> 32)) |
+                (BEToNative(static_cast<uint32_t>(aBigEndianNumber & 0x0000'0000'FFFF'FFFF)) << 32);
         }
 
         /**
@@ -75,6 +94,20 @@ namespace DeviceTree
         }
 
         /**
+         * Converts a big-endian entry to native endian (for our kernel)
+         * 
+         * @param aBigEndianStruct The entry to convert
+         * @return The converted header
+         */
+        constexpr fdt_reserve_entry BEToNative(fdt_reserve_entry const& aBigEndianStruct)
+        {
+            fdt_reserve_entry result;
+            result.address = BEToNative(aBigEndianStruct.address);
+            result.size = BEToNative(aBigEndianStruct.size);
+            return result;
+        }
+
+        /**
          * Outputs the header to UART
          * 
          * @param aHeader The header to output
@@ -89,6 +122,33 @@ namespace DeviceTree
             Print::FormatToMiniUART("\tMemory reservation map offset: {:x}\r\n", aHeader.off_mem_rsvmap);
             Print::FormatToMiniUART("\tVersion (comp version): {} ({})\r\n", aHeader.version, aHeader.last_comp_version);
             Print::FormatToMiniUART("\tBoot CPU ID: {:x}\r\n", aHeader.boot_cpuid_phys);
+        }
+
+        /**
+         * Output the memory reservation map to the UART
+         * 
+         * @param aHeader The header containing the map offset
+         * @param aBaseAddr The base address for the offset
+         */
+        void OutputMemoryReservationMap(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
+        {
+            MiniUART::SendString("Memory reservation map:\r\n");
+            uint8_t const* pcurEntry = aBaseAddr + aHeader.off_mem_rsvmap;
+            auto done = false;
+            while (!done)
+            {
+                fdt_reserve_entry entry;
+                std::memcpy(&entry, pcurEntry, sizeof(entry));
+                
+                entry = BEToNative(entry);
+
+                done = (entry.address == 0) && (entry.size == 0);
+                if (!done)
+                {
+                    Print::FormatToMiniUART("\tAddress (size): {:x} ({} bytes)\r\n", entry.address, entry.size);
+                    pcurEntry += sizeof(entry);
+                }
+            }
         }
     }
 
@@ -114,6 +174,7 @@ namespace DeviceTree
                 MiniUART::SendString("Version check passes!\r\n");
 
                 OutputHeader(header);
+                OutputMemoryReservationMap(header, apDTB);
                 // #TODO: Handle more of the device tree
             }
             else
