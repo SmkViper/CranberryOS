@@ -44,8 +44,7 @@ namespace
             break;
 
         default:
-            // TODO
-            // throw exception - invalid
+            // #TODO: throw exception - invalid
             break;
         }
         return retVal;
@@ -105,8 +104,7 @@ namespace
             break;
 
         default:
-            // TODO
-            // throw exception - invalid
+            // #TODO: throw exception - invalid
             break;
         }
 
@@ -124,8 +122,7 @@ namespace
      */
     bool OutputInteger(const uint64_t aValue, const char aFormat, Print::Detail::OutputFunctorBase& arOutput)
     {
-        // TODO
-        // Handle 'c' format
+        // #TODO: Handle 'c' format
 
         auto success = true;
         if (aValue == 0)
@@ -135,8 +132,7 @@ namespace
         }
         else
         {
-            // TODO
-            // We'll need to make this more generic with various integer sizes, signed/unsigned, bases, etc
+            // #TODO: We'll need to make this more generic with various integer sizes, signed/unsigned, bases, etc
 
             success = OutputIntegerPrefix(aFormat, false, arOutput);
             const auto outputFormat = ConvertOutputFormat(aFormat);
@@ -178,6 +174,19 @@ namespace Print
         {
             MiniUART::Send(aChar);
             return true;
+        }
+
+        /**
+         * Output the data this wrapper holds to the given functor - overriden by implementation
+         * 
+         * @param aFormat The format character to use for formatting
+         * @param aOutput The functor to use for outputting
+         * 
+         * @return True on success
+         */
+        bool DataWrapper<uint16_t>::OutputDataImpl(const char aFormat, OutputFunctorBase& arOutput) const
+        {
+            return OutputInteger(WrappedData, aFormat, arOutput);
         }
 
         /**
@@ -314,8 +323,7 @@ namespace Print
                         }
                         else
                         {
-                            // TODO
-                            // throw exception - invalid
+                            // #TODO: throw exception - invalid
                             writeChar = false;
                         }
                         break;
@@ -331,8 +339,7 @@ namespace Print
                         }
                         else
                         {
-                            // TODO
-                            // throw exception - invalid
+                            // #TODO: throw exception - invalid
                             writeChar = false;
                         }
                         break;
@@ -345,8 +352,7 @@ namespace Print
                         }
                         else
                         {
-                            // TODO
-                            // throw exception - invalid
+                            // #TODO: throw exception - invalid
                             writeChar = false;
                         }
                         break;
@@ -363,8 +369,7 @@ namespace Print
                         }
                         else
                         {
-                            // TODO
-                            // support full formatting options
+                            // #TODO: support full formatting options
                             curFormat = *pcurChar;
                             curState = ParseState::CloseBrace;
                             writeChar = false;
@@ -372,8 +377,7 @@ namespace Print
                         break;
 
                     default:
-                        // TODO
-                        // assert - unexpected state
+                        // #TODO: assert - unexpected state
                         break;
                     }
 

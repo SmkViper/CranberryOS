@@ -1,3 +1,5 @@
+#include "ARM/MMUDefines.h"
+#include "Peripherals/DeviceTree.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
 #include "MiniUart.h"
@@ -104,6 +106,8 @@ extern "C"
         Print::FormatToMiniUART("x2: {:x}\r\n", aX2Reserved);
         Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
         Print::FormatToMiniUART("_start: {:x}\r\n", aStartPointer);
+        // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
+        DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(static_cast<uintptr_t>(aDTBPointer) + VA_START));
 
         // #TODO: Fix crashing tests by implementing MMU support
         // Tests currently crash on real hardware due to unaligned access (pointers to strings being dereferenced into
@@ -127,7 +131,6 @@ extern "C"
         {
             MiniUART::SendString("Error while starting kernel process");
         }
-        
 
         MiniUART::SendString("\r\nExiting... (sending CPU into an infinite loop)\r\n");
 

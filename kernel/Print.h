@@ -187,6 +187,23 @@ namespace Print
         };
 
         template<>
+        class DataWrapper<uint16_t> final: public DataWrapperBase
+        {
+        public:
+            /**
+             * Wraps the specified data
+             * 
+             * @param aData Data to wrap
+             */
+            explicit DataWrapper(const uint16_t aData): WrappedData{aData} {}
+
+        private:
+            bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
+
+            uint16_t WrappedData = 0u;
+        };
+
+        template<>
         class DataWrapper<uint32_t> final: public DataWrapperBase
         {
         public:

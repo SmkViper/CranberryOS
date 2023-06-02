@@ -136,7 +136,7 @@ start_kmain:
     mov     x2, x22
     mov     x3, x23
     mov     x4, x24
-    br      x9
+    blr     x9
     b       proc_hang           // hang the processor if kmain ever exits
 
     /////////////////////////////////////////////
