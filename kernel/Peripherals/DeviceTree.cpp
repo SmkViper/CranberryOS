@@ -36,6 +36,26 @@ namespace DeviceTree
             uint64_t size = 0; // size of the reserved block
         };
 
+        // From DeviceTree specification, section 5.4.1
+        // Token followed by zero-terminated string containing the name and unit address. 0 padded to 4 bytes
+        constexpr uint32_t FDT_BEGIN_NODE = 0x01;
+        // Token has no extra data
+        constexpr uint32_t FDT_END_NODE = 0x02;
+        // Token followed by fdt_prop_extra_data, then zero-terminated value. 0 padded to 4 bytes
+        constexpr uint32_t FDT_PROP = 0x03;
+        // Token has no extra data
+        constexpr uint32_t FDT_NOP = 0x04;
+        // Token has no extra data. Byte address following should be off_det_struct + size_dt_struct
+        constexpr uint32_t FDT_END = 0x09;
+
+        struct fdt_prop_extra_data
+        {
+            uint32_t len = 0; // length of the property's value in bytes (may be 0)
+            uint32_t nameoff = 0; // offset into the strings block where the name is stored
+        };
+
+        // #TODO: A lot of these utilities should probably be moved somewhere for conveinience
+
         /**
          * Converts a big-endian number to native endian (for our kernel)
          * 
@@ -56,7 +76,7 @@ namespace DeviceTree
         constexpr uint32_t BEToNative(uint32_t const aBigEndianNumber)
         {
             return BEToNative(static_cast<uint16_t>((aBigEndianNumber & 0xFFFF0000) >> 16)) |
-                (BEToNative(static_cast<uint16_t>(aBigEndianNumber & 0x0000FFFF)) << 16);
+                (static_cast<uint32_t>(BEToNative(static_cast<uint16_t>(aBigEndianNumber & 0x0000FFFF))) << 16);
         }
 
         /**
@@ -68,7 +88,7 @@ namespace DeviceTree
         constexpr uint64_t BEToNative(uint64_t const aBigEndianNumber)
         {
             return BEToNative(static_cast<uint32_t>((aBigEndianNumber & 0xFFFF'FFFF'0000'0000) >> 32)) |
-                (BEToNative(static_cast<uint32_t>(aBigEndianNumber & 0x0000'0000'FFFF'FFFF)) << 32);
+                (static_cast<uint64_t>(BEToNative(static_cast<uint32_t>(aBigEndianNumber & 0x0000'0000'FFFF'FFFF))) << 32);
         }
 
         /**
@@ -108,6 +128,33 @@ namespace DeviceTree
         }
 
         /**
+         * Converts a big-endian extra data to native endian (for our kernel)
+         * 
+         * @param aBigEndianStruct The extra data to convert
+         * @return The converted header
+         */
+        constexpr fdt_prop_extra_data BEToNative(fdt_prop_extra_data const& aBigEndianStruct)
+        {
+            fdt_prop_extra_data result;
+            result.len = BEToNative(aBigEndianStruct.len);
+            result.nameoff = BEToNative(aBigEndianStruct.nameoff);
+            return result;
+        }
+
+        /**
+         * Aligns the given pointer
+         * 
+         * @param apPtr The pointer to alignt
+         * @param aAlignment The bytes to align it to (i.e. 4 for 32-bit integers)
+         * @return The aligned pointer
+         */
+        uint8_t const* AlignPointer(uint8_t const* apPtr, std::size_t aAlignment)
+        {
+            auto const padding = (aAlignment - (reinterpret_cast<uintptr_t>(apPtr) % aAlignment)) % aAlignment;
+            return apPtr + padding;
+        }
+
+        /**
          * Outputs the header to UART
          * 
          * @param aHeader The header to output
@@ -139,7 +186,7 @@ namespace DeviceTree
             {
                 fdt_reserve_entry entry;
                 std::memcpy(&entry, pcurEntry, sizeof(entry));
-                
+
                 entry = BEToNative(entry);
 
                 done = (entry.address == 0) && (entry.size == 0);
@@ -147,6 +194,149 @@ namespace DeviceTree
                 {
                     Print::FormatToMiniUART("\tAddress (size): {:x} ({} bytes)\r\n", entry.address, entry.size);
                     pcurEntry += sizeof(entry);
+                }
+            }
+        }
+
+        /**
+         * Outputs a begin node with its extra data
+         * 
+         * @param apExtraData The location of the extra data in the table
+         * @return The new position of the pointer after the extra data and alignment
+         */
+        uint8_t const* OutputBeginNode(uint8_t const* const apExtraData)
+        {
+            char const* pnodeName = reinterpret_cast<char const*>(apExtraData);
+            Print::FormatToMiniUART("\tFDT_BEGIN_NODE: \"{}\"\r\n", pnodeName);
+            auto const nameByteLen = std::strlen(pnodeName) + 1; // including terminator
+            return AlignPointer(apExtraData + nameByteLen, alignof(uint32_t));
+        }
+
+        /**
+         * Outputs an end node with its extra data
+         * 
+         * @param apExtraData The location of the extra data in the table
+         * @return The new position of the pointer after the extra data and alignment
+         */
+        uint8_t const* OutputEndNode(uint8_t const* const apExtraData)
+        {
+            // No extra data
+            MiniUART::SendString("\tFDT_END_NODE\r\n");
+            return apExtraData;
+        }
+
+        /**
+         * Outputs a property with its extra data
+         * 
+         * @param aHeader Header containing offsets and other information
+         * @param aBaseAddr Base address for offsets in the header
+         * @param apExtraData The location of the extra data in the table
+         * @return The new position of the pointer after the extra data and alignment
+         */
+        uint8_t const* OutputProp(fdt_header const& aHeader, uint8_t const* const aBaseAddr, uint8_t const* const apExtraData)
+        {
+            fdt_prop_extra_data dataHeader;
+            std::memcpy(&dataHeader, apExtraData, sizeof(dataHeader));
+            uint8_t const* pendPtr = apExtraData + sizeof(dataHeader);
+
+            dataHeader = BEToNative(dataHeader);
+
+            char const* pname = reinterpret_cast<char const*>(aBaseAddr + aHeader.off_dt_strings + dataHeader.nameoff);
+            Print::FormatToMiniUART("\t\tFDT_PROP:\r\n\t\t\tName: {}\r\n\t\t\tValue:", pname);
+            
+            if (dataHeader.len == 0)
+            {
+                MiniUART::SendString(" <empty>\r\n");
+            }
+            else
+            {
+                for (auto curByte = 0; curByte != dataHeader.len; ++curByte, ++pendPtr)
+                {
+                    Print::FormatToMiniUART(" {:x}", *pendPtr);
+                }
+                MiniUART::SendString("\r\n");
+            }
+            return AlignPointer(pendPtr, 4);
+        }
+
+        /**
+         * Outputs a nop with its extra data
+         * 
+         * @param apExtraData The location of the extra data in the table
+         * @return The new position of the pointer after the extra data and alignment
+         */
+        uint8_t const* OutputNop(uint8_t const* const apExtraData)
+        {
+            // No extra data
+            MiniUART::SendString("\tFDT_NOP\r\n");
+            return apExtraData;
+        }
+
+        /**
+         * Outputs an end with its extra data
+         * 
+         * @param apExtraData The location of the extra data in the table
+         * @return The new position of the pointer after the extra data and alignment
+         */
+        uint8_t const* OutputEnd(uint8_t const* const apExtraData)
+        {
+            // No extra data
+            MiniUART::SendString("\tFDT_END\r\n");
+            return apExtraData;
+        }
+
+        /**
+         * Outputs the list of tokens to the UART
+         * 
+         * @param aHeader The header containing the block offset and other data needed
+         * @param aBaseAddr The base address for the offsets
+         */
+        void OutputTokenList(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
+        {
+            MiniUART::SendString("Structure block:\r\n");
+            uint8_t const* pcurToken = aBaseAddr + aHeader.off_dt_struct;
+            auto done = false;
+            while (!done)
+            {
+                uint32_t token = 0;
+                std::memcpy(&token, pcurToken, sizeof(token));
+                pcurToken += sizeof(token);
+
+                token = BEToNative(token);
+
+                switch (token)
+                {
+                case FDT_BEGIN_NODE:
+                    pcurToken = OutputBeginNode(pcurToken);
+                    break;
+
+                case FDT_END_NODE:
+                    pcurToken = OutputEndNode(pcurToken);
+                    break;
+
+                case FDT_PROP:
+                    pcurToken = OutputProp(aHeader, aBaseAddr, pcurToken);
+                    break;
+
+                case FDT_NOP:
+                    pcurToken = OutputNop(pcurToken);
+                    break;
+
+                case FDT_END:
+                    pcurToken = OutputEnd(pcurToken);
+                    done = true;
+                    break;
+
+                default:
+                    Print::FormatToMiniUART("Unknown token {}, aborting\r\n", token);
+                    done = true;
+                    break;
+                }
+
+                if ((pcurToken >= (aBaseAddr + aHeader.off_dt_struct + aHeader.size_dt_struct)) && !done)
+                {
+                    MiniUART::SendString("Ran off the end of the table, aborting\r\n");
+                    done = true;
                 }
             }
         }
@@ -175,6 +365,7 @@ namespace DeviceTree
 
                 OutputHeader(header);
                 OutputMemoryReservationMap(header, apDTB);
+                OutputTokenList(header, apDTB);
                 // #TODO: Handle more of the device tree
             }
             else

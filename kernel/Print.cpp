@@ -184,6 +184,19 @@ namespace Print
          * 
          * @return True on success
          */
+        bool DataWrapper<uint8_t>::OutputDataImpl(const char aFormat, OutputFunctorBase& arOutput) const
+        {
+            return OutputInteger(WrappedData, aFormat, arOutput);
+        }
+
+        /**
+         * Output the data this wrapper holds to the given functor - overriden by implementation
+         * 
+         * @param aFormat The format character to use for formatting
+         * @param aOutput The functor to use for outputting
+         * 
+         * @return True on success
+         */
         bool DataWrapper<uint16_t>::OutputDataImpl(const char aFormat, OutputFunctorBase& arOutput) const
         {
             return OutputInteger(WrappedData, aFormat, arOutput);
@@ -211,6 +224,19 @@ namespace Print
          * @return True on success
          */
         bool DataWrapper<uint64_t>::OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const
+        {
+            return OutputInteger(WrappedData, aFormat, arOutput);
+        }
+
+        /**
+         * Output the data this wrapper holds to the given functor - overriden by implementation
+         * 
+         * @param aFormat The format character to use for formatting
+         * @param aOutput The functor to use for outputting
+         * 
+         * @return True on success
+         */
+        bool DataWrapper<size_t>::OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const
         {
             return OutputInteger(WrappedData, aFormat, arOutput);
         }
