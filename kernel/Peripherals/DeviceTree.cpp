@@ -199,15 +199,30 @@ namespace DeviceTree
         }
 
         /**
+         * Helper to indent UART output by the specified number of levels
+         * 
+         * @param aIndentLevel Number of levels to indent
+         */
+        void IndentOutput(uint32_t const aIndentLevel)
+        {
+            for (auto curIndent = 0; curIndent < aIndentLevel; ++curIndent)
+            {
+                MiniUART::SendString("  ");
+            }
+        }
+
+        /**
          * Outputs a begin node with its extra data
          * 
          * @param apExtraData The location of the extra data in the table
+         * @param aIndentLevel Level of indentation to use
          * @return The new position of the pointer after the extra data and alignment
          */
-        uint8_t const* OutputBeginNode(uint8_t const* const apExtraData)
+        uint8_t const* OutputBeginNode(uint8_t const* const apExtraData, uint32_t const aIndentLevel)
         {
+            IndentOutput(aIndentLevel);
             char const* pnodeName = reinterpret_cast<char const*>(apExtraData);
-            Print::FormatToMiniUART("\tFDT_BEGIN_NODE: \"{}\"\r\n", pnodeName);
+            Print::FormatToMiniUART("{} {{\r\n", pnodeName);
             auto const nameByteLen = std::strlen(pnodeName) + 1; // including terminator
             return AlignPointer(apExtraData + nameByteLen, alignof(uint32_t));
         }
@@ -216,12 +231,14 @@ namespace DeviceTree
          * Outputs an end node with its extra data
          * 
          * @param apExtraData The location of the extra data in the table
+         * @param aIndentLevel Level of indentation to use
          * @return The new position of the pointer after the extra data and alignment
          */
-        uint8_t const* OutputEndNode(uint8_t const* const apExtraData)
+        uint8_t const* OutputEndNode(uint8_t const* const apExtraData, uint32_t const aIndentLevel)
         {
             // No extra data
-            MiniUART::SendString("\tFDT_END_NODE\r\n");
+            IndentOutput(aIndentLevel);
+            MiniUART::SendString("};\r\n");
             return apExtraData;
         }
 
@@ -231,9 +248,11 @@ namespace DeviceTree
          * @param aHeader Header containing offsets and other information
          * @param aBaseAddr Base address for offsets in the header
          * @param apExtraData The location of the extra data in the table
+         * @param aIndentLevel Level of indentation to use
          * @return The new position of the pointer after the extra data and alignment
          */
-        uint8_t const* OutputProp(fdt_header const& aHeader, uint8_t const* const aBaseAddr, uint8_t const* const apExtraData)
+        uint8_t const* OutputProp(fdt_header const& aHeader, uint8_t const* const aBaseAddr,
+            uint8_t const* const apExtraData, uint32_t const aIndentLevel)
         {
             fdt_prop_extra_data dataHeader;
             std::memcpy(&dataHeader, apExtraData, sizeof(dataHeader));
@@ -241,20 +260,22 @@ namespace DeviceTree
 
             dataHeader = BEToNative(dataHeader);
 
+            IndentOutput(aIndentLevel);
             char const* pname = reinterpret_cast<char const*>(aBaseAddr + aHeader.off_dt_strings + dataHeader.nameoff);
-            Print::FormatToMiniUART("\t\tFDT_PROP:\r\n\t\t\tName: {}\r\n\t\t\tValue:", pname);
+            MiniUART::SendString(pname);
             
             if (dataHeader.len == 0)
             {
-                MiniUART::SendString(" <empty>\r\n");
+                MiniUART::SendString(";\r\n");
             }
             else
             {
+                MiniUART::SendString(" = <");
                 for (auto curByte = 0; curByte != dataHeader.len; ++curByte, ++pendPtr)
                 {
                     Print::FormatToMiniUART(" {:x}", *pendPtr);
                 }
-                MiniUART::SendString("\r\n");
+                MiniUART::SendString(">;\r\n");
             }
             return AlignPointer(pendPtr, 4);
         }
@@ -268,7 +289,7 @@ namespace DeviceTree
         uint8_t const* OutputNop(uint8_t const* const apExtraData)
         {
             // No extra data
-            MiniUART::SendString("\tFDT_NOP\r\n");
+            // Nothing to output
             return apExtraData;
         }
 
@@ -281,20 +302,21 @@ namespace DeviceTree
         uint8_t const* OutputEnd(uint8_t const* const apExtraData)
         {
             // No extra data
-            MiniUART::SendString("\tFDT_END\r\n");
+            // Nothing to output
             return apExtraData;
         }
 
         /**
-         * Outputs the list of tokens to the UART
+         * Outputs the device tree to the UART
          * 
          * @param aHeader The header containing the block offset and other data needed
          * @param aBaseAddr The base address for the offsets
          */
-        void OutputTokenList(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
+        void OutputDeviceTree(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
         {
             MiniUART::SendString("Structure block:\r\n");
             uint8_t const* pcurToken = aBaseAddr + aHeader.off_dt_struct;
+            auto indentLevel = 0u;
             auto done = false;
             while (!done)
             {
@@ -307,15 +329,17 @@ namespace DeviceTree
                 switch (token)
                 {
                 case FDT_BEGIN_NODE:
-                    pcurToken = OutputBeginNode(pcurToken);
+                    pcurToken = OutputBeginNode(pcurToken, indentLevel);
+                    ++indentLevel;
                     break;
 
                 case FDT_END_NODE:
-                    pcurToken = OutputEndNode(pcurToken);
+                    --indentLevel;
+                    pcurToken = OutputEndNode(pcurToken, indentLevel);
                     break;
 
                 case FDT_PROP:
-                    pcurToken = OutputProp(aHeader, aBaseAddr, pcurToken);
+                    pcurToken = OutputProp(aHeader, aBaseAddr, pcurToken, indentLevel);
                     break;
 
                 case FDT_NOP:
@@ -365,8 +389,7 @@ namespace DeviceTree
 
                 OutputHeader(header);
                 OutputMemoryReservationMap(header, apDTB);
-                OutputTokenList(header, apDTB);
-                // #TODO: Handle more of the device tree
+                OutputDeviceTree(header, apDTB);
             }
             else
             {
