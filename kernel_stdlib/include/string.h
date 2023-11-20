@@ -14,7 +14,7 @@ extern "C"
      * 
      * @return The destination pointer
      */
-    void* memcpy(void* apDest, const void* apSource, size_t aCount);
+    void* memcpy(void* apDest, void const* apSource, size_t aCount);
 
     /**
      * Fills the specified memory with the given value
@@ -36,7 +36,15 @@ extern "C"
      * @return 0 if they are equal, negative if LHS appears before RHS in lexicographical order, positive if LHS appears
      *         after RHS in lexicographical order
      */
-    int strcmp(const char* apLHS, const char* apRHS);
+    int strcmp(char const* apLHS, char const* apRHS);
+
+    /**
+     * Obtain the length of a string, not including the null character
+     * 
+     * @param apStr String to get the length of. UB if apStr is null
+     * @return The length of the string, minus the terminator
+    */
+    size_t strlen(char const* apStr);
 }
 
 #endif // __KERNEL_STDLIB_STRING_H__

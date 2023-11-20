@@ -1,3 +1,5 @@
+#include "ARM/MMUDefines.h"
+#include "Peripherals/DeviceTree.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
 #include "MiniUart.h"
@@ -81,8 +83,15 @@ extern "C"
 
     /**
      * Kernel entry point
+     * 
+     * @param aDTBPointer 32-bit pointer to the Device Tree Binary blob in memory
+     * @param aX1Reserved Reserved for future use by the firmware
+     * @param aX2Reserved Reserved for future use by the firmware
+     * @param aX3Reserved Reserved for future use by the firmware
+     * @param aStartPointer 32-bit pointer to _start which the firmware launched
      */
-    void kmain()
+    void kmain(uint32_t const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
+        uint64_t const aX3Reserved, uint32_t const aStartPointer)
     {
         CallStaticConstructors();
 
@@ -91,6 +100,14 @@ extern "C"
         Scheduler::InitTimer();
         ExceptionVectors::EnableInterruptController();
         enable_irq();
+
+        Print::FormatToMiniUART("DTB Address: {:x}\r\n", aDTBPointer);
+        Print::FormatToMiniUART("x1: {:x}\r\n", aX1Reserved);
+        Print::FormatToMiniUART("x2: {:x}\r\n", aX2Reserved);
+        Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
+        Print::FormatToMiniUART("_start: {:x}\r\n", aStartPointer);
+        // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
+        DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(static_cast<uintptr_t>(aDTBPointer) + VA_START));
 
         // #TODO: Fix crashing tests by implementing MMU support
         // Tests currently crash on real hardware due to unaligned access (pointers to strings being dereferenced into
@@ -114,7 +131,6 @@ extern "C"
         {
             MiniUART::SendString("Error while starting kernel process");
         }
-        
 
         MiniUART::SendString("\r\nExiting... (sending CPU into an infinite loop)\r\n");
 

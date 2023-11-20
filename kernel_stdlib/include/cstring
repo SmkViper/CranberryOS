@@ -8,6 +8,7 @@ namespace std
     using ::memcpy;
     using ::memset;
     using ::strcmp;
+    using ::strlen;
 }
 
 #endif // __KERNEL_STDLIB_CSTRING__
