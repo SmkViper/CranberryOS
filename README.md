@@ -15,18 +15,22 @@ The repository is set up for editing with VSCode and the CMake Tools extension f
 
 ## Running
 ### QEMU
-Run QEMU with the following command:
+First, you'll have to grab the `bcm2710-rpi-3-b.dtb` file from the [Raspberry Pi firmware repository](https://github.com/raspberrypi/firmware).
 
-`qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio`
+Then run QEMU with the following command:
+
+`qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -dtb <path>/bcm2710-rpi-3-b.dtb`
 
 (Assuming this is run from the `build\kernel` folder which contains the kernel image file)
 
 ### Real Hardware
-* Create a microSD card formatted as the Raspberry Pi expects, with the `bootcode.bin`, `fixup.dat`, and `start.elf` from the [Raspberry Pi firmware repository](https://github.com/raspberrypi/firmware).
+* Create a microSD card formatted as the Raspberry Pi expects, with the `bootcode.bin`, `fixup.dat`, `start.elf`, `*.dtb` files, and `Overlays` folder - all from the `boot` folder in the [Raspberry Pi firmware repository](https://github.com/raspberrypi/firmware).
 * Copy the built `kernel8.img` from `build/kernel` onto the card.
 * Insert the card into the Raspberry Pi
 * Connect a USB-to-TTL cable to the Raspberry Pi and your PC
-* Launch a terminal emulator (i.e. Putty on Windows) and have it connect to the cable's COM port at `115200` speed.
+* Launch a terminal emulator and have it connect to the cable's COM port at `115200` speed.
+  * Windows: PuTTY has been tested
+  * Linux: `minicom -b 115200 -D /dev/ttyUSB0` (assumes the USB-to-TTL cable shows up as ttyUSB0)
 * Power on the Raspberry Pi
 
 ## Debugging
