@@ -15,6 +15,7 @@ SECTIONS
 
     .text.boot ALIGN(4K) : AT (ADDR(.text.boot) - KERNEL_MAPPING_BASE) {
         *(.text.boot) /* boot code section - must be first */
+        CMakeFiles/kernel8.elf.dir/ARM/Boot/* (.text) /* make sure the code in the boot folder is in this section */
     }
 
     /*

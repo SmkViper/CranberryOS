@@ -1,37 +1,6 @@
 #include "ARM/MMUDefines.h"
 #include "ARM/SystemRegisters.h"
 
-// Macro to switch the current processor to el1, using the given scratch
-// register. Assumes we are in EL2. If there is some way to boot the RPi into
-// EL3, then we'll have to add some additional code to move into EL2 first.
-.macro armv8_switch_to_el1, xreg1
-    // Initialize the processor settings (see SystemRegisters.h)
-    ldr     \xreg1, =SCTLR_INIT_VALUE
-    msr     sctlr_el1, \xreg1
-
-    ldr     \xreg1, =HCR_EL2_INIT_VALUE
-    msr     hcr_el2, \xreg1
-
-    ldr     \xreg1, =SPSR_EL2_INIT_VALUE
-    msr     spsr_el2, \xreg1
-
-    // Disable all traps so that EL2, EL1, and EL0 can access the coprocessor,
-    // floating point, and SIMD instructions and registers
-    ldr     \xreg1, =CPTR_EL2_INIT_VALUE
-    msr     cptr_el2, \xreg1
-    ldr     \xreg1, =HSTR_EL2_INIT_VALUE
-    msr     hstr_el2, \xreg1
-    ldr     \xreg1, =CPACR_EL1_INIT_VALUE
-    msr     cpacr_el1, \xreg1
-
-    // Overwrite the exception return address with the location of the first 1
-    // label past this instruction, and then return to it (in EL1)
-    adr     \xreg1, 1f
-    msr     elr_el2, \xreg1
-    eret
-1:
-    .endm
-
 // Where the GPU will start execution (put at the correct address via our link.ld file)
 .section ".text.boot"
 
@@ -81,26 +50,25 @@ master:
     mov     x23, x3
     mov     x24, x4
 
-    // See if our exception level is 1 already, if it is, skip elevation.
-    // Exception level is in bits 2 and 3
-    mrs     x0, CurrentEL
-    cmp     x0, #(1 << 2)
-    beq     1f
-
-    armv8_switch_to_el1 x0
-
-1:
     // Load the start of the .bss segment into x0 and the count into x1 (32
     // bits) then loop and store zero into every 64-bit chunk
     adr     x0, __bss_start
     ldr     w1, =__bss_size_divided_by_8
-    cbz     w1, start_kmain
+    cbz     w1, switch_exception_level
 clear_bss:
     str     xzr, [x0], #8       // Stores 0 into *x0 and adds 8
     sub     w1, w1, #1          // Decrement w1
     cbnz    w1, clear_bss
 
-start_kmain:
+switch_exception_level:
+    // Point our stack to start just before our code (it grows towards 0).
+    // #TODO: There's likely a better way to do this, hopefully in a way that doesn't risk stomping anything before our
+    // kernel start point, but we'll have to investigate the memory mapping on boot.
+    adrp    x0, _start          // Loads the offset to the page where _start is
+    add     x0, x0, :lo12:_start // Add in the offset to the actual _start symbol
+    mov     sp, x0
+    bl      switch_to_el1
+
     bl      __create_page_tables
 
     // Update the stack pointer to point at the virtual address instead of a physical one
