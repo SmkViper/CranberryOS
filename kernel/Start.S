@@ -68,6 +68,8 @@ _start:
 
 // Infinite loop to hang the other processors with
 proc_hang:
+    msr     daifset, #2 // Mask out all interrupts
+    wfi                 // Wait for an interrupt (go to low power state)
     b       proc_hang
 
 // Main processor starts here
