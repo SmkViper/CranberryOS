@@ -93,7 +93,7 @@ master:
     // Load the start of the .bss segment into x0 and the count into x1 (32
     // bits) then loop and store zero into every 64-bit chunk
     adr     x0, __bss_start
-    ldr     w1, =__bss_size
+    ldr     w1, =__bss_size_divided_by_8
     cbz     w1, start_kmain
 clear_bss:
     str     xzr, [x0], #8       // Stores 0 into *x0 and adds 8

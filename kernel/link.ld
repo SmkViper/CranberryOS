@@ -13,12 +13,8 @@ SECTIONS
     /* 0x00080000 is the physical address the Raspberry Pi GPU will load the kernel at */
     . = KERNEL_MAPPING_BASE + 0x00080000;
 
-    /*
-        Make sure .text.boot section is at the very front, and that the linker knows it is the root for doing garbage
-        collection, since it's the entry point of the kernel.
-    */
-    .text.boot : AT (ADDR(.text.boot) - KERNEL_MAPPING_BASE) {
-        KEEP(*(.text.boot)) /* boot code section */
+    .text.boot ALIGN(4K) : AT (ADDR(.text.boot) - KERNEL_MAPPING_BASE) {
+        *(.text.boot) /* boot code section - must be first */
     }
 
     /*
@@ -26,7 +22,7 @@ SECTIONS
         of the user process, and be put in this segment between user_begin and user_end. That way we can just memcpy
         to "load" our process
     */
-    . = ALIGN(0x00001000);
+    . = ALIGN(4K);
     __user_start = .;
     .text.user : AT (ADDR(.text.user) - KERNEL_MAPPING_BASE) {
         CMakeFiles/kernel8.elf.dir/user_* (.text)
@@ -47,39 +43,23 @@ SECTIONS
         *(.text .text.*) /* remaining code sections */
     }
 
-    .rodata : AT (ADDR(.rodata) - KERNEL_MAPPING_BASE) {
-        *(.rodata .rodata.*) /* read-only data sections */
-    }
-
-    /* .init_array is a list of pointers to constructors for static variables - pointer alignment */
-    .init_array ALIGN(0x8) : AT (ADDR(.init_array) - KERNEL_MAPPING_BASE) {
+    .rodata ALIGN(4K) : AT (ADDR(.rodata) - KERNEL_MAPPING_BASE) {
+        /* .init_array is a list of pointers to constructors for static variables (requires pointer alignment) */
         __init_start = .;
         KEEP(*(SORT(.init_array.*))) /* make sure constructor priorities are respected by sorting */
         KEEP(*(.init_array*))
         __init_end = .;
-    }
 
-    /* .fini_array is a list of pointers to destructors for static variables - pointer alignment */
-    .fini_array ALIGN(0x8) : AT (ADDR(.fini_array) - KERNEL_MAPPING_BASE) {
+        /* .fini_array is a list of pointers to destructors for static variables (requires pointer alignment) */
         __fini_start = .;
-        KEEP (*(SORT(.fini_array.*))) /* make sure destructor priorities are respected by sorting */
+        KEEP(*(SORT(.fini_array.*))) /* make sure destructor priorities are respected by sorting */
         KEEP(*(.fini_array*))
         __fini_end = .;
+
+        *(.rodata .rodata.*) /* read-only data sections */
     }
 
-    /* exception handler frame information */
-    .eh_frame : AT (ADDR(.eh_frame) - KERNEL_MAPPING_BASE) {
-        *(.eh_frame*)
-    }
-
-    /* stack unwind information */
-    .ARM.exidx : AT (ADDR(.ARM.exidx) - KERNEL_MAPPING_BASE) {
-        __exidx_start = .;
-        *(.ARM.exidx*)
-        __exidx_end = .;
-    }
-
-    .data ALIGN(0x00001000) : AT (ADDR(.data) - KERNEL_MAPPING_BASE) {
+    .data ALIGN(4K) : AT (ADDR(.data) - KERNEL_MAPPING_BASE) {
         *(.data .data.*) /* initialized writable data sections */
     }
 
@@ -97,11 +77,26 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
     }
-    . = ALIGN(0x00001000);
+
+    /* exception handler frame information */
+    .eh_frame : AT (ADDR(.eh_frame) - KERNEL_MAPPING_BASE) {
+        *(.eh_frame*)
+    }
+
+    /* stack unwind information */
+    .ARM.exidx : AT (ADDR(.ARM.exidx) - KERNEL_MAPPING_BASE) {
+        __exidx_start = .;
+        *(.ARM.exidx*)
+        __exidx_end = .;
+    }
+
+    . = ALIGN(4K);
     pg_dir = .;
     _end = .;
 
     /* strip out some general unimportant stuff we don't need */
     /DISCARD/ : { *(.comment) *(.note*) }
 }
-__bss_size = (__bss_end - __bss_start) >> 3; /* calculate the size as the number of 8 byte chunks */
+
+/* calculate the size as the number of 8 byte chunks, since we're going to write 8 bytes at a time */
+__bss_size_divided_by_8 = (__bss_end - __bss_start) >> 3;
