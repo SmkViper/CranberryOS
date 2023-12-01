@@ -5,29 +5,32 @@
 
 namespace AArch64
 {
-    namespace
+    namespace Boot
     {
-        /**
-         * Halts the CPU (never returns)
-        */
-        [[noreturn]] void Halt()
+        namespace
         {
-            for (;;)
+            /**
+             * Halts the CPU (never returns)
+            */
+            [[noreturn]] void Halt()
             {
-                // wait forever for interupts (which won't happen at this point in the boot process)
-                asm volatile("wfi");
+                for (;;)
+                {
+                    // wait forever for interupts (which won't happen at this point in the boot process)
+                    asm volatile("wfi");
+                }
             }
         }
-    }
 
-    void Panic(char const* /*apMessage*/)
-    {
-        // #TODO: Actually figure out how to emit this message very early on in the boot process
-        Halt();
-    }
+        void Panic(char const* /*apMessage*/)
+        {
+            // #TODO: Actually figure out how to emit this message very early on in the boot process
+            Halt();
+        }
 
-    void OutputDebug(char const* /*apMessage*/)
-    {
-        // #TODO: Actually figure out how to emit this message very early on in the boot process
+        void OutputDebug(char const* /*apMessage*/)
+        {
+            // #TODO: Actually figure out how to emit this message very early on in the boot process
+        }
     }
 }

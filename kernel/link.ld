@@ -92,7 +92,7 @@ SECTIONS
     }
 
     . = ALIGN(4K);
-    pg_dir = .;
+    __pg_dir = .;
     _end = .;
 
     /* strip out some general unimportant stuff we don't need */
