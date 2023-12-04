@@ -1,6 +1,3 @@
-#include "ARM/MMUDefines.h"
-#include "ARM/SystemRegisters.h"
-
 // Where the GPU will start execution (put at the correct address via our link.ld file)
 .section ".text.boot"
 
