@@ -45,12 +45,16 @@ namespace AArch64
             {
                 // Make sure the stack pointer is copied over as well when switching to EL1, since the processor is set up
                 // with EL1 using its own stack
-                asm volatile("  mov x0, sp\n"
+                asm volatile(
+                            "  mov x0, sp\n"
                             "  msr sp_el1, x0\n"
                             "  adr x0, el1_entry\n" // return to this label at eret
                             "  msr elr_el2, x0\n"
                             "  eret\n"
-                            "el1_entry:" :: : "x0"
+                            "el1_entry:"
+                            : // no outputs
+                            : // no inputs
+                            : "x0" // clobbered registers
                 );
             }
 
@@ -63,7 +67,12 @@ namespace AArch64
             void SetHCR_EL2(uint64_t const aValue)
             {
                 // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                asm volatile("msr hcr_el2, %[value]" ::[value] "r"(aValue));
+                asm volatile(
+                    "msr hcr_el2, %[value]"
+                    : // no outputs
+                    :[value] "r"(aValue) // inputs
+                    : // no clobbered registers
+                );
             }
 
             /**
@@ -75,7 +84,12 @@ namespace AArch64
             void SetSPSR_EL2(uint64_t const aValue)
             {
                 // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                asm volatile("msr spsr_el2, %[value]" ::[value] "r"(aValue));
+                asm volatile(
+                    "msr spsr_el2, %[value]"
+                    : // no outputs
+                    :[value] "r"(aValue) // inputs
+                    : // no clobbered registers
+                );
             }
 
             /**
@@ -87,7 +101,12 @@ namespace AArch64
             void SetCPTR_EL2(uint64_t const aValue)
             {
                 // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                asm volatile("msr cptr_el2, %[value]" ::[value] "r"(aValue));
+                asm volatile(
+                    "msr cptr_el2, %[value]"
+                    : // no outputs
+                    :[value] "r"(aValue) // inputs
+                    : // no clobbered registers
+                );
             }
 
             /**
@@ -99,7 +118,12 @@ namespace AArch64
             void SetHSTR_EL2(uint64_t const aValue)
             {
                 // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                asm volatile("msr hstr_el2, %[value]" ::[value] "r"(aValue));
+                asm volatile(
+                    "msr hstr_el2, %[value]"
+                    : // no outputs
+                    :[value] "r"(aValue) // inputs
+                    : // no clobbered registers
+                );
             }
 
             /**
@@ -111,7 +135,12 @@ namespace AArch64
             void SetCPACR_EL1(uint64_t const aValue)
             {
                 // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                asm volatile("msr cpacr_el1, %[value]" ::[value] "r"(aValue));
+                asm volatile(
+                    "msr cpacr_el1, %[value]"
+                    : // no outputs
+                    :[value] "r"(aValue) // inputs
+                    : // no clobbered registers
+                );
             }
         }
 

@@ -69,27 +69,11 @@ switch_exception_level:
     mov     sp, x0
     bl      switch_to_el1
     bl      create_page_tables
+    bl      enable_mmu
 
     // Update the stack pointer to point at the virtual address instead of a physical one
     mov     x0, #VA_START
     add     sp, x0, #LOW_MEMORY
-
-    // Update the table translation register to point at our page directory
-    adrp    x0, __pg_dir
-    msr     ttbr1_el1, x0
-    // Set ttbr0 to the same page table. At the moment it's an identity table, so we should be ok to reuse it. It's
-    // needed, however, because otherwise the PC pointing at the "br x2" instruction after we turn on the MMU will
-    // fault because the PC register is still pointing in the lower half. (For some reason, real hardware does not seem
-    // to need this - perhaps due to instruction caches that QEMU isn't emulating?)
-    msr     ttbr0_el1, x0
-
-    // Set up the translation control register for stage 1 of the EL1/0 translation regime
-    ldr     x0, =(TCR_VALUE)
-    msr     tcr_el1, x0
-
-    // Set up the MAIR register with the flags we use for memory types
-    ldr     x0, =(MAIR_VALUE)
-    msr     mair_el1, x0
 
     // Load the absolute address of our kernel main function into x9 BEFORE we turn on the MMU (x9 ensures we don't
     // stomp on any parameters passed in x0-x7, and the XR register which is x8)
