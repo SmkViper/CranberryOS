@@ -58,4 +58,4 @@ continue_boot:
     mov     sp, x19
     bl      boot_kernel
 
-    b       proc_hang           // hang the processor if book_kernel ever exits
+    b       proc_hang           // hang the processor if boot_kernel ever exits
