@@ -79,10 +79,6 @@ switch_exception_level:
     // stomp on any parameters passed in x0-x7, and the XR register which is x8)
     ldr     x9, =kmain
 
-    // Now turn on the MMU
-    mov     x0, #SCTLR_MMU_ENABLED
-    msr     sctlr_el1, x0
-
     // And jump to the kmain address we stored previously, after restoring the firmware parameters from x20+
     mov     x0, x20
     mov     x1, x21

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include "../MMUDefines.h"
+#include "../SystemRegisters.h"
 #include "Output.h"
 
 extern "C"
@@ -82,6 +83,23 @@ namespace AArch64
                 // #TODO: Would be nice to have a bitfield value that was type safe to pass in
                 asm volatile(
                     "msr tcr_el1, %[value]"
+                    : // no outputs
+                    : [value] "r"(aValue) // inputs
+                    : // no clobbered registers
+                );
+            }
+
+            /**
+             * Sets the sctrl_el1 register to the given value. This is the top level system control fro EL1 and EL0.
+             * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/SCTLR-EL1--System-Control-Register--EL1-
+             * 
+             * @param aValue The value to set to.
+            */
+            void SetSCTLR_EL1(uint64_t const aValue)
+            {
+                // #TODO: Would be nice to have a bitfield value that was type safe to pass in
+                asm volatile(
+                    "msr sctlr_el1, %[value]"
                     : // no outputs
                     : [value] "r"(aValue) // inputs
                     : // no clobbered registers
@@ -251,7 +269,6 @@ extern "C"
         // #TODO: Should make some nice type-safe wrappers for the register values
         AArch64::Boot::ASM::SetMAIR_EL1(MAIR_VALUE);
         AArch64::Boot::ASM::SetTCR_EL1(TCR_VALUE);
-
-        // #TODO: Enable the MMU
+        AArch64::Boot::ASM::SetSCTLR_EL1(SCTLR_MMU_ENABLED);
     }
 }
