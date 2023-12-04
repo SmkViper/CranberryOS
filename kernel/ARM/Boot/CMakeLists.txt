@@ -1,6 +1,7 @@
 target_sources(kernel8.elf
     PRIVATE
-        ExceptionLevel.cpp
-        MMU.cpp
+        Boot.cpp
+        ExceptionLevel.h ExceptionLevel.cpp
+        MMU.h MMU.cpp
         Output.h Output.cpp
 )

@@ -6,7 +6,7 @@ add_executable(kernel8.elf
     ExceptionVectorHandlers.h ExceptionVectorHandlers.cpp
     ExceptionVectors.S
     IRQ.h IRQ.S
-    Main.cpp
+    Main.h Main.cpp
     MemoryManager.h MemoryManager.cpp MemoryManager.S
     MiniUart.h MiniUart.cpp
     Print.h Print.cpp

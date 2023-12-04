@@ -2,6 +2,7 @@
 #include "Peripherals/DeviceTree.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
+#include "Main.h"
 #include "MiniUart.h"
 #include "Print.h"
 #include "Scheduler.h"
@@ -81,15 +82,10 @@ extern "C"
     // it there are linker issues with it thinking the object is out of range
     void* __dso_handle;
 
-    /**
-     * Kernel entry point
-     * 
-     * @param aDTBPointer 32-bit pointer to the Device Tree Binary blob in memory
-     * @param aX1Reserved Reserved for future use by the firmware
-     * @param aX2Reserved Reserved for future use by the firmware
-     * @param aX3Reserved Reserved for future use by the firmware
-     * @param aStartPointer 32-bit pointer to _start which the firmware launched
-     */
+}
+
+namespace Kernel
+{
     void kmain(uint32_t const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
         uint64_t const aX3Reserved, uint32_t const aStartPointer)
     {

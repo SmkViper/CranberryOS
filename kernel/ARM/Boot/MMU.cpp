@@ -5,6 +5,7 @@
 #include <cstring>
 #include "../MMUDefines.h"
 #include "../SystemRegisters.h"
+#include "MMU.h"
 #include "Output.h"
 
 extern "C"
@@ -19,91 +20,94 @@ namespace AArch64
         // #TODO: Really should consolidate all these ASM calls in one location for re-use
         namespace ASM
         {
-            /**
-             * Sets the ttbr0_el1 register to the given value. This sets up the translation table for stage 1
-             * translation from the lower virtual address range (upper bits all 0) in EL0 and 1.
-             * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR0-EL1--Translation-Table-Base-Register-0--EL1-
-             * 
-             * @param aValue The value to set to.
-            */
-            void SetTTBR0_EL1(uintptr_t const aValue)
+            namespace
             {
-                asm volatile(
-                    "msr ttbr0_el1, %[value]"
-                    : // no output
-                    : [value] "r"(aValue) // inputs
-                    : // no clobbered registers
-                );
-            }
+                /**
+                 * Sets the ttbr0_el1 register to the given value. This sets up the translation table for stage 1
+                 * translation from the lower virtual address range (upper bits all 0) in EL0 and 1.
+                 * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR0-EL1--Translation-Table-Base-Register-0--EL1-
+                 * 
+                 * @param aValue The value to set to.
+                */
+                void SetTTBR0_EL1(uintptr_t const aValue)
+                {
+                    asm volatile(
+                        "msr ttbr0_el1, %[value]"
+                        : // no output
+                        : [value] "r"(aValue) // inputs
+                        : // no clobbered registers
+                    );
+                }
 
-            /**
-             * Sets the ttbr1_el1 register to the given value. This sets up the translation table for stage 1
-             * translation from the higher virtual address range (upper bits all 1) in EL0 and 1.
-             * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR1-EL1--Translation-Table-Base-Register-1--EL1-
-             * 
-             * @param aValue The value to set to.
-            */
-            void SetTTBR1_EL1(uintptr_t const aValue)
-            {
-                // #TODO: Would be nice to have a bitfield value that was type safe to pass in
-                asm volatile(
-                    "msr ttbr1_el1, %[value]"
-                    : // no output
-                    : [value] "r"(aValue) // inputs
-                    : // no clobbered registers
-                );
-            }
+                /**
+                 * Sets the ttbr1_el1 register to the given value. This sets up the translation table for stage 1
+                 * translation from the higher virtual address range (upper bits all 1) in EL0 and 1.
+                 * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR1-EL1--Translation-Table-Base-Register-1--EL1-
+                 * 
+                 * @param aValue The value to set to.
+                */
+                void SetTTBR1_EL1(uintptr_t const aValue)
+                {
+                    // #TODO: Would be nice to have a bitfield value that was type safe to pass in
+                    asm volatile(
+                        "msr ttbr1_el1, %[value]"
+                        : // no output
+                        : [value] "r"(aValue) // inputs
+                        : // no clobbered registers
+                    );
+                }
 
-            /**
-             * Sets the mair_el1 register to the given value. This is the memory attribute encodings for index values
-             * in the translation table.
-             * See: https://developer.arm.com/documentation/ddi0595/2020-12/AArch64-Registers/MAIR-EL1--Memory-Attribute-Indirection-Register--EL1-
-             * 
-             * @param aValue The value to set to.
-            */
-            void SetMAIR_EL1(uint64_t const aValue)
-            {
-                // #TODO: Would be nice to have a bitfield value that was type safe to pass in
-                asm volatile(
-                    "msr mair_el1, %[value]"
-                    : // no outputs
-                    : [value] "r"(aValue) // inputs
-                    : // no clobbered registers
-                );
-            }
+                /**
+                 * Sets the mair_el1 register to the given value. This is the memory attribute encodings for index values
+                 * in the translation table.
+                 * See: https://developer.arm.com/documentation/ddi0595/2020-12/AArch64-Registers/MAIR-EL1--Memory-Attribute-Indirection-Register--EL1-
+                 * 
+                 * @param aValue The value to set to.
+                */
+                void SetMAIR_EL1(uint64_t const aValue)
+                {
+                    // #TODO: Would be nice to have a bitfield value that was type safe to pass in
+                    asm volatile(
+                        "msr mair_el1, %[value]"
+                        : // no outputs
+                        : [value] "r"(aValue) // inputs
+                        : // no clobbered registers
+                    );
+                }
 
-            /**
-             * Sets the tcr_el register to the given value. This controls stage 1 of the EL1 and 0 translation regime.
-             * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TCR-EL1--Translation-Control-Register--EL1-
-             * 
-             * @param aValue The value to set to.
-            */
-            void SetTCR_EL1(uint64_t const aValue)
-            {
-                // #TODO: Would be nice to have a bitfield value that was type safe to pass in
-                asm volatile(
-                    "msr tcr_el1, %[value]"
-                    : // no outputs
-                    : [value] "r"(aValue) // inputs
-                    : // no clobbered registers
-                );
-            }
+                /**
+                 * Sets the tcr_el register to the given value. This controls stage 1 of the EL1 and 0 translation regime.
+                 * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TCR-EL1--Translation-Control-Register--EL1-
+                 * 
+                 * @param aValue The value to set to.
+                */
+                void SetTCR_EL1(uint64_t const aValue)
+                {
+                    // #TODO: Would be nice to have a bitfield value that was type safe to pass in
+                    asm volatile(
+                        "msr tcr_el1, %[value]"
+                        : // no outputs
+                        : [value] "r"(aValue) // inputs
+                        : // no clobbered registers
+                    );
+                }
 
-            /**
-             * Sets the sctrl_el1 register to the given value. This is the top level system control fro EL1 and EL0.
-             * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/SCTLR-EL1--System-Control-Register--EL1-
-             * 
-             * @param aValue The value to set to.
-            */
-            void SetSCTLR_EL1(uint64_t const aValue)
-            {
-                // #TODO: Would be nice to have a bitfield value that was type safe to pass in
-                asm volatile(
-                    "msr sctlr_el1, %[value]"
-                    : // no outputs
-                    : [value] "r"(aValue) // inputs
-                    : // no clobbered registers
-                );
+                /**
+                 * Sets the sctrl_el1 register to the given value. This is the top level system control fro EL1 and EL0.
+                 * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/SCTLR-EL1--System-Control-Register--EL1-
+                 * 
+                 * @param aValue The value to set to.
+                */
+                void SetSCTLR_EL1(uint64_t const aValue)
+                {
+                    // #TODO: Would be nice to have a bitfield value that was type safe to pass in
+                    asm volatile(
+                        "msr sctlr_el1, %[value]"
+                        : // no outputs
+                        : [value] "r"(aValue) // inputs
+                        : // no clobbered registers
+                    );
+                }
             }
         }
 
@@ -222,53 +226,44 @@ namespace AArch64
                 ASM::SetTTBR1_EL1(reinterpret_cast<uintptr_t>(apTable));
             }
         }
-    }
-}
+    
+        void CreatePageTables()
+        {
+            // #TODO: Currently unclear why the address stored in __pg_dir appears to be the physical address and not
+            // the virtual address. But this seems to work for now.
+            PageBumpAllocator allocator{__pg_dir, __pg_dir + PG_DIR_SIZE};
 
-extern "C"
-{
-    /**
-     * Called from assembly to create our boot page tables
-    */
-    void create_page_tables()
-    {
-        // #TODO: Currently unclear why the address stored in __pg_dir appears to be the physical address and not the
-        // virtual address. But this seems to work for now.
-        AArch64::Boot::PageBumpAllocator allocator{__pg_dir, __pg_dir + PG_DIR_SIZE};
+            // #TODO: This is all rather hard-coded and should be made more flexible based off of external information
+            // like the actual kernel size.
 
-        // #TODO: This is all rather hard-coded and should be made more flexible based off of external information like
-        // the actual kernel size.
+            // allocate the three pages we need for the mapping we're doing
+            auto const ppageGlobalDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
+            auto const ppageUpperDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
+            auto const ppageMiddleDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
 
-        // allocate the three pages we need for the mapping we're doing
-        auto const ppageGlobalDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
-        auto const ppageUpperDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
-        auto const ppageMiddleDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
+            CreateTableEntry(ppageGlobalDirectory, ppageUpperDirectory, VA_START, PGD_SHIFT);
+            CreateTableEntry(ppageUpperDirectory, ppageMiddleDirectory, VA_START, PUD_SHIFT);
 
-        AArch64::Boot::CreateTableEntry(ppageGlobalDirectory, ppageUpperDirectory, VA_START, PGD_SHIFT);
-        AArch64::Boot::CreateTableEntry(ppageUpperDirectory, ppageMiddleDirectory, VA_START, PUD_SHIFT);
+            // #TODO: We should be making sure we only map what we need, not "everything". And definitely not
+            // hardcoding how much physical memory we have. That should be left up to the real memory manager which
+            // will know the memory information from the device tree.
 
-        // #TODO: We should be making sure we only map what we need, not "everything". And definitely not hardcoding
-        // how much physical memory we have. That should be left up to the real memory manager which will know the
-        // memory information from the device tree.
+            // Map all memory from 0 up to DEVICE_BASE as regular memory (- SECTION_SIZE because the function expects
+            // the end value to be the address of the last section to map)
+            CreateBlockMap(ppageMiddleDirectory, 0, VA_START, (VA_START + DEVICE_BASE - SECTION_SIZE), MMU_FLAGS);
+            // Map all memory from the DEVICE_BASE up to the end of physical memory as MMIO memory
+            CreateBlockMap(ppageMiddleDirectory, DEVICE_BASE, (VA_START + DEVICE_BASE), (VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE), MMU_DEVICE_FLAGS);
+        }
 
-        // Map all memory from 0 up to DEVICE_BASE as regular memory (- SECTION_SIZE because the function expects the
-        // end value to be the address of the last section to map)
-        AArch64::Boot::CreateBlockMap(ppageMiddleDirectory, 0, VA_START, (VA_START + DEVICE_BASE - SECTION_SIZE), MMU_FLAGS);
-        // Map all memory from the DEVICE_BASE up to the end of physical memory as MMIO memory
-        AArch64::Boot::CreateBlockMap(ppageMiddleDirectory, DEVICE_BASE, (VA_START + DEVICE_BASE), (VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE), MMU_DEVICE_FLAGS);
-    }
+        void EnableMMU()
+        {
+            // #TODO: Not sure why the __pg_dir pointer doesn't need to be adjusted.
+            SwitchToPageTable(__pg_dir);
 
-    /**
-     * Called from assembly to turn on the MMU
-    */
-    void enable_mmu()
-    {
-        // #TODO: Not sure why the __pg_dir pointer doesn't need to be adjusted.
-        AArch64::Boot::SwitchToPageTable(__pg_dir);
-
-        // #TODO: Should make some nice type-safe wrappers for the register values
-        AArch64::Boot::ASM::SetMAIR_EL1(MAIR_VALUE);
-        AArch64::Boot::ASM::SetTCR_EL1(TCR_VALUE);
-        AArch64::Boot::ASM::SetSCTLR_EL1(SCTLR_MMU_ENABLED);
+            // #TODO: Should make some nice type-safe wrappers for the register values
+            ASM::SetMAIR_EL1(MAIR_VALUE);
+            ASM::SetTCR_EL1(TCR_VALUE);
+            ASM::SetSCTLR_EL1(SCTLR_MMU_ENABLED);
+        }
     }
 }
