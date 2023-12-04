@@ -5,3 +5,5 @@ target_sources(kernel8.elf
         SchedulerDefines.h
         SystemRegisters.h
 )
+
+add_subdirectory(Boot)

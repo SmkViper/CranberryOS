@@ -54,6 +54,12 @@ Debugging has been tested in VSCode with the CodeLLDB extension. The following l
 
 Note that trying to debug with LLDB on a Windows machine (using Win32 QEMU) will cause LLDB to be unable to find source files if built on a Linux box or WSL, due to a known issue with LLDB where it "sanitizes" all paths it receives for code mapping. This results in LLDB transforming all forward slashes to back slashes, which won't match the slashes in the DWARF data. To work around this, launch VSCode from WSL so that the Linux version of LLDB is used instead.
 
+If you need to debug the boot process before the MMU is enabled, you'll need to tell the debugger to load the symbols at a different location. For example, to tell lldb to load symbols just for the specific boot assembly, use:
+
+`target modules load --file <path>/kernel8.elf .text.boot 0x80000`
+
+Where `<path>` is the path to the elf file (you can find it easily using the `image list` command).
+
 ## Contributing
 For now, this is just a personal exploration project, so outside contributions are not being accepted.
 
