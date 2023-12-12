@@ -2,7 +2,7 @@
 // not initialized, and the linker maps everythin the kernel into the higher-half.
 
 #include <cstdint>
-#include "../SystemRegisters.h"
+#include "../RegisterDefines.h"
 #include "ExceptionLevel.h"
 #include "Output.h"
 
@@ -155,7 +155,7 @@ namespace AArch64
             */
             void SwitchFromEL2ToEL1()
             {
-                // See SystemRegisters.h for these values
+                // See RegisterDefines.h for these values
                 ASM::SetHCR_EL2(HCR_EL2_INIT_VALUE);
                 ASM::SetSPSR_EL2(SPSR_EL2_INIT_VALUE);
 

@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include "../MMUDefines.h"
-#include "../SystemRegisters.h"
+#include "../RegisterDefines.h"
 #include "MMU.h"
 #include "Output.h"
 
