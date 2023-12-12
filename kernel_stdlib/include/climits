@@ -1,0 +1,6 @@
+#ifndef __KERNEL_STDLIB_CLIMITS__
+#define __KERNEL_STDLIB_CLIMITS__
+
+#include "limits.h"
+
+#endif // __KERNEL_STDLIB_CLIMITS__
