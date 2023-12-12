@@ -1,5 +1,5 @@
-#ifndef KERNEL_ARM_BOOT_OUTPUT_H
-#define KERNEL_ARM_BOOT_OUTPUT_H
+#ifndef KERNEL_AARCH64_BOOT_OUTPUT_H
+#define KERNEL_AARCH64_BOOT_OUTPUT_H
 
 namespace AArch64
 {
@@ -21,4 +21,4 @@ namespace AArch64
     }
 }
 
-#endif // KERNEL_ARM_BOOT_OUTPUT_H
+#endif // KERNEL_AARCH64_BOOT_OUTPUT_H

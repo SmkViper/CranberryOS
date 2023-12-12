@@ -6,7 +6,7 @@
 
 namespace
 {
-    // Order should match #define values in ARM/ExceptionVectorDefines.h
+    // Order should match #define values in AArch64/ExceptionVectorDefines.h
     constexpr const char* ExceptionTypeNames[] = {
         "SYNC_INVALID_EL1t",
         "IRQ_INVALID_EL1t",
@@ -45,7 +45,7 @@ extern "C"
     /**
      * Spits out an error message for an exception type we don't currently handle
      * 
-     * @param aType Exception type index (see ARM/ExceptionVectorDefines.h)
+     * @param aType Exception type index (see AArch64/ExceptionVectorDefines.h)
      * @param aESR The contents of the ESR register
      * @param aReturnAddress The address the exception occurred at
      */

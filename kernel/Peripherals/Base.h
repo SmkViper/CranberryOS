@@ -2,7 +2,7 @@
 #define KERNEL_PERIPHERALS_BASE_H
 
 #include <cstdint>
-#include "../ARM/MMUDefines.h"
+#include "../AArch64/MMUDefines.h"
 #include "../MemoryManager.h"
 
 namespace MemoryMappedIO

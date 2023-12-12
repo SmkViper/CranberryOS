@@ -30,7 +30,7 @@ target_link_libraries(kernel8.elf PRIVATE kernel_stdlib)
 
 # Bring in each sub folder that we need (they have their own CMakeLists.txt files that will add appropriate
 # information to the targets)
-add_subdirectory(ARM)
+add_subdirectory(AArch64)
 add_subdirectory(Peripherals)
 
 # GPU can't read elf files, so we have to extract the contents out to an img file so it can blindly load the file and
