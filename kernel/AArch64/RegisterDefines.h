@@ -28,19 +28,6 @@
                              SCTLR_MMU_DISABLED)
 
 ///////////////////////////////////////////////////////////////////////////////
-// HCR_EL2 register flags - See D10.2.45 in the ARMv8 manual
-///////////////////////////////////////////////////////////////////////////////
-
-// Some bits are reserved, but none are set to 1, so this one is simple
-#define HCR_EL2_RESERVED_FLAGS  0
-#define HCR_EL2_EL1_IS_AARCH64  (1 << 31) // set EL1 to AArch64 mode
-
-// We aren't going to implement a hypervisor for now, so only thing we need to set is to make sure that
-// EL1 executes in AArch64 mode instead of AArch32
-#define HCR_EL2_INIT_VALUE  (HCR_EL2_RESERVED_FLAGS | \
-                             HCR_EL2_EL1_IS_AARCH64)
-
-///////////////////////////////////////////////////////////////////////////////
 // SPSR_EL2 register flags - See C5.2.19 in the ARMv8 manual
 ///////////////////////////////////////////////////////////////////////////////
 

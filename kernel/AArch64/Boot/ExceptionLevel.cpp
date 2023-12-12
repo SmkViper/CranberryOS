@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "../RegisterDefines.h"
+#include "../SystemRegisters.h"
 #include "ExceptionLevel.h"
 #include "Output.h"
 
@@ -58,23 +59,6 @@ namespace AArch64
                                 : // no outputs
                                 : // no inputs
                                 : "x0" // clobbered registers
-                    );
-                }
-
-                /**
-                 * Sets the Hypervisor Configuration Register for EL2 to the given value
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/HCR-EL2--Hypervisor-Configuration-Register
-                 * 
-                 * @param aValue New value for the register
-                */
-                void SetHCR_EL2(uint64_t const aValue)
-                {
-                    // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                    asm volatile(
-                        "msr hcr_el2, %[value]"
-                        : // no outputs
-                        :[value] "r"(aValue) // inputs
-                        : // no clobbered registers
                     );
                 }
 
@@ -155,8 +139,11 @@ namespace AArch64
             */
             void SwitchFromEL2ToEL1()
             {
+                HCR_EL2 hcr_el2;
+                hcr_el2.RW(true); // Flag EL1 as running in AArch64 mode
+                HCR_EL2::Write(hcr_el2);
+
                 // See RegisterDefines.h for these values
-                ASM::SetHCR_EL2(HCR_EL2_INIT_VALUE);
                 ASM::SetSPSR_EL2(SPSR_EL2_INIT_VALUE);
 
                 // Disable all traps so that EL2, EL1, and EL0 can access the coprocessor, floating point, and SIMD

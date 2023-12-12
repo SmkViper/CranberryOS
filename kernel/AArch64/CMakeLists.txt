@@ -4,6 +4,7 @@ target_sources(kernel8.elf
         MMUDefines.h
         RegisterDefines.h
         SchedulerDefines.h
+        SystemRegisters.h
 )
 
 add_subdirectory(Boot)
