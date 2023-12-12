@@ -57,7 +57,7 @@ namespace AArch64
          * 
          * @param aEL1ExecutionIsAArch64 If true, EL1 will be AArch64, otherwise it will be AArch32
         */
-        void RW(bool aEL1ExecutionIsAArch64) { RegisterValue[RWIndex] = aEL1ExecutionIsAArch64; }
+        void RW(bool const aEL1ExecutionIsAArch64) { RegisterValue[RWIndex] = aEL1ExecutionIsAArch64; }
 
         /**
          * RW Bit - Execution state for lower exception levels
@@ -136,6 +136,183 @@ namespace AArch64
         // #TODO: TID5  [58]
         // #TODO: TWEDEn [59]
         // #TODO: TWEDEL [63:60]
+
+        std::bitset<64> RegisterValue;
+    };
+
+    class SPSR_EL2
+    {
+        static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
+    public:
+        /**
+         * Constructor - produces a value with all bits zeroed
+        */
+        SPSR_EL2() = default;
+
+        /**
+         * Writes the given value to the SPSR_EL2 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write(SPSR_EL2 const aValue)
+        {
+            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+            asm volatile(
+                "msr spsr_el2, %[value]"
+                : // no outputs
+                :[value] "r"(rawValue) // inputs
+                : // no bashed registers
+            );
+        }
+
+        /**
+         * Reads the current state of the SPSR_EL2 register
+         * 
+         * @return The current state of the register
+        */
+        static SPSR_EL2 Read()
+        {
+            uint64_t readRawValue = 0;
+            asm volatile(
+                "mrs %[value], spsr_el2"
+                :[value] "=r"(readRawValue) // outputs
+                : // no inputs
+                : // no bashed registers
+            );
+            return SPSR_EL2{ readRawValue };
+        }
+
+        enum class Mode: uint8_t
+        {
+            EL0t = 0b0000, // Exception level 0
+            EL1t = 0b0100, // Exception level 1, SP is SP_EL0 (shared stack)
+            EL1h = 0b0101, // Exception level 1, SP is SP_EL1 (own stack)
+            EL2t = 0b1000, // Exception level 2, SP is SP_EL0 (shared stack)
+            EL2h = 0b1001, // Exception level 2, SP is SP_EL2 (own stack)
+        };
+
+        /**
+         * Mode bits - where to return to with ERET and whether to use its own stack or not
+         * 
+         * @param aMode The mode for ERET
+        */
+        void M(Mode const aMode)
+        {
+            // #TODO: Probably should make this a common utility
+            for (auto bitIndex = MIndex_Min; bitIndex <= MIndex_Max; ++bitIndex)
+            {
+                // Assumes MIndex_Min is 0
+                auto const mask = (1 << bitIndex);
+                RegisterValue[bitIndex] = static_cast<bool>(static_cast<uint8_t>(aMode) & mask);
+            }
+        }
+
+        /**
+         * Mode bits - where to return to with ERET and whether to use its own stack or not
+         * 
+         * @return The current ERET mode
+        */
+        Mode M() const
+        {
+            // #TODO: Probably should make this a common utility
+            uint8_t retVal = 0;
+            for (auto bitIndex = MIndex_Min; bitIndex <= MIndex_Max; ++bitIndex)
+            {
+                // Assumes MIndex_Min is 0
+                retVal |= (RegisterValue[bitIndex] << bitIndex);
+            }
+            return static_cast<Mode>(retVal);
+        }
+
+        /**
+         * F Bit - FIQ interrupt mask
+         * 
+         * @param aFIQInterruptMask Masks (ignores) FIQ interrupts if set
+        */
+        void F(bool const aFIQInterruptMask) { RegisterValue[FIndex] = aFIQInterruptMask; }
+
+        /**
+         * F Bit - FIQ interrupt mask
+         * 
+         * @return True if FIQ interrupts are masked (ignored)
+        */
+        bool F() const { return RegisterValue[FIndex]; }
+
+        /**
+         * I Bit - IRQ interrupt mask
+         * 
+         * @param aIRQInterruptMask Masks (ignores) IRQ interrupts if set
+        */
+        void I(bool const aIRQInterruptMask) { RegisterValue[IIndex] = aIRQInterruptMask; }
+
+        /**
+         * I Bit - IRQ interrupt mask
+         * 
+         * @return True if IRQ interrupts are masked (ignored)
+        */
+        bool I() const { return RegisterValue[IIndex]; }
+
+        /**
+         * A Bit - SError interrupt mask
+         * 
+         * @param aSErrorInterruptMask Masks (ignores) SError interrupts if set
+        */
+        void A(bool const aSErrorInterruptMask) { RegisterValue[AIndex] = aSErrorInterruptMask; }
+
+        /**
+         * A Bit - SError interrupt mask
+         * 
+         * @return True if SError interrupts are masked (ignored)
+        */
+        bool A() const { return RegisterValue[AIndex]; }
+
+        /**
+         * D Bit - Debug exception mask
+         * 
+         * @param aDebugExceptionMask Masks (ignores) debug exceptions if set
+        */
+        void D(bool const aDebugExceptionMask) { RegisterValue[DIndex] = aDebugExceptionMask; }
+
+        /**
+         * D Bit - Debug exception mask
+         * 
+         * @return True if debug exceptions are masked (ignored)
+        */
+        bool D() const { return RegisterValue[DIndex]; }
+
+    private:
+        /**
+         * Create a register value from the given bits
+         * 
+         * @param aInitialValue The bits to start with
+        */
+        SPSR_EL2(uint64_t const aInitialValue)
+            : RegisterValue{ aInitialValue }
+        {}
+
+        static constexpr unsigned MIndex_Min = 0;
+        static constexpr unsigned MIndex_Max = 3;
+        // #TODO: M[4]  [4]
+        // Reserved     [5]
+        static constexpr unsigned FIndex = 6;
+        static constexpr unsigned IIndex = 7;
+        static constexpr unsigned AIndex = 8;
+        static constexpr unsigned DIndex = 9;
+        // #TODO: BTYPE [11:10]
+        // #TODO: SSBS  [12]
+        // Reserved     [19:13]
+        // #TODO: IL    [20]
+        // #TODO: SS    [21]
+        // #TODO: PAN   [22]
+        // #TODO: UAO   [23]
+        // #TODO: DIT   [24]
+        // #TODO: TCO   [25]
+        // Reserved     [27:26]
+        // #TODO: V     [28]
+        // #TODO: C     [29]
+        // #TODO: Z     [30]
+        // #TODO: N     [31]
+        // Reserved:    [63:32]
 
         std::bitset<64> RegisterValue;
     };

@@ -63,23 +63,6 @@ namespace AArch64
                 }
 
                 /**
-                 * Sets the Saved Program Status Register for EL2 to the given value
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/SPSR-EL2--Saved-Program-Status-Register--EL2-
-                 * 
-                 * @param aValue New value for the register
-                */
-                void SetSPSR_EL2(uint64_t const aValue)
-                {
-                    // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                    asm volatile(
-                        "msr spsr_el2, %[value]"
-                        : // no outputs
-                        :[value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
-
-                /**
                  * Sets the Architectural Feature Trap Register for EL2 to the given value
                  * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPTR-EL2--Architectural-Feature-Trap-Register--EL2-
                  * 
@@ -143,9 +126,15 @@ namespace AArch64
                 hcr_el2.RW(true); // Flag EL1 as running in AArch64 mode
                 HCR_EL2::Write(hcr_el2);
 
-                // See RegisterDefines.h for these values
-                ASM::SetSPSR_EL2(SPSR_EL2_INIT_VALUE);
+                SPSR_EL2 spsr_el2;
+                spsr_el2.D(true); // Mask debug exceptions
+                spsr_el2.A(true); // Mask SError interrupts
+                spsr_el2.I(true); // Mask IRQ interrupts
+                spsr_el2.F(true); // Mask FIQ interrupts
+                spsr_el2.M(SPSR_EL2::Mode::EL1h); // Return to EL1, using SP_EL1 for stack
+                SPSR_EL2::Write(spsr_el2);
 
+                // See RegisterDefines.h for these values
                 // Disable all traps so that EL2, EL1, and EL0 can access the coprocessor, floating point, and SIMD
                 // instructions and registers
                 ASM::SetCPTR_EL2(CPTR_EL2_INIT_VALUE);

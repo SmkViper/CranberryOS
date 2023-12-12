@@ -28,26 +28,6 @@
                              SCTLR_MMU_DISABLED)
 
 ///////////////////////////////////////////////////////////////////////////////
-// SPSR_EL2 register flags - See C5.2.19 in the ARMv8 manual
-///////////////////////////////////////////////////////////////////////////////
-
-// Some bits are reserved, but none are set to 0, so this one is simple
-#define SPSR_EL2_RESERVED_FLAGS                 0
-#define SPSR_EL2_PROCESS_STATE_INTERRUPT_MASK   (1 << 9)
-#define SPSR_EL2_SERROR_INTERRUPT_MASK          (1 << 8)
-#define SPSR_EL2_IRQ_MASK                       (1 << 7)
-#define SPSR_EL2_FIQ_MASK                       (1 << 6)
-#define SPSR_EL2_EL1_USES_OWN_SP                (1 << 2) | 1 // EL1 uses its own stack pointer instead of SP0
-
-// Mask out (disable) all interrupts and tell EL1 to use its own stack pointer
-#define SPSR_EL2_INIT_VALUE (SPSR_EL2_RESERVED_FLAGS | \
-                             SPSR_EL2_PROCESS_STATE_INTERRUPT_MASK | \
-                             SPSR_EL2_SERROR_INTERRUPT_MASK | \
-                             SPSR_EL2_IRQ_MASK | \
-                             SPSR_EL2_FIQ_MASK | \
-                             SPSR_EL2_EL1_USES_OWN_SP)
-
-///////////////////////////////////////////////////////////////////////////////
 // CPTR_EL2 register flags - See D10.2.30 in the ARMv8 manual
 ///////////////////////////////////////////////////////////////////////////////
 
