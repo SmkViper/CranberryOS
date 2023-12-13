@@ -63,23 +63,6 @@ namespace AArch64
                 }
 
                 /**
-                 * Sets the Architectural Feature Trap Register for EL2 to the given value
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPTR-EL2--Architectural-Feature-Trap-Register--EL2-
-                 * 
-                 * @param aValue New value for the register
-                */
-                void SetCPTR_EL2(uint64_t const aValue)
-                {
-                    // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                    asm volatile(
-                        "msr cptr_el2, %[value]"
-                        : // no outputs
-                        :[value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
-
-                /**
                  * Sets the Hypervisor System Tracp Register for EL2 to the given value
                  * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/HSTR-EL2--Hypervisor-System-Trap-Register
                  * 
@@ -134,10 +117,11 @@ namespace AArch64
                 spsr_el2.M(SPSR_EL2::Mode::EL1h); // Return to EL1, using SP_EL1 for stack
                 SPSR_EL2::Write(spsr_el2);
 
+                // Make sure all traps are disabled so we don't trip up on SIMD or floating point instructions
+                CPTR_EL2 cptr_el2;
+                CPTR_EL2::Write(cptr_el2);
+
                 // See RegisterDefines.h for these values
-                // Disable all traps so that EL2, EL1, and EL0 can access the coprocessor, floating point, and SIMD
-                // instructions and registers
-                ASM::SetCPTR_EL2(CPTR_EL2_INIT_VALUE);
                 ASM::SetHSTR_EL2(HSTR_EL2_INIT_VALUE);
 
                 ASM::SwitchFromEL2ToEL1();

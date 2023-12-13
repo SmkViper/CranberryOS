@@ -7,6 +7,100 @@
 namespace AArch64
 {
     /**
+     * Architectural Feature Trap Register (EL2)
+     * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPTR-EL2--Architectural-Feature-Trap-Register--EL2-
+     * 
+     * Note that the definition of this class assumes HCR_EL2.E2H is 0. But since we never expect to turn it on (it's
+     * apparently a feature that lets the OS run in EL2 with the programs in EL0) this should be fine.
+    */
+    class CPTR_EL2
+    {
+        static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
+    public:
+        /**
+         * Constructor - produces a value with all bits zeroed (and Res1 bits set)
+        */
+        CPTR_EL2()
+            : RegisterValue{ ReservedValues }
+        {}
+
+        /**
+         * Writes the given value to the CPTR_EL2 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write(CPTR_EL2 const aValue)
+        {
+            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+            asm volatile(
+                "msr cptr_el2, %[value]"
+                : // no outputs
+                :[value] "r"(rawValue) // inputs
+                : // no bashed registers
+            );
+        }
+
+        /**
+         * Reads the current state of the CPTR_EL2 register
+         * 
+         * @return The current state of the register
+        */
+        static CPTR_EL2 Read()
+        {
+            uint64_t readRawValue = 0;
+            asm volatile(
+                "mrs %[value], cptr_el2"
+                :[value] "=r"(readRawValue) // outputs
+                : // no inputs
+                : // no bashed registers
+            );
+            return CPTR_EL2{ readRawValue };
+        }
+
+        /**
+         * TFP Bit - Traps execution of instructions for SIMD and floating-point functionality
+         * 
+         * @param aTrapFPInstructions If true, SIMD and floating point instructions will trap to EL2
+        */
+        void TFP(bool const aTrapFPInstructions) { RegisterValue[TFPIndex] = aTrapFPInstructions; }
+
+        /**
+         * TFP Bit - Traps execution of instructions for SIMD and floating-point functionality
+         * 
+         * @return True if SIMD and floating point instructions trap to EL2
+        */
+        bool TFP() const { return RegisterValue[TFPIndex]; }
+
+    private:
+        /**
+         * Create a register value from the given bits
+         * 
+         * @param aInitialValue The bits to start with
+        */
+        CPTR_EL2(uint64_t const aInitialValue)
+            : RegisterValue{ aInitialValue }
+        {}
+
+        // We are currently assuming FEAT_SVE isn't available, so bit 8 is Res1
+        static constexpr uint64_t ReservedValues = (1 << 13) | (1 << 12) | (1 << 9) | (1 << 8) | 0xFF;
+
+        // Reserved     [7:0] (Res1)
+        // TZ           [8] (Res1 if FEAT_SVE is not available)
+        // Reserved     [9] (Res1)
+        static constexpr unsigned TFPIndex = 10;
+        // Reserved     [11]
+        // Reserved     [13:12] (Res1)
+        // Reserved     [19:14]
+        // #TODO: TTA   [20]
+        // Reserved     [29:21]
+        // #TODO: TAM   [30]
+        // #TODO: TCPAC [31]
+        // Reserved     [63:32]
+
+        std::bitset<64> RegisterValue;
+    };
+
+    /**
      * Hypervisor Configuration Register
      * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/HCR-EL2--Hypervisor-Configuration-Register
     */

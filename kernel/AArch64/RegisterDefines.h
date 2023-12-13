@@ -28,18 +28,6 @@
                              SCTLR_MMU_DISABLED)
 
 ///////////////////////////////////////////////////////////////////////////////
-// CPTR_EL2 register flags - See D10.2.30 in the ARMv8 manual
-///////////////////////////////////////////////////////////////////////////////
-
-// Some bits are reserved, set to 1, which we set here
-#define CPTR_EL2_RESERVED_FLAGS             (1 << 13) | (1 << 12) | (1 << 9) | (1 << 8) | 0xFF
-#define CPTR_EL2_DISABLE_SEV_FP_SIMD_TRAPS  (0 << 10)
-
-// AArch64: Allow EL2 and non-secure EL1 and EL0 to access SEV, floating-point, and SIMD registers (won't trap to EL2)
-#define CPTR_EL2_INIT_VALUE (CPTR_EL2_RESERVED_FLAGS | \
-                             CPTR_EL2_DISABLE_SEV_FP_SIMD_TRAPS)
-
-///////////////////////////////////////////////////////////////////////////////
 // HSTR_EL2 register flags - See D10.2.47 in the ARMv8 manual
 ///////////////////////////////////////////////////////////////////////////////
 
