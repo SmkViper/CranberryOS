@@ -234,6 +234,83 @@ namespace AArch64
         std::bitset<64> RegisterValue;
     };
 
+    /**
+     * Hypervisor System Trap Register
+     * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/HSTR-EL2--Hypervisor-System-Trap-Register
+    */
+    class HSTR_EL2
+    {
+        static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
+    public:
+        /**
+         * Constructor - produces a value with all bits zeroed
+        */
+        HSTR_EL2() = default;
+
+        /**
+         * Writes the given value to the HSTR_EL2 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write(HSTR_EL2 const aValue)
+        {
+            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+            asm volatile(
+                "msr hstr_el2, %[value]"
+                : // no outputs
+                :[value] "r"(rawValue) // inputs
+                : // no bashed registers
+            );
+        }
+
+        /**
+         * Reads the current state of the HSTR_EL2 register
+         * 
+         * @return The current state of the register
+        */
+        static HSTR_EL2 Read()
+        {
+            uint64_t readRawValue = 0;
+            asm volatile(
+                "mrs %[value], hstr_el2"
+                :[value] "=r"(readRawValue) // outputs
+                : // no inputs
+                : // no bashed registers
+            );
+            return HSTR_EL2{ readRawValue };
+        }
+
+    private:
+        /**
+         * Create a register value from the given bits
+         * 
+         * @param aInitialValue The bits to start with
+        */
+        HSTR_EL2(uint64_t const aInitialValue)
+            : RegisterValue{ aInitialValue }
+        {}
+
+        // #TODO: T0    [0]
+        // #TODO: T1    [1]
+        // #TODO: T2    [2]
+        // #TODO: T3    [3]
+        // Reserved     [4]
+        // #TODO: T5    [5]
+        // #TODO: T6    [6]
+        // #TODO: T7    [7]
+        // #TODO: T8    [8]
+        // #TODO: T9    [9]
+        // #TODO: T10   [10]
+        // #TODO: T11   [11]
+        // #TODO: T12   [12]
+        // #TODO: T13   [13]
+        // Reserved     [14]
+        // #TODO: T15   [15]
+        // Reserved     [63:16]
+
+        std::bitset<64> RegisterValue;
+    };
+
     class SPSR_EL2
     {
         static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");

@@ -28,18 +28,6 @@
                              SCTLR_MMU_DISABLED)
 
 ///////////////////////////////////////////////////////////////////////////////
-// HSTR_EL2 register flags - See D10.2.47 in the ARMv8 manual
-///////////////////////////////////////////////////////////////////////////////
-
-// Some bits are reserved, but none are set to 0, so this one is simple
-#define HSTR_EL2_RESERVED_FLAGS 0
-// Access to coprocessor registers are set by bits [15:0], set to 1 to trap, 0 to not trap. So just leave everything
-// zeroed to not trap
-
-// AArch32: Allow non-secure EL1 and EL0 access all coprocessor registers (won't trap to EL2)
-#define HSTR_EL2_INIT_VALUE     HSTR_EL2_RESERVED_FLAGS
-
-///////////////////////////////////////////////////////////////////////////////
 // CPACR_EL1 register flags - See D10.2.29 in the ARMv8 manual
 ///////////////////////////////////////////////////////////////////////////////
 

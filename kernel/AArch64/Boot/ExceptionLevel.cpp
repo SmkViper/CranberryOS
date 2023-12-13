@@ -120,9 +120,8 @@ namespace AArch64
                 // Make sure all traps are disabled so we don't trip up on SIMD or floating point instructions
                 CPTR_EL2 cptr_el2;
                 CPTR_EL2::Write(cptr_el2);
-
-                // See RegisterDefines.h for these values
-                ASM::SetHSTR_EL2(HSTR_EL2_INIT_VALUE);
+                HSTR_EL2 hstr_el2;
+                HSTR_EL2::Write(hstr_el2);
 
                 ASM::SwitchFromEL2ToEL1();
             }
