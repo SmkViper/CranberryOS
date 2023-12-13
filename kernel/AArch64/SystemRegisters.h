@@ -24,33 +24,14 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(CPACR_EL1 const aValue)
-        {
-            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
-            asm volatile(
-                "msr cpacr_el1, %[value]"
-                : // no outputs
-                :[value] "r"(rawValue) // inputs
-                : // no bashed registers
-            );
-        }
+        static void Write(CPACR_EL1 const aValue);
 
         /**
          * Reads the current state of the CPACR_EL1 register
          * 
          * @return The current state of the register
         */
-        static CPACR_EL1 Read()
-        {
-            uint64_t readRawValue = 0;
-            asm volatile(
-                "mrs %[value], cpacr_el1"
-                :[value] "=r"(readRawValue) // outputs
-                : // no inputs
-                : // no bashed registers
-            );
-            return CPACR_EL1{ readRawValue };
-        }
+        static CPACR_EL1 Read();
 
         enum class FPENTraps: uint8_t
         {
@@ -65,22 +46,14 @@ namespace AArch64
          * 
          * @param aTraps The traps for FPEN
         */
-        void FPEN(FPENTraps const aTraps)
-        {
-            RegisterValue &= std::bitset<64>{ ~(FPENIndex_Mask) };
-            auto const maskedTraps = (static_cast<uint8_t>(aTraps) << FPENIndex_Shift) & FPENIndex_Mask;
-            RegisterValue |= std::bitset<64>{ maskedTraps };
-        }
+        void FPEN(FPENTraps const aTraps);
 
         /**
          * FPEN bits - controls traps of floating point and SIMD instructions
          * 
          * @return The current traps
         */
-        FPENTraps FPEN() const
-        {
-            return static_cast<FPENTraps>((RegisterValue & std::bitset<64>{ FPENIndex_Mask }).to_ulong());
-        }
+        FPENTraps FPEN() const;
 
     private:
         /**
@@ -127,33 +100,14 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(CPTR_EL2 const aValue)
-        {
-            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
-            asm volatile(
-                "msr cptr_el2, %[value]"
-                : // no outputs
-                :[value] "r"(rawValue) // inputs
-                : // no bashed registers
-            );
-        }
+        static void Write(CPTR_EL2 const aValue);
 
         /**
          * Reads the current state of the CPTR_EL2 register
          * 
          * @return The current state of the register
         */
-        static CPTR_EL2 Read()
-        {
-            uint64_t readRawValue = 0;
-            asm volatile(
-                "mrs %[value], cptr_el2"
-                :[value] "=r"(readRawValue) // outputs
-                : // no inputs
-                : // no bashed registers
-            );
-            return CPTR_EL2{ readRawValue };
-        }
+        static CPTR_EL2 Read();
 
         /**
          * TFP Bit - Traps execution of instructions for SIMD and floating-point functionality
@@ -216,33 +170,14 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(HCR_EL2 const aValue)
-        {
-            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
-            asm volatile(
-                "msr hcr_el2, %[value]"
-                : // no outputs
-                :[value] "r"(rawValue) // inputs
-                : // no bashed registers
-            );
-        }
+        static void Write(HCR_EL2 const aValue);
 
         /**
          * Reads the current state of the HCR_EL2 register
          * 
          * @return The current state of the register
         */
-        static HCR_EL2 Read()
-        {
-            uint64_t readRawValue = 0;
-            asm volatile(
-                "mrs %[value], hcr_el2"
-                :[value] "=r"(readRawValue) // outputs
-                : // no inputs
-                : // no bashed registers
-            );
-            return HCR_EL2{ readRawValue };
-        }
+        static HCR_EL2 Read();
 
         /**
          * RW Bit - Execution state for lower exception levels
@@ -350,33 +285,14 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(HSTR_EL2 const aValue)
-        {
-            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
-            asm volatile(
-                "msr hstr_el2, %[value]"
-                : // no outputs
-                :[value] "r"(rawValue) // inputs
-                : // no bashed registers
-            );
-        }
+        static void Write(HSTR_EL2 const aValue);
 
         /**
          * Reads the current state of the HSTR_EL2 register
          * 
          * @return The current state of the register
         */
-        static HSTR_EL2 Read()
-        {
-            uint64_t readRawValue = 0;
-            asm volatile(
-                "mrs %[value], hstr_el2"
-                :[value] "=r"(readRawValue) // outputs
-                : // no inputs
-                : // no bashed registers
-            );
-            return HSTR_EL2{ readRawValue };
-        }
+        static HSTR_EL2 Read();
 
     private:
         /**
@@ -409,6 +325,10 @@ namespace AArch64
         std::bitset<64> RegisterValue;
     };
 
+    /**
+     * Saved Program Status Register (EL2)
+     * https://developer.arm.com/documentation/ddi0601/2023-09/AArch64-Registers/SPSR-EL2--Saved-Program-Status-Register--EL2-
+    */
     class SPSR_EL2
     {
         static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
@@ -423,33 +343,14 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(SPSR_EL2 const aValue)
-        {
-            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
-            asm volatile(
-                "msr spsr_el2, %[value]"
-                : // no outputs
-                :[value] "r"(rawValue) // inputs
-                : // no bashed registers
-            );
-        }
+        static void Write(SPSR_EL2 const aValue);
 
         /**
          * Reads the current state of the SPSR_EL2 register
          * 
          * @return The current state of the register
         */
-        static SPSR_EL2 Read()
-        {
-            uint64_t readRawValue = 0;
-            asm volatile(
-                "mrs %[value], spsr_el2"
-                :[value] "=r"(readRawValue) // outputs
-                : // no inputs
-                : // no bashed registers
-            );
-            return SPSR_EL2{ readRawValue };
-        }
+        static SPSR_EL2 Read();
 
         enum class Mode: uint8_t
         {
@@ -465,22 +366,14 @@ namespace AArch64
          * 
          * @param aMode The mode for ERET
         */
-        void M(Mode const aMode)
-        {
-            RegisterValue &= std::bitset<64>{ ~(MIndex_Mask) };
-            auto const maskedMode = static_cast<uint8_t>(aMode) & MIndex_Mask;
-            RegisterValue |= std::bitset<64>{ maskedMode };
-        }
+        void M(Mode const aMode);
 
         /**
          * Mode bits - where to return to with ERET and whether to use its own stack or not
          * 
          * @return The current ERET mode
         */
-        Mode M() const
-        {
-            return static_cast<Mode>((RegisterValue & std::bitset<64>{ MIndex_Mask }).to_ulong());
-        }
+        Mode M() const;
 
         /**
          * F Bit - FIQ interrupt mask

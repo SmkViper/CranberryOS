@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "AArch64/CPU.h"
 #include "Print.h"
 #include "Utils.h"
 
@@ -768,7 +769,7 @@ namespace
      */
     void ExceptionLevelTest()
     {
-        EmitTestResult(CPU::GetExceptionLevel() == 1, "Exception level");
+        EmitTestResult(AArch64::CPU::GetCurrentExceptionLevel() == AArch64::CPU::ExceptionLevel::EL1, "Exception level");
     }
 
     /**

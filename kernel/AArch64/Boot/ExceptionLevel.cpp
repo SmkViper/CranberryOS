@@ -2,7 +2,7 @@
 // not initialized, and the linker maps everythin the kernel into the higher-half.
 
 #include <cstdint>
-#include "../RegisterDefines.h"
+#include "../CPU.h"
 #include "../SystemRegisters.h"
 #include "ExceptionLevel.h"
 #include "Output.h"
@@ -11,37 +11,10 @@ namespace AArch64
 {
     namespace Boot
     {
-        namespace ASM
+        namespace CPU
         {
             namespace
             {
-                enum class ExceptionLevel : uint8_t
-                {
-                    EL0 = 0,
-                    EL1 = 1,
-                    EL2 = 2,
-                    EL3 = 3
-                };
-
-                /**
-                 * Obtains the current exception level we're running under
-                 * 
-                 * @return The current exception level
-                */
-                ExceptionLevel GetCurrentExceptionLevel()
-                {
-                    // #TODO: We have a copy of this in Utils.cpp as well, which we could just re-use, but if we do, I want to
-                    // move it to some sort of location where we know it's safe to call from anywhere (including boot)
-                    uint64_t exceptionLevel = 0;
-
-                    asm volatile("mrs %[value], CurrentEL" : [value] "=r"(exceptionLevel));
-
-                    // The exception level is in bits 2 and 3 of the value in the CurrentEL register, so extract those and
-                    // convert to our enum
-                    exceptionLevel = (exceptionLevel >> 2) & 0b11;
-                    return static_cast<ExceptionLevel>(exceptionLevel);
-                }
-
                 /**
                  * Switches processor exception level from EL2 to EL1
                 */
@@ -89,29 +62,29 @@ namespace AArch64
                 HSTR_EL2 hstr_el2;
                 HSTR_EL2::Write(hstr_el2);
 
-                ASM::SwitchFromEL2ToEL1();
+                CPU::SwitchFromEL2ToEL1();
             }
         }
 
         void SwitchToEL1()
         {
-            auto const initialExceptionLevel = AArch64::Boot::ASM::GetCurrentExceptionLevel();
+            auto const initialExceptionLevel = AArch64::CPU::GetCurrentExceptionLevel();
 
-            if (initialExceptionLevel > AArch64::Boot::ASM::ExceptionLevel::EL3)
+            if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL3)
             {
                 Panic("Unknown exception level (above EL3)");
             }
-            else if (initialExceptionLevel < AArch64::Boot::ASM::ExceptionLevel::EL1)
+            else if (initialExceptionLevel < AArch64::CPU::ExceptionLevel::EL1)
             {
                 Panic("We must at least be in EL1 to boot");
             }
 
-            if (initialExceptionLevel > AArch64::Boot::ASM::ExceptionLevel::EL2)
+            if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL2)
             {
                 // #TODO: Figure out how to handle EL3
                 Panic("We don't yet know how to switch from EL3 to EL2");
             }
-            if (initialExceptionLevel > AArch64::Boot::ASM::ExceptionLevel::EL1)
+            if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL1)
             {
                 SwitchFromEL2ToEL1();
             }

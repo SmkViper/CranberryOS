@@ -38,19 +38,4 @@ namespace Timing
      */
     uint32_t GetSystemCounterClockFrequencyHz();
 }
-
-namespace CPU
-{
-    /**
-     * Obtain the current exception level the CPU is running at
-     * 
-     * @return The current exception level
-     *         0 - user land
-     *         1 - OS level
-     *         2 - hypervisor
-     *         3 - firmware (secure/insecure world switching)
-     */
-    uint64_t GetExceptionLevel();
-}
-
 #endif // KERNEL_UTILS_H
