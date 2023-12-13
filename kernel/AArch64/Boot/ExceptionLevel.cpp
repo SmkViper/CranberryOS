@@ -61,23 +61,6 @@ namespace AArch64
                                 : "x0" // clobbered registers
                     );
                 }
-
-                /**
-                 * Sets the Architectural Feature Access Control Register for EL1 to the given value
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPACR-EL1--Architectural-Feature-Access-Control-Register
-                 * 
-                 * @param aValue New value for the register
-                */
-                void SetCPACR_EL1(uint64_t const aValue)
-                {
-                    // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                    asm volatile(
-                        "msr cpacr_el1, %[value]"
-                        : // no outputs
-                        :[value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
             }
         }
 
@@ -135,7 +118,9 @@ namespace AArch64
 
             // Disable all traps so that EL1 and EL0 can access the coprocessor, floating point, and SIMD instructions and
             // registers
-            ASM::SetCPACR_EL1(CPACR_EL1_INIT_VALUE);
+            CPACR_EL1 cpacr_el1;
+            cpacr_el1.FPEN(CPACR_EL1::FPENTraps::TrapNone);
+            CPACR_EL1::Write(cpacr_el1);
         }
     }
 }

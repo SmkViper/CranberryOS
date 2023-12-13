@@ -28,18 +28,6 @@
                              SCTLR_MMU_DISABLED)
 
 ///////////////////////////////////////////////////////////////////////////////
-// CPACR_EL1 register flags - See D10.2.29 in the ARMv8 manual
-///////////////////////////////////////////////////////////////////////////////
-
-// Some bits are reserved, but none are set to 0, so this one is simple
-#define CPACR_EL1_RESERVED_FLAGS            0
-#define CPACR_EL1_DISABLE_SVE_FP_SIMD_TRAPS (3 << 20)
-
-// AArch64: Allow EL1 and EL0 to use SVE, floating-point, and SIMD registers (won't trap to EL1)
-#define CPACR_EL1_INIT_VALUE    (CPACR_EL1_RESERVED_FLAGS | \
-                                 CPACR_EL1_DISABLE_SVE_FP_SIMD_TRAPS)
-
-///////////////////////////////////////////////////////////////////////////////
 // ESR_ELx register flags - See D10.2.39 in the ARMv8 manual
 ///////////////////////////////////////////////////////////////////////////////
 

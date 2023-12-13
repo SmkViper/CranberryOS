@@ -7,6 +7,104 @@
 namespace AArch64
 {
     /**
+     * Architectural Feature Access Control Register
+     * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPACR-EL1--Architectural-Feature-Access-Control-Register
+    */
+    class CPACR_EL1
+    {
+        static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
+    public:
+        /**
+         * Constructor - produces a value with all bits zeroed
+        */
+        CPACR_EL1() = default;
+
+        /**
+         * Writes the given value to the CPACR_EL1 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write(CPACR_EL1 const aValue)
+        {
+            uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+            asm volatile(
+                "msr cpacr_el1, %[value]"
+                : // no outputs
+                :[value] "r"(rawValue) // inputs
+                : // no bashed registers
+            );
+        }
+
+        /**
+         * Reads the current state of the CPACR_EL1 register
+         * 
+         * @return The current state of the register
+        */
+        static CPACR_EL1 Read()
+        {
+            uint64_t readRawValue = 0;
+            asm volatile(
+                "mrs %[value], cpacr_el1"
+                :[value] "=r"(readRawValue) // outputs
+                : // no inputs
+                : // no bashed registers
+            );
+            return CPACR_EL1{ readRawValue };
+        }
+
+        enum class FPENTraps: uint8_t
+        {
+            TrapAll = 0b00,
+            TrapEL0 = 0b01,
+            TrapAll2 = 0b10, // documented as the same as TrapAll, not sure the difference?
+            TrapNone = 0b11,
+        };
+
+        /**
+         * FPEN bits - controls traps of floating point and SIMD instructions
+         * 
+         * @param aTraps The traps for FPEN
+        */
+        void FPEN(FPENTraps const aTraps)
+        {
+            RegisterValue &= std::bitset<64>{ ~(FPENIndex_Mask) };
+            auto const maskedTraps = (static_cast<uint8_t>(aTraps) << FPENIndex_Shift) & FPENIndex_Mask;
+            RegisterValue |= std::bitset<64>{ maskedTraps };
+        }
+
+        /**
+         * FPEN bits - controls traps of floating point and SIMD instructions
+         * 
+         * @return The current traps
+        */
+        FPENTraps FPEN() const
+        {
+            return static_cast<FPENTraps>((RegisterValue & std::bitset<64>{ FPENIndex_Mask }).to_ulong());
+        }
+
+    private:
+        /**
+         * Create a register value from the given bits
+         * 
+         * @param aInitialValue The bits to start with
+        */
+        CPACR_EL1(uint64_t const aInitialValue)
+            : RegisterValue{ aInitialValue }
+        {}
+
+        // Reserved     [15:0]
+        // #TODO: ZEN   [17:16] (Res0 if FEAT_SVE is not available)
+        // Reserved     [19:18]
+        static constexpr uint64_t FPENIndex_Shift = 20;
+        static constexpr uint64_t FPENIndex_Mask = 0b11 << FPENIndex_Shift;
+        // Reserved     [27:22]
+        // #TODO: TTA   [28]
+        // Reserved     [63:29]
+
+        std::bitset<64> RegisterValue;
+    };
+
+    /**
      * Architectural Feature Trap Register (EL2)
      * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPTR-EL2--Architectural-Feature-Trap-Register--EL2-
      * 
@@ -21,7 +119,7 @@ namespace AArch64
          * Constructor - produces a value with all bits zeroed (and Res1 bits set)
         */
         CPTR_EL2()
-            : RegisterValue{ ReservedValues }
+            : CPTR_EL2{ ReservedValues }
         {}
 
         /**
@@ -369,13 +467,9 @@ namespace AArch64
         */
         void M(Mode const aMode)
         {
-            // #TODO: Probably should make this a common utility
-            for (auto bitIndex = MIndex_Min; bitIndex <= MIndex_Max; ++bitIndex)
-            {
-                // Assumes MIndex_Min is 0
-                auto const mask = (1 << bitIndex);
-                RegisterValue[bitIndex] = static_cast<bool>(static_cast<uint8_t>(aMode) & mask);
-            }
+            RegisterValue &= std::bitset<64>{ ~(MIndex_Mask) };
+            auto const maskedMode = static_cast<uint8_t>(aMode) & MIndex_Mask;
+            RegisterValue |= std::bitset<64>{ maskedMode };
         }
 
         /**
@@ -385,14 +479,7 @@ namespace AArch64
         */
         Mode M() const
         {
-            // #TODO: Probably should make this a common utility
-            uint8_t retVal = 0;
-            for (auto bitIndex = MIndex_Min; bitIndex <= MIndex_Max; ++bitIndex)
-            {
-                // Assumes MIndex_Min is 0
-                retVal |= (RegisterValue[bitIndex] << bitIndex);
-            }
-            return static_cast<Mode>(retVal);
+            return static_cast<Mode>((RegisterValue & std::bitset<64>{ MIndex_Mask }).to_ulong());
         }
 
         /**
@@ -461,8 +548,7 @@ namespace AArch64
             : RegisterValue{ aInitialValue }
         {}
 
-        static constexpr unsigned MIndex_Min = 0;
-        static constexpr unsigned MIndex_Max = 3;
+        static constexpr uint64_t MIndex_Mask = 0b1111;
         // #TODO: M[4]  [4]
         // Reserved     [5]
         static constexpr unsigned FIndex = 6;
