@@ -1,7 +1,7 @@
 // Included from assembly, so can't have anything fancy in here
 
-#ifndef KERNEL_ARM_MMU_DEFINES_H
-#define KERNEL_ARM_MMU_DEFINES_H
+#ifndef KERNEL_AARCH64_MMU_DEFINES_H
+#define KERNEL_AARCH64_MMU_DEFINES_H
 
 // #TODO: Clean all this up in some way so we don't have so many #defines polluting the global namespace
 
@@ -149,4 +149,4 @@
 // The value we set for TCR_EL1 - 4kb granule size for EL0 and EL1, and 2^48 size for each as well
 #define TCR_VALUE (TCR_T0SZ | TCR_T1SZ | TCR_TG0_4K | TCR_TG1_4K)
 
-#endif // KERNEL_ARM_MMU_DEFINES_H
+#endif // KERNEL_AARCH64_MMU_DEFINES_H

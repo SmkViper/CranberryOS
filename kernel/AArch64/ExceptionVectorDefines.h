@@ -1,7 +1,7 @@
 // Included from assembly, so can't have anything fancy in here
 
-#ifndef KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H
-#define KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H
+#ifndef KERNEL_AARCH64_EXCEPTION_VECTOR_DEFINES_H
+#define KERNEL_AARCH64_EXCEPTION_VECTOR_DEFINES_H
 
 #define STACK_FRAME_SIZE        272     // we store 17 pairs of 8 byte registers on the stack (17 * 8 * 2)
 #define STACK_X0_OFFSET         0       // x0 is stored on the top
@@ -29,4 +29,4 @@
 #define SYSCALL_ERROR           14
 #define DATA_ABORT_ERROR        15
 
-#endif // KERNEL_ARM_EXCEPTION_VECTOR_DEFINES_H
+#endif // KERNEL_AARCH64_EXCEPTION_VECTOR_DEFINES_H

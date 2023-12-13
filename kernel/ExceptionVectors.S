@@ -1,5 +1,5 @@
-#include "ARM/ExceptionVectorDefines.h"
-#include "ARM/SystemRegisters.h"
+#include "AArch64/ExceptionVectorDefines.h"
+#include "AArch64/RegisterDefines.h"
 #include "SystemCallDefines.h"
 
 // Helper for handling exceptions we don't actually handle by spitting out an error

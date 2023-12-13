@@ -1,0 +1,962 @@
+#ifndef __KERNEL_STDLIB_BITSET__
+#define __KERNEL_STDLIB_BITSET__
+
+#include <cstddef>
+#include <climits>
+#include <type_traits>
+
+namespace std
+{
+    namespace _Detail
+    {
+        template<class _Container>
+        class _BitReference
+        {
+            friend typename _Container::_Self; // let the bitset access our private constructor
+            using _StorageType = typename _Container::_StorageType;
+        public:
+            /**
+             * Copy constructor (points this at the same bit that the other reference is)
+             * 
+             * @param __aOther The other reference to copy from
+            */
+            constexpr _BitReference(_BitReference const& /*__aOther*/) = default;
+
+            /**
+             * Returns the value of the bit
+             * 
+             * @return The value of the bit
+            */
+            constexpr operator bool() const noexcept
+            {
+                return static_cast<bool>((*__pWord) & _Mask);
+            }
+
+            /**
+             * Returns the inverse of the value of the bit
+             * 
+             * @return The inverse of the bit value
+            */
+            constexpr bool operator~() const noexcept
+            {
+                return !static_cast<bool>(*this);
+            }
+
+            /**
+             * Sets or clears the bit
+             * 
+             * @param __aValue The value to give to the bit
+             * @return This bit reference
+            */
+            constexpr _BitReference& operator=(bool __aValue) noexcept
+            {
+                if (__aValue)
+                {
+                    *__pWord |= _Mask;
+                }
+                else
+                {
+                    *__pWord &= ~_Mask;
+                }
+                return *this;
+            }
+
+            /**
+             * Sets the value of this bit to equal the value of the other bit. Does NOT repoint the reference to the
+             * bit the other one points at (so it's not a copy assignment operator in that sense)
+             * 
+             * @param __aValue The reference to the bit to set this one's value to
+             * @return This bit reference
+            */
+            constexpr _BitReference& operator=(_BitReference const& __aValue) noexcept
+            {
+                return operator=(static_cast<bool>(__aValue));
+            }
+
+            /**
+             * Flips this bit
+            */
+            constexpr void flip() noexcept
+            {
+                *__pWord ^= _Mask;
+            }
+
+        private:
+            /**
+             * Construct a reference to a bit
+             * 
+             * @param __apWord Pointer to the word being accessed
+             * @param __aMask Mask to the specific bit
+            */
+            constexpr _BitReference(_StorageType* const __apWord, _StorageType const __aMask) noexcept
+                : __pWord{ __apWord }
+                , _Mask{ __aMask }
+            {}
+
+            _StorageType* __pWord = nullptr;
+            _StorageType _Mask = 0;
+        };
+
+        /**
+         * Swaps the bits that two references point at
+         * 
+         * @param __aLeft The left bit to swap
+         * @param __aRight The right bit to swap
+        */
+        template<class _Container>
+        constexpr void swap(_BitReference<_Container> __aLeft, _BitReference<_Container> __aRight) noexcept
+        {
+            bool __value = __aLeft;
+            __aLeft = __aRight;
+            __aRight = __value;
+        }
+
+        /**
+         * Swaps the bits that two references point at
+         * 
+         * @param __aLeft The left bit to swap
+         * @param __aRight The right bit to swap
+        */
+        template<class _ContainerA, class _ContainerB>
+        constexpr void swap(_BitReference<_ContainerA> __aLeft, _BitReference<_ContainerB> __aRight) noexcept
+        {
+            bool __value = __aLeft;
+            __aLeft = __aRight;
+            __aRight = __value;
+        }
+
+        /**
+         * Swaps a bitreference with a bool reference
+         * 
+         * @param __aLeft The left bit to swap
+         * @param __aRight The right bool
+        */
+        template<class _Container>
+        constexpr void swap(_BitReference<_Container> __aLeft, bool& __aRight) noexcept
+        {
+            bool __value = __aLeft;
+            __aLeft = __aRight;
+            __aRight = __value;
+        }
+
+        /**
+         * Swaps a bitreference with a bool reference
+         * 
+         * @param __aLeft The bool to swap
+         * @param __aRight The right bit to swap
+        */
+        template<class _Container>
+        constexpr void swap(bool& __aLeft, _BitReference<_Container> __aRight) noexcept
+        {
+            bool __value = __aLeft;
+            __aLeft = __aRight;
+            __aRight = __value;
+        }
+
+        template<class _Container>
+        class _BitConstReference
+        {
+            friend typename _Container::_Self; // let the bitset access our private constructor
+            using _StorageType = typename _Container::_StorageType;
+        public:
+            /**
+             * Copy constructor (points this at the same bit that the other reference is)
+             * 
+             * @param __aOther The other reference to copy from
+            */
+            constexpr _BitConstReference(_BitConstReference const& /*__aOther*/) = default;
+
+            /**
+             * Copy constructor from a non-const reference (points to the same bit)
+             * 
+             * @param __aOther The other reference to copy from
+            */
+            constexpr _BitConstReference(_BitReference<_Container> const& __aOther)
+                : __pWord{ __aOther.__pWord }
+                , _Mask{ __aOther._Mask }
+            {}
+
+            /**
+             * Returns the value of the bit
+             * 
+             * @return The value of the bit
+            */
+            constexpr operator bool() const noexcept
+            {
+                return static_cast<bool>((*__pWord) & _Mask);
+            }
+
+            /**
+             * Returns the inverse of the value of the bit
+             * 
+             * @return The inverse of the bit value
+            */
+            constexpr bool operator~() const noexcept
+            {
+                return !static_cast<bool>(*this);
+            }
+
+        private:
+            /**
+             * Construct a reference to a bit
+             * 
+             * @param __apWord Pointer to the word being accessed
+             * @param __aMask Mask to the specific bit
+            */
+            constexpr _BitConstReference(_StorageType const* const __apWord, _StorageType const __aMask) noexcept
+                : __pWord{ __apWord }
+                , _Mask{ __aMask }
+            {}
+
+            _BitConstReference& operator=(_BitConstReference const&) = delete;
+
+            _StorageType const* __pWord = nullptr;
+            _StorageType _Mask = 0;
+        };
+        
+        template<size_t _WordCount, size_t _Size>
+        class _Bitset
+        {
+        public:
+            using _Self = _Bitset; // so our reference classes can refer to us in friend definitions
+            using _StorageType = size_t;
+            static constexpr unsigned _BitsPerWord = static_cast<unsigned>(sizeof(_StorageType) * CHAR_BIT);
+
+            using _Reference = _BitReference<_Bitset>;
+            using _ConstReference = _BitConstReference<_Bitset>;
+
+            /**
+             * Constructs the bitset with all bits zeroed
+            */
+            constexpr _Bitset() noexcept = default;
+
+            /**
+             * Constructs the bitset with the lowest (rightmost) bits set to the specified value
+             * 
+             * @param __aValue The value to set the low bits to
+            */
+            constexpr explicit _Bitset(unsigned long long const __aValue) noexcept
+#if __SIZEOF_SIZE_T__ == 8
+                : _Words{ __aValue }
+#else
+#error Currently only support 64-bit size_t
+#endif
+            {}
+
+            /**
+             * Make a reference to the specified bit
+             * 
+             * @param __aPos The bit to make a reference for
+             * @return A reference to the given bit
+            */
+            constexpr _Reference _MakeReference(size_t const __aPos) noexcept
+            {
+                return _Reference{ &(_Words[__aPos / _BitsPerWord]), _StorageType{ 1 } << __aPos % _BitsPerWord };
+            }
+
+            /**
+             * Make a const reference to the specified bit
+             * 
+             * @param __aPos The bit to make a reference for
+             * @return A const reference to the given bit
+            */
+            constexpr _ConstReference _MakeReference(size_t const __aPos) const noexcept
+            {
+                return _ConstReference{ &(_Words[__aPos / _BitsPerWord]), _StorageType{ 1 } << __aPos % _BitsPerWord };
+            }
+
+            /**
+             * ANDs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to AND with
+            */
+            constexpr void operator&=(_Bitset const& __aOther) noexcept
+            {
+                for (auto __curIndex = 0U; __curIndex < _WordCount; ++__curIndex)
+                {
+                    _Words[__curIndex] &= __aOther._Words[__curIndex];
+                }
+            }
+
+            /**
+             * ORs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to OR with
+            */
+            constexpr void operator|=(_Bitset const& __aOther) noexcept
+            {
+                for (auto __curIndex = 0U; __curIndex < _WordCount; ++__curIndex)
+                {
+                    _Words[__curIndex] |= __aOther._Words[__curIndex];
+                }
+            }
+
+            /**
+             * XORs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to XOR with
+            */
+            constexpr void operator^=(_Bitset const& __aOther) noexcept
+            {
+                for (auto __curIndex = 0U; __curIndex < _WordCount; ++__curIndex)
+                {
+                    _Words[__curIndex] ^= __aOther._Words[__curIndex];
+                }
+            }
+
+            /**
+             * Flips all the bits in the bitset
+            */
+            constexpr void _Flip() noexcept
+            {
+                // Handle all the full words first
+                auto __remainingBits = _Size;
+                _StorageType* __curWord = _Words;
+                for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
+                {
+                    *__curWord = ~(*__curWord);
+                }
+
+                // Handle the partial word last specially, because we don't want to flip bits that aren't conceptually
+                // part of the bitset
+                if (__remainingBits > 0)
+                {
+                    auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - __remainingBits);
+                    auto const __bottomBits = *__curWord & __mask;
+                    *__curWord &= ~__mask;
+                    *__curWord |= ~__bottomBits & __mask;
+                }
+            }
+
+            /**
+             * Convert the bitset to an unsigned long
+             * 
+             * @return The value of the bitset as an unsigned long
+            */
+            constexpr unsigned long _ToULong() const
+            {
+                // #TODO: If _Size is greater than the number of bits in an unsigned long, then throw if we have any
+                // valid bits set higher than that range
+                return _Words[0];
+            }
+
+            /**
+             * Convert the bitset to an unsigned long long
+             * 
+             * @return The value of the bitset as an unsigned long long
+            */
+            constexpr unsigned long long _ToULongLong() const
+            {
+                // #TODO: If _Size is greater than the number of bits in an unsigned long long, then throw if we have
+                // any valid bits set higher than that range
+                if constexpr (sizeof(_StorageType) < sizeof(unsigned long long))
+                {
+                    unsigned long long __result = _Words[0];
+                    for (auto __curWord = 1; __curWord < sizeof(unsigned long long) / sizeof(_StorageType); ++__curWord)
+                    {
+                        __result |= static_cast<unsigned long long>(_Words[__curWord]) << ((sizeof(_StorageType) * CHAR_BIT) * __curWord);
+                    }
+                    return __result;
+                }
+                else
+                {
+                    return _Words[0];
+                }
+            }
+
+            /**
+             * Checks to see if all bits in the bitset are set
+             * 
+             * @return True if all bits are set
+            */
+            constexpr bool _All() const noexcept
+            {
+                // Handle all the full words first
+                auto __remainingBits = _Size;
+                _StorageType const* __curWord = _Words;
+                for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
+                {
+                    if (~(*__curWord))
+                    {
+                        return false;
+                    }
+                }
+
+                // Handle the partial word last specially, because we don't want the extra bits to affect the result
+                if (__remainingBits > 0)
+                {
+                    auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - __remainingBits);
+                    if ((~(*__curWord)) & __mask)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            /**
+             * Checks to see if any bits in the bitset are set
+             * 
+             * @return True if any bits are set
+            */
+            constexpr bool _Any() const noexcept
+            {
+                // Handle all the full words first
+                auto __remainingBits = _Size;
+                _StorageType const* __curWord = _Words;
+                for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
+                {
+                    if (*__curWord)
+                    {
+                        return true;
+                    }
+                }
+
+                // Handle the partial word last specially, because we don't want the extra bits to affect the result
+                // result
+                if (__remainingBits > 0)
+                {
+                    auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - __remainingBits);
+                    if ((*__curWord) & __mask)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+        private:
+            _StorageType _Words[_WordCount] = { 0 };
+        };
+
+        template<size_t _Size>
+        class _Bitset<1, _Size>
+        {
+        public:
+            using _Self = _Bitset; // so our reference classes can refer to us in friend definitions
+            using _StorageType = size_t;
+            static constexpr unsigned _BitsPerWord = static_cast<unsigned>(sizeof(_StorageType) * CHAR_BIT);
+
+            using _Reference = _BitReference<_Bitset>;
+            using _ConstReference = _BitConstReference<_Bitset>;
+
+            /**
+             * Constructs the bitset with all bits zeroed
+            */
+            constexpr _Bitset() noexcept = default;
+
+            /**
+             * Constructs the bitset with the lowest (rightmost) bits set to the specified value
+             * 
+             * @param __aValue The value to set the low bits to
+            */
+            constexpr explicit _Bitset(unsigned long long const __aValue) noexcept
+                : _Word{
+                    _Size == _BitsPerWord ? static_cast<_StorageType>(__aValue)
+                        : static_cast<_StorageType>(__aValue) & ((_StorageType{ 1 } << _Size) - 1)
+                }
+            {}
+
+            /**
+             * Make a reference to the specified bit
+             * 
+             * @param __aPos The bit to make a reference for
+             * @return A reference to the given bit
+            */
+            constexpr _Reference _MakeReference(size_t const __aPos) noexcept
+            {
+                return _Reference{ &_Word, _StorageType{ 1 } << __aPos };
+            }
+
+            /**
+             * Make a const reference to the specified bit
+             * 
+             * @param __aPos The bit to make a reference for
+             * @return A const reference to the given bit
+            */
+            constexpr _ConstReference _MakeReference(size_t const __aPos) const noexcept
+            {
+                return _ConstReference{ &_Word, _StorageType{ 1 } << __aPos };
+            }
+
+            /**
+             * ANDs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to AND with
+            */
+            constexpr void operator&=(_Bitset const& __aOther) noexcept
+            {
+                _Word &= __aOther._Word;
+            }
+
+            /**
+             * ORs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to OR with
+            */
+            constexpr void operator|=(_Bitset const& __aOther) noexcept
+            {
+                _Word |= __aOther._Word;
+            }
+
+            /**
+             * XORs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to XOR with
+            */
+            constexpr void operator^=(_Bitset const& __aOther) noexcept
+            {
+                _Word ^= __aOther._Word;
+            }
+
+            /**
+             * Flips all the bits in the bitset
+            */
+            constexpr void _Flip() noexcept
+            {
+                // Make sure we only flip bits that are part of the bitset
+                auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - _Size);
+                _Word = ~_Word;
+                _Word &= __mask;
+            }
+
+            /**
+             * Convert the bitset to an unsigned long
+             * 
+             * @return The value of the bitset as an unsigned long
+            */
+            constexpr unsigned long _ToULong() const
+            {
+                return _Word;
+            }
+
+            /**
+             * Convert the bitset to an unsigned long long
+             * 
+             * @return The value of the bitset as an unsigned long long
+            */
+            constexpr unsigned long long _ToULongLong() const
+            {
+                return _Word;
+            }
+
+            /**
+             * Checks to see if all bits in the bitset are set
+             * 
+             * @return True if all bits are set
+            */
+            constexpr bool _All() const noexcept
+            {
+                // Make sure we're only testing valid bits
+                auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - _Size);
+                return !((~_Word) & __mask);
+            }
+
+            /**
+             * Checks to see if any bits in the bitset are set
+             * 
+             * @return True if any bits are set
+            */
+            constexpr bool _Any() const noexcept
+            {
+                
+                auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - _Size);
+                return _Word & __mask;
+            }
+
+        private:
+            _StorageType _Word = { 0 };
+        };
+
+        template<>
+        class _Bitset<0, 0>
+        {
+        public:
+            using _Self = _Bitset; // so our reference classes can refer to us in friend definitions
+            using _StorageType = size_t;
+            static constexpr unsigned _BitsPerWord = static_cast<unsigned>(sizeof(_StorageType) * CHAR_BIT);
+
+            using _Reference = _BitReference<_Bitset>;
+            using _ConstReference = _BitConstReference<_Bitset>;
+
+            /**
+             * Constructs the bitset with all bits zeroed
+            */
+            constexpr _Bitset() noexcept = default;
+
+            /**
+             * Constructs the bitset with the lowest (rightmost) bits set to the specified value
+             * 
+             * @param __aValue The value to set the low bits to
+            */
+            constexpr explicit _Bitset(unsigned long long const /*__aValue*/) noexcept {}
+
+            /**
+             * Make a reference to the specified bit
+             * 
+             * @param __aPos The bit to make a reference for
+             * @return A reference to the given bit
+            */
+            constexpr _Reference _MakeReference(size_t const /*__aPos*/) noexcept
+            {
+                return _Reference{ nullptr, 1 };
+            }
+
+            /**
+             * Make a const reference to the specified bit
+             * 
+             * @param __aPos The bit to make a reference for
+             * @return A const reference to the given bit
+            */
+            constexpr _ConstReference _MakeReference(size_t const /*__aPos*/) const noexcept
+            {
+                return _ConstReference{ nullptr, 1 };
+            }
+
+            /**
+             * ANDs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to AND with
+            */
+            constexpr void operator&=(_Bitset const& /*__aOther*/) noexcept {}
+
+            /**
+             * ORs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to OR with
+            */
+            constexpr void operator|=(_Bitset const& /*__aOther*/) noexcept {}
+
+            /**
+             * XORs the bits in this bitset with another one
+             * 
+             * @param __aOther The other bitset to XOR with
+            */
+            constexpr void operator^=(_Bitset const& /*__aOther*/) noexcept {}
+
+            /**
+             * Flips all the bits in the bitset
+            */
+            constexpr void _Flip() noexcept {}
+
+            /**
+             * Convert the bitset to an unsigned long
+             * 
+             * @return The value of the bitset as an unsigned long
+            */
+            constexpr unsigned long _ToULong() const
+            {
+                return 0;
+            }
+
+            /**
+             * Convert the bitset to an unsigned long long
+             * 
+             * @return The value of the bitset as an unsigned long long
+            */
+            constexpr unsigned long long _ToULongLong() const
+            {
+                return 0;
+            }
+
+            /**
+             * Checks to see if all bits in the bitset are set
+             * 
+             * @return True if all bits are set
+            */
+            constexpr bool _All() const noexcept
+            {
+                // Matches the behavior of libc++
+                return true;
+            }
+
+            /**
+             * Checks to see if any bits in the bitset are set
+             * 
+             * @return True if any bits are set
+            */
+            constexpr bool _Any() const noexcept
+            {
+                // Matches the behavior of libc++
+                return false;
+            }
+        };
+    }
+
+    template<size_t _Size>
+    class bitset: private _Detail::_Bitset<_Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1, _Size>
+    {
+    private:
+        static constexpr auto _WordCount = _Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1;
+        using _Base = _Detail::_Bitset<_WordCount, _Size>;
+
+    public:
+        using reference = typename _Base::_Reference;
+        using const_reference = typename _Base::_ConstReference;
+
+        /**
+         * Construct a new bitset with bits zeroed out
+        */
+        constexpr bitset() noexcept = default;
+
+        /**
+         * Construct a new bitset with the low bits (right most) set to the value
+         * 
+         * @param __aValue The value to set the low bits to
+        */
+        constexpr bitset(unsigned long long __aValue) : _Base{ __aValue } {}
+
+        // #TODO: bitset constructor from basic_string
+        // #TODO: bitset constructor from basic_string_view
+        // #TODO: bitset constructor from CharT
+
+        /**
+         * AND the bits of the two bitsets together
+         * 
+         * @param __aOther The other bitset to AND with
+         * @return This bitset
+        */
+        constexpr bitset& operator&=(bitset const& __aOther) noexcept
+        {
+            _Base::operator&=(__aOther);
+            return *this;
+        }
+
+        /**
+         * OR the bits of the two bitsets together
+         * 
+         * @param __aOther The other bitset to OR with
+         * @return This bitset
+        */
+        constexpr bitset& operator|=(bitset const& __aOther) noexcept
+        {
+            _Base::operator|=(__aOther);
+            return *this;
+        }
+
+        /**
+         * XOR the bits of the two bitsets together
+         * 
+         * @param __aOther The other bitset to XOR with
+         * @return This bitset
+        */
+        constexpr bitset& operator^=(bitset const& __aOther) noexcept
+        {
+            _Base::operator^=(__aOther);
+            return *this;
+        }
+
+        // #TODO: operator<<=
+        // #TODO: operator>>=
+        // #TODO: set()
+        
+        /**
+         * Set (or clear) the given bit
+         * 
+         * @param __aPos The bit to set or clear
+         * @param __aVal Whether to set or clear the bit
+         * @return This bitset
+        */
+        constexpr bitset& set(size_t const __aPos, bool __aVal = true)
+        {
+            // #TODO: Throw if out of range
+            (*this)[__aPos] = __aVal;
+            return *this;
+        }
+
+        // #TODO: reset()
+
+        /**
+         * Clear the given bit
+         * 
+         * @param __aPos The bit to clear
+         * @return This bitset
+        */
+        constexpr bitset& reset(size_t const __aPos)
+        {
+            // #TODO: Throw if out of range
+            (*this)[__aPos] = false;
+            return *this;
+        }
+
+        /**
+         * Return the NOT of this bitset
+         * 
+         * @return The NOT of this bitset
+        */
+        constexpr bitset operator~() const noexcept
+        {
+            bitset __copy{ *this };
+            __copy.flip();
+            return __copy;
+        }
+
+        /**
+         * Flips the bits in this bitset
+         * 
+         * @return This bitset
+        */
+        constexpr bitset& flip() noexcept
+        {
+            _Base::_Flip();
+            return *this;
+        }
+
+        /**
+         * Flip the given bit in the bitset
+         * 
+         * @param __aPos The bit to flip
+         * @return This bitset
+        */
+        constexpr bitset& flip(size_t const __aPos)
+        {
+            // #TODO: Throw if position out of range
+            auto __reference = _Base::_MakeReference(__aPos);
+            __reference = ~__reference;
+            return *this;
+        }
+
+        /**
+         * Obtain a const reference to the given bit
+         * 
+         * @param __aPos The bit to get a reference to
+         * @return A const reference to the bit
+        */
+        constexpr const_reference operator[](size_t const __aPos) const { return _Base::_MakeReference(__aPos); }
+
+        /**
+         * Obtain a reference to the given bit
+         * 
+         * @param __aPos The bit to get a reference to
+         * @return A reference to the bit
+        */
+        constexpr reference operator[](size_t const __aPos) { return _Base::_MakeReference(__aPos); }
+
+        /**
+         * Convert this bitset to an unsigned long
+         * 
+         * @return The bits in this bitset as an unsigned long
+        */
+        constexpr unsigned long to_ulong() const
+        {
+            return _Base::_ToULong();
+        }
+
+        /**
+         * Convert this bitset to an unsigned long long
+         * 
+         * @return The bits in this bitset as an unsigned long long
+        */
+        constexpr unsigned long long to_ullong() const
+        {
+            return _Base::_ToULongLong();
+        }
+
+        // #TODO: to_string
+        // #TODO: count
+
+        /**
+         * Obtains the number of bits in the bitset
+         * 
+         * @return The number of bits
+        */
+        constexpr size_t size() const noexcept { return _Size; }
+
+        // #TODO: operator==
+        // #TODO: operator!=
+
+        /**
+         * Tests the given bit
+         * 
+         * @param __aPos The bit to test
+         * @return True if the bit set, false otherwise
+        */
+        constexpr bool test(size_t const __aPos) const
+        {
+            // #TODO: Throw if pos is out of range
+            return (*this)[__aPos];
+        }
+
+        /**
+         * Check to see if all bits are set
+         * 
+         * @return True if all bits are set
+        */
+        constexpr bool all() const noexcept
+        {
+            return _Base::_All();
+        }
+
+        /**
+         * Check to see if any bits are set
+         * 
+         * @return True if any bits are set
+        */
+        constexpr bool any() const noexcept
+        {
+            return _Base::_Any();
+        }
+
+        /**
+         * Check to see if no bits are set
+         * 
+         * @return True if no bets are set
+        */
+        constexpr bool none() const noexcept
+        {
+            return !any();
+        }
+
+        // #TODO: operator<<
+        // #TODO: operator>>
+    };
+
+    /**
+     * AND two bitsets together
+     * 
+     * @param __aLeft The first bitset
+     * @param __aRight The second bitset
+     * @return The two bitsets ANDed together
+    */
+    template<size_t _Size>
+    constexpr bitset<_Size> operator&(bitset<_Size> const& __aLeft, bitset<_Size> const& __aRight) noexcept
+    {
+        bitset<_Size> __result = __aLeft;
+        __result &= __aRight;
+        return __result;
+    }
+
+    /**
+     * OR two bitsets together
+     * 
+     * @param __aLeft The first bitset
+     * @param __aRight The second bitset
+     * @return The two bitsets ORed together
+    */
+    template<size_t _Size>
+    constexpr bitset<_Size> operator|(bitset<_Size> const& __aLeft, bitset<_Size> const& __aRight) noexcept
+    {
+        bitset<_Size> __result = __aLeft;
+        __result |= __aRight;
+        return __result;
+    }
+
+    /**
+     * XOR two bitsets together
+     * 
+     * @param __aLeft The first bitset
+     * @param __aRight The second bitset
+     * @return The two bitsets XORed together
+    */
+    template<size_t _Size>
+    constexpr bitset<_Size> operator^(bitset<_Size> const& __aLeft, bitset<_Size> const& __aRight) noexcept
+    {
+        bitset<_Size> __result = __aLeft;
+        __result ^= __aRight;
+        return __result;
+    }
+
+    // #TODO: hash
+}
+
+#endif // __KERNEL_STDLIB_BITSET__

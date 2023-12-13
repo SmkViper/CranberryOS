@@ -1,4 +1,5 @@
-#include "ARM/MMUDefines.h"
+#include "AArch64/CPU.h"
+#include "AArch64/MMUDefines.h"
 #include "Peripherals/DeviceTree.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
@@ -61,7 +62,7 @@ namespace
      */
     void KernelProcess(const void* const /*apParam*/)
     {
-        Print::FormatToMiniUART("Kernel process started. EL {}\r\n", CPU::GetExceptionLevel());
+        Print::FormatToMiniUART("Kernel process started. EL {}\r\n", static_cast<uint32_t>(AArch64::CPU::GetCurrentExceptionLevel()));
         const auto pbegin = &__user_start;
         const auto size = reinterpret_cast<uintptr_t>(&__user_end) - reinterpret_cast<uintptr_t>(pbegin);
         const auto processOffset = reinterpret_cast<uintptr_t>(&User::Process) - reinterpret_cast<uintptr_t>(pbegin);

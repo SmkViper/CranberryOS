@@ -2,7 +2,7 @@
 
 #include <cstring>
 #include <new>
-#include "ARM/SchedulerDefines.h"
+#include "AArch64/SchedulerDefines.h"
 #include "IRQ.h"
 #include "MemoryManager.h"
 #include "TaskStructs.h"

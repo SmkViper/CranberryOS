@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
-#include "ARM/MMUDefines.h"
+#include "AArch64/MMUDefines.h"
 #include "Peripherals/Base.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"

@@ -2,7 +2,7 @@
 #define KERNEL_MEMORY_MANAGER_H
 
 #include <cstdint>
-#include "ARM/MMUDefines.h"
+#include "AArch64/MMUDefines.h"
 
 namespace Scheduler
 {

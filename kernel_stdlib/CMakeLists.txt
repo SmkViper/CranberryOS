@@ -1,10 +1,13 @@
 # Manually adding the headers here, instead of in a CMakeLists.txt file in the include folder to keep
 # said folder "clean" and able to be copied around if needed.
 set(HEADER_LIST
+    "include/bitset"
+    "include/climits"
     "include/cstddef"
     "include/cstdint"
     "include/cstring"
     "include/exception"
+    "include/limits.h"
     "include/new"
     "include/stddef.h"
     "include/stdint.h"
