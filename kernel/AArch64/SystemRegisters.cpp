@@ -2,6 +2,39 @@
 
 namespace AArch64
 {
+    namespace
+    {
+        /**
+         * Writes a multi-bit value to a bitset
+         * 
+         * @param arBitset The bitset to modify
+         * @param aValue The value to write
+         * @param aMask An un-shifted mask for the bits to write
+         * @param aShit How much to shift the value before writing
+        */
+        template<typename EnumType, size_t BitsetSize>
+        void WriteMultiBitValue(std::bitset<BitsetSize>& arBitset, EnumType const aValue, uint64_t const aMask, uint64_t const aShift)
+        {
+            arBitset &= std::bitset<64>{ ~(aMask << aShift) };
+            auto const maskedValue = (static_cast<uint64_t>(aValue) & aMask) << aShift;
+            arBitset |= std::bitset<64>{ maskedValue };
+        }
+
+        /**
+         * Reads a multi-bit value from a bitset
+         * 
+         * @param aBitset The bitset to read
+         * @param aMask An un-shifted mask fro the bits to read
+         * @param aShift How much to shift the value after reading
+         * @return The read bits, casted to EnumType
+        */
+        template<typename EnumType, size_t BitsetSize>
+        EnumType ReadMultiBitValue(std::bitset<BitsetSize> const& aBitset, uint64_t const aMask, uint64_t const aShift)
+        {
+            auto const shiftedMask = aMask << aShift;
+            return static_cast<EnumType>((aBitset & std::bitset<64>{ shiftedMask }).to_ulong() >> aShift);
+        }
+    }
     
     void CPACR_EL1::Write(CPACR_EL1 const aValue)
     {
@@ -28,14 +61,12 @@ namespace AArch64
 
     void CPACR_EL1::FPEN(FPENTraps const aTraps)
     {
-        RegisterValue &= std::bitset<64>{ ~(FPENIndex_Mask) };
-        auto const maskedTraps = (static_cast<uint8_t>(aTraps) << FPENIndex_Shift) & FPENIndex_Mask;
-        RegisterValue |= std::bitset<64>{ maskedTraps };
+        WriteMultiBitValue(RegisterValue, aTraps, FPENIndex_Mask, FPENIndex_Shift);
     }
 
     CPACR_EL1::FPENTraps CPACR_EL1::FPEN() const
     {
-        return static_cast<FPENTraps>((RegisterValue & std::bitset<64>{ FPENIndex_Mask }).to_ulong());
+        return ReadMultiBitValue<FPENTraps>(RegisterValue, FPENIndex_Mask, FPENIndex_Shift);
     }
 
     void CPTR_EL2::Write(CPTR_EL2 const aValue)
@@ -132,13 +163,11 @@ namespace AArch64
 
     void SPSR_EL2::M(Mode const aMode)
     {
-        RegisterValue &= std::bitset<64>{ ~(MIndex_Mask) };
-        auto const maskedMode = static_cast<uint8_t>(aMode) & MIndex_Mask;
-        RegisterValue |= std::bitset<64>{ maskedMode };
+        WriteMultiBitValue(RegisterValue, aMode, MIndex_Mask, MIndex_Shift);
     }
 
     SPSR_EL2::Mode SPSR_EL2::M() const
     {
-        return static_cast<Mode>((RegisterValue & std::bitset<64>{ MIndex_Mask }).to_ulong());
+        return ReadMultiBitValue<Mode>(RegisterValue, MIndex_Mask, MIndex_Shift);
     }
 }

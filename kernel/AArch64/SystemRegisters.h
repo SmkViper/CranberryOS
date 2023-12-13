@@ -68,8 +68,8 @@ namespace AArch64
         // Reserved     [15:0]
         // #TODO: ZEN   [17:16] (Res0 if FEAT_SVE is not available)
         // Reserved     [19:18]
-        static constexpr uint64_t FPENIndex_Shift = 20;
-        static constexpr uint64_t FPENIndex_Mask = 0b11 << FPENIndex_Shift;
+        static constexpr unsigned FPENIndex_Shift = 20; // bits [20:21]
+        static constexpr uint64_t FPENIndex_Mask = 0b11;
         // Reserved     [27:22]
         // #TODO: TTA   [28]
         // Reserved     [63:29]
@@ -441,6 +441,7 @@ namespace AArch64
             : RegisterValue{ aInitialValue }
         {}
 
+        static constexpr unsigned MIndex_Shift = 0; // bits [3:0]
         static constexpr uint64_t MIndex_Mask = 0b1111;
         // #TODO: M[4]  [4]
         // Reserved     [5]
