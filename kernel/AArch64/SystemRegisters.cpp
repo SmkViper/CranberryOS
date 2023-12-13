@@ -138,6 +138,29 @@ namespace AArch64
         return HSTR_EL2{ readRawValue };
     }
 
+    void SCTLR_EL1::Write(SCTLR_EL1 const aValue)
+    {
+        uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        asm volatile(
+            "msr sctlr_el1, %[value]"
+            : // no outputs
+            :[value] "r"(rawValue) // inputs
+            : // no bashed registers
+        );
+    }
+
+    SCTLR_EL1 SCTLR_EL1::Read()
+    {
+        uint64_t readRawValue = 0;
+        asm volatile(
+            "mrs %[value], sctlr_el1"
+            :[value] "=r"(readRawValue) // outputs
+            : // no inputs
+            : // no bashed registers
+        );
+        return SCTLR_EL1{ readRawValue };
+    }
+
     void SPSR_EL2::Write(SPSR_EL2 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();

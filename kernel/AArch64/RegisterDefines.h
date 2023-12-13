@@ -4,30 +4,6 @@
 #define KERNEL_AARCH64_REGISTER_DEFINES_H
 
 ///////////////////////////////////////////////////////////////////////////////
-// SCTLR_EL1 register flags - See D10.2.100 in the ARMv8 manual
-///////////////////////////////////////////////////////////////////////////////
-
-// #TODO: We need to get these out of defines if possible
-
-// Some bits are reserved, set to 1, in ARMv8.0, which we set here
-#define SCTLR_RESERVED_FLAGS    (1 << 29) | (1 << 28) | (1 << 23) | (1 << 22) | (1 << 20) | (1 << 11)
-#define SCTLR_EL1_LITTLE_ENDIAN (0 << 25) // EL1 data access and exceptions are little-endian
-#define SCTLR_EL0_LITTLE_ENDIAN (0 << 24) // EL0 data access is little-endian
-#define SCTLR_ICACHE_DISABLED   (0 << 12) // Disable the instruction cache
-#define SCTLR_DCACHE_DISABLED   (0 << 2) // Disable the data cache
-#define SCTLR_MMU_DISABLED      (0 << 0) // Disable memory address translation
-#define SCTLR_MMU_ENABLED       (1 << 0) // Enable memory address translation
-
-// Simplest mode possible for now - pretty much set the CPU in little-endian mode with caching and address
-// translation disabled (we don't have virtual memory set up yet)
-#define SCTLR_INIT_VALUE    (SCTLR_RESERVED_FLAGS | \
-                             SCTLR_EL1_LITTLE_ENDIAN | \
-                             SCTLR_EL0_LITTLE_ENDIAN | \
-                             SCTLR_ICACHE_DISABLED | \
-                             SCTLR_DCACHE_DISABLED | \
-                             SCTLR_MMU_DISABLED)
-
-///////////////////////////////////////////////////////////////////////////////
 // ESR_ELx register flags - See D10.2.39 in the ARMv8 manual
 ///////////////////////////////////////////////////////////////////////////////
 

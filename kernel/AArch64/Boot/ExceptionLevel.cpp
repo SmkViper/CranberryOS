@@ -89,6 +89,10 @@ namespace AArch64
                 SwitchFromEL2ToEL1();
             }
 
+            // Make sure all caches and MMU is disabled, and we're in little endian mode
+            SCTLR_EL1 sctlr_el1;
+            SCTLR_EL1::Write(sctlr_el1);
+
             // Disable all traps so that EL1 and EL0 can access the coprocessor, floating point, and SIMD instructions and
             // registers
             CPACR_EL1 cpacr_el1;

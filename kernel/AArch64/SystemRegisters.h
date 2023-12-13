@@ -326,6 +326,115 @@ namespace AArch64
     };
 
     /**
+     * System Control Register (EL1)
+     * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/SCTLR-EL1--System-Control-Register--EL1-
+    */
+    class SCTLR_EL1
+    {
+        static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
+    public:
+        /**
+         * Constructor - produces a value with all bits zeroed (and Res1 bits set)
+        */
+        SCTLR_EL1()
+            : SCTLR_EL1{ ReservedValues }
+        {}
+
+        /**
+         * Writes the given value to the SCTLR_EL1 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write(SCTLR_EL1 const aValue);
+
+        /**
+         * Reads the current state of the SCTLR_EL1 register
+         * 
+         * @return The current state of the register
+        */
+        static SCTLR_EL1 Read();
+
+        /**
+         * M Bit - MMU enable for EL1 & 0
+         * 
+         * @param aEnableMMU If true, MMU will be enabled for EL1 and 0
+        */
+        void M(bool const aEnableMMU) { RegisterValue[MIndex] = aEnableMMU; }
+
+        /**
+         * RW Bit - Execution state for lower exception levels
+         * 
+         * @return True if EL1 execution state is AArch64. Otherwise it's AArch32
+        */
+        bool M() const { return RegisterValue[MIndex]; }
+
+    private:
+        /**
+         * Create a register value from the given bits
+         * 
+         * @param aInitialValue The bits to start with
+        */
+        SCTLR_EL1(uint64_t const aInitialValue)
+            : RegisterValue{ aInitialValue }
+        {}
+
+        // We are currently assuming FEAT_SVE isn't available, so bit 8 is Res1
+        static constexpr uint64_t ReservedValues = (1 << 29) | (1 << 28) | (1 << 23) | (1 << 22) | (1 << 20) | (1 << 11);
+
+        static constexpr unsigned MIndex = 0;
+        // #TODO: A     [1]
+        // #TODO: C     [2]
+        // #TODO: SA    [3]
+        // #TODO: SA0   [4]
+        // #TODO: CP15BEN [5] (Res0 if EL0 isn't capable of using AArch32)
+        // #TODO: nAA   [6] (Res0 if FEAT_LSE2 isn't available)
+        // #TODO: ITD   [7] (Res1 if EL0 isn't capable of using AArch32)
+        // #TODO: SED   [8] (Res1 if EL0 isn't capable of using AArch32)
+        // #TODO: UMA   [9]
+        // #TODO: EnRCTX [10] (Res0 if FEAT_SPECRES isn't available)
+        // #TODO: EOS   [11] (Res1 if FEAT_ExS isn't available)
+        // #TODO: I     [12]
+        // #TODO: EnDB  [13] (Res0 if FEAT_PAuth isn't available)
+        // #TODO: DZE   [14]
+        // #TODO: UCT   [15]
+        // #TODO: nTWI  [16]
+        // Reserved     [17]
+        // #TODO: nTWE  [18]
+        // #TODO: WXN   [19]
+        // #TODO: TSCXT [20] (Res1 if FEAT_CSV2_2 and FEAT_CSV2_1p2 isn't available)
+        // #TODO: IESB  [21] (Res0 if FEAT_IESB isn't available)
+        // #TODO: EIS   [22] (Res1 if FEAT_ExS isn't available)
+        // #TODO: SPAN  [23] (Res1 if FEAT_PAN isn't available)
+        // #TODO: EOE   [24]
+        // #TODO: EE    [25]
+        // #TODO: UCI   [26]
+        // #TODO: EnDA  [27] (Res0 if FEAT_PAuth isn't available)
+        // #TODO: nTLSMD [28] (Res1 if FEAT_LSMAOC isn't available)
+        // #TODO: LSMAOE [29] (Res1 if FEAT_LSMAOC isn't available)
+        // #TODO: EnIB  [30] (Res0 if FEAT_PAuth isn't available)
+        // #TODO: EnIA  [31] (Res0 if FEAT_PAuth isn't available)
+        // Reserved     [34:32]
+        // #TODO: BT0   [35] (Res0 if FEAT_BTI isn't available)
+        // #TODO: BT1   [36] (Res0 if FEAT_BTI isn't available)
+        // #TODO: ITFSB [37] (Res0 if FEAT_MTE2 isn't available)
+        // #TODO: TCF0  [39:38] (Res0 if FEAT_MTE isn't available)
+        // #TODO: TCF   [41:40] (Res0 if FEAT_MTE isn't available)
+        // #TODO: ATA0  [42] (Res0 if FEAT_MTE2 isn't available)
+        // #TODO: ATA   [43] (Res0 if FEAT_MTE2 isn't available)
+        // #TODO: DSSBS [44] (Res0 if FEAT_SSBS isn't available)
+        // #TODO: TWEDEn [45] (Res0 if FEAT_TWED isn't available)
+        // #TODO: TWEDEL [49:46] (Res0 if FEAT_TWED isn't available)
+        // Reserved     [53:50]
+        // #TODO: EnASR [54] (Res0 if FEAT_LS64 isn't available)
+        // #TODO: EnAS0 [55] (Res0 if FEAT_LS64 isn't available)
+        // #TODO: EnALS [56] (Res0 if FEAT_LS64 isn't available)
+        // #TODO: EPAN  [57] (Res0 if FEAT_PAN3 isn't available)
+        // Reserved     [63:58]
+
+        std::bitset<64> RegisterValue;
+    };
+
+    /**
      * Saved Program Status Register (EL2)
      * https://developer.arm.com/documentation/ddi0601/2023-09/AArch64-Registers/SPSR-EL2--Saved-Program-Status-Register--EL2-
     */
