@@ -63,23 +63,6 @@ namespace AArch64
                 }
 
                 /**
-                 * Sets the Hypervisor System Tracp Register for EL2 to the given value
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/HSTR-EL2--Hypervisor-System-Trap-Register
-                 * 
-                 * @param aValue New value for the register
-                */
-                void SetHSTR_EL2(uint64_t const aValue)
-                {
-                    // #TODO: Would be nice to make the value some kind of bitfield or something so it's more readable
-                    asm volatile(
-                        "msr hstr_el2, %[value]"
-                        : // no outputs
-                        :[value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
-
-                /**
                  * Sets the Architectural Feature Access Control Register for EL1 to the given value
                  * See: https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPACR-EL1--Architectural-Feature-Access-Control-Register
                  * 
