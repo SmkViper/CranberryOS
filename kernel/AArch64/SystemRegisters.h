@@ -9,6 +9,9 @@
 // Res0: Write 0 to initialize, then preserve value (read-modify-write)
 // Res1: Write 1 to initialize, then preserve value (read-modify-write)
 // RAZ/WI: Hardwired to read as 0 and ignore writes
+//
+// For FEAT_ names:
+// https://developer.arm.com/downloads/-/exploration-tools/feature-names-for-a-profile
 
 namespace AArch64
 {
@@ -71,14 +74,14 @@ namespace AArch64
             : RegisterValue{ aInitialValue }
         {}
 
-        // Reserved     [15:0]
-        // #TODO: ZEN   [17:16] (Res0 if FEAT_SVE is not available)
-        // Reserved     [19:18]
+        // Reserved     [15:0]  (Res0)
+        // ZEN          [17:16] (Res0 if FEAT_SVE is not available)
+        // Reserved     [19:18] (Res0)
         static constexpr unsigned FPENIndex_Shift = 20; // bits [20:21]
         static constexpr uint64_t FPENIndex_Mask = 0b11;
-        // Reserved     [27:22]
-        // #TODO: TTA   [28]
-        // Reserved     [63:29]
+        // Reserved     [27:22] (Res0)
+        // TTA          [28]
+        // Reserved     [63:29] (Res0)
 
         std::bitset<64> RegisterValue;
     };
@@ -140,20 +143,24 @@ namespace AArch64
         {}
 
         // We are currently assuming FEAT_SVE isn't available, so bit 8 is Res1
-        static constexpr uint64_t ReservedValues = (1 << 13) | (1 << 12) | (1 << 9) | (1 << 8) | 0xFF;
+        static constexpr uint64_t ReservedValues =
+            0xFF        | // Reserved [7:0]
+            (0b1 << 8)  | // TZ
+            (0b1 << 9)  | // Reserved [9]
+            (0b11 << 12); // Reserved [13:12]
 
-        // Reserved     [7:0] (Res1)
-        // TZ           [8] (Res1 if FEAT_SVE is not available)
-        // Reserved     [9] (Res1)
+        // Reserved     [7:0]   (Res1)
+        // TZ           [8]     (Res1 if FEAT_SVE is not available)
+        // Reserved     [9]     (Res1)
         static constexpr unsigned TFPIndex = 10;
-        // Reserved     [11]
+        // Reserved     [11]    (Res0)
         // Reserved     [13:12] (Res1)
-        // Reserved     [19:14]
-        // #TODO: TTA   [20]
-        // Reserved     [29:21]
-        // #TODO: TAM   [30]
-        // #TODO: TCPAC [31]
-        // Reserved     [63:32]
+        // Reserved     [19:14] (Res0)
+        // TTA          [20]
+        // Reserved     [29:21] (Res0)
+        // TAM          [30]    (Res0 if FEAT_AMUv1 not implemented)
+        // TCPAC        [31]
+        // Reserved     [63:32] (Res0)
 
         std::bitset<64> RegisterValue;
     };
@@ -209,66 +216,66 @@ namespace AArch64
             : RegisterValue{ aInitialValue }
         {}
 
-        // #TODO: VM    [0]
-        // #TODO: SWIO  [1]
-        // #TODO: PTW   [2]
-        // #TODO: FMO   [3]
-        // #TODO: IMO   [4]
-        // #TODO: AMO   [5]
-        // #TODO: VF    [6]
-        // #TODO: VI    [7]
-        // #TODO: VSE   [8]
-        // #TODO: FB    [9]
-        // #TODO: BSU   [11:10]
-        // #TODO: DC    [12]
-        // #TODO: TWI   [13]
-        // #TODO: TWE   [14]
-        // #TODO: TID0  [15]
-        // #TODO: TID1  [16]
-        // #TODO: TID2  [17]
-        // #TODO: TID3  [18]
-        // #TODO: TSC   [19]
-        // #TODO: TIDCP [20]
-        // #TODO: TACR  [21]
-        // #TODO: TSW   [22]
-        // #TODO: TPCP  [23]
-        // #TODO: TPU   [24]
-        // #TODO: TTLB  [25]
-        // #TODO: TVM   [26]
-        // #TODO: TGE   [27]
-        // #TODO: TDZ   [28]
-        // #TODO: HCD   [29]
-        // #TODO: TRVM  [30]
+        // VM           [0]
+        // SWIO         [1]
+        // PTW          [2]
+        // FMO          [3]
+        // IMO          [4]
+        // AMO          [5]
+        // VF           [6]
+        // VI           [7]
+        // VSE          [8]
+        // FB           [9]
+        // BSU          [11:10]
+        // DC           [12]
+        // TWI          [13]
+        // TWE          [14]
+        // TID0         [15]    (Res0 if AArch32 not supported at EL0)
+        // TID1         [16]
+        // TID2         [17]
+        // TID3         [18]
+        // TSC          [19]
+        // TIDCP        [20]
+        // TACR         [21]
+        // TSW          [22]
+        // TPCP         [23]
+        // TPU          [24]
+        // TTLB         [25]
+        // TVM          [26]
+        // TGE          [27]
+        // TDZ          [28]
+        // HCD          [29]    (Res0 if EL3 not implemented)
+        // TRVM         [30]
         static constexpr unsigned RWIndex = 31;
-        // #TODO: CD    [32]
-        // #TODO: ID    [33]
-        // #TODO: E2H   [34]
-        // #TODO: TLOR  [35]
-        // #TODO: TERR  [36]
-        // #TODO: TEA   [37]
-        // #TODO: MIOCNCE [38]
-        // Reserved     [39]
-        // #TODO: APK   [40]
-        // #TODO: API   [41]
-        // #TODO: NV    [42]
-        // #TODO: NV1   [43]
-        // #TODO: AT    [44]
-        // #TODO: NV2   [45]
-        // #TODO: FWB   [46]
-        // #TODO: FIEN  [47]
-        // Reserved     [48]
-        // #TODO: TID4  [49]
-        // #TODO: TICAB [50]
-        // #TODO: AMVOFFEN [51]
-        // #TODO: TOCU  [52]
-        // #TODO: EnSCXT [53]
-        // #TODO: TTLBIS [54]
-        // #TODO: TTLBOS [55]
-        // #TODO: ATA   [56]
-        // #TODO: DCT   [57]
-        // #TODO: TID5  [58]
-        // #TODO: TWEDEn [59]
-        // #TODO: TWEDEL [63:60]
+        // CD           [32]
+        // ID           [33]
+        // E2H          [34]    (Res0 if FEAT_VHE not implemented)
+        // TLOR         [35]    (Res0 if FEAT_LOR not implemented)
+        // TERR         [36]    (Res0 if FEAT_RAS not implemented)
+        // TEA          [37]    (Res0 if FEAT_RAS not implemented)
+        // MIOCNCE      [38]
+        // Reserved     [39]    (Res0)
+        // APK          [40]    (Res0 if FEAT_PAuth not implemented)
+        // API          [41]    (Res0 if FEAT_PAuth not implemented)
+        // NV           [42]    (Res0 if FEAT_NV2 or FEAT_NV not implemented)
+        // NV1          [43]    (Res0 if FEAT_NV2 or FEAT_NV not implemented)
+        // AT           [44]    (Res0 if FEAT_NV not implemented)
+        // NV2          [45]    (Res0 if FEAT_NV2 not implemented)
+        // FWB          [46]    (Res0 if FEAT_S2FWB not implemented)
+        // FIEN         [47]    (Res0 if FEAT_RASv1p1 not implemented)
+        // Reserved     [48]    (Res0)
+        // TID4         [49]    (Res0 if FEAT_EVT not implemented)
+        // TICAB        [50]    (Res0 if FEAT_EVT not implemented)
+        // AMVOFFEN     [51]    (Res0 if FEAT_AMUv1p1 not implemented)
+        // TOCU         [52]    (Res0 if FEAT_EVT not implemented)
+        // EnSCXT       [53]    (Res0 if FEAT_CSV2 and FEAT_CSV2_1p2 not implemented)
+        // TTLBIS       [54]    (Res0 if FEAT_EVT not implemented)
+        // TTLBOS       [55]    (Res0 if FEAT_EVT not implemented)
+        // ATA          [56]    (Res0 if FEAT_MTE2 not implemented)
+        // DCT          [57]    (Res0 if FEAT_MTE2 not implemented)
+        // TID5         [58]    (Res0 if FEAT_MTE2 not implemented)
+        // TWEDEn       [59]    (Res0 if FEAT_TWED not implemented)
+        // TWEDEL       [63:60] (Res0 if FEAT_TWED not implemented)
 
         std::bitset<64> RegisterValue;
     };
@@ -310,23 +317,23 @@ namespace AArch64
             : RegisterValue{ aInitialValue }
         {}
 
-        // #TODO: T0    [0]
-        // #TODO: T1    [1]
-        // #TODO: T2    [2]
-        // #TODO: T3    [3]
-        // Reserved     [4]
-        // #TODO: T5    [5]
-        // #TODO: T6    [6]
-        // #TODO: T7    [7]
-        // #TODO: T8    [8]
-        // #TODO: T9    [9]
-        // #TODO: T10   [10]
-        // #TODO: T11   [11]
-        // #TODO: T12   [12]
-        // #TODO: T13   [13]
-        // Reserved     [14]
-        // #TODO: T15   [15]
-        // Reserved     [63:16]
+        // T0           [0]
+        // T1           [1]
+        // T2           [2]
+        // T3           [3]
+        // Reserved     [4]     (Res0)
+        // T5           [5]
+        // T6           [6]
+        // T7           [7]
+        // T8           [8]
+        // T9           [9]
+        // T10          [10]
+        // T11          [11]
+        // T12          [12]
+        // T13          [13]
+        // Reserved     [14]    (Res0)
+        // T15          [15]
+        // Reserved     [63:16] (Res0)
 
         std::bitset<64> RegisterValue;
     };
@@ -457,7 +464,7 @@ namespace AArch64
         bool M() const { return RegisterValue[MIndex]; }
 
     private:
-        /**
+        /**            (1 << 13);
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
@@ -467,57 +474,65 @@ namespace AArch64
         {}
 
         // We are currently assuming FEAT_SVE isn't available, so bit 8 is Res1
-        static constexpr uint64_t ReservedValues = (1 << 29) | (1 << 28) | (1 << 23) | (1 << 22) | (1 << 20) | (1 << 11);
+        static constexpr uint64_t ReservedValues = 
+            (1 << 7)  | // ITD
+            (1 << 8)  | // SED
+            (1 << 11) | // EOS
+            (1 << 20) | // TSCXT
+            (1 << 22) | // EIS
+            (1 << 23) | // SPAN
+            (1 << 28) | // nTLSMD
+            (1 << 29) ; // LSMAOE
 
         static constexpr unsigned MIndex = 0;
-        // #TODO: A     [1]
-        // #TODO: C     [2]
-        // #TODO: SA    [3]
-        // #TODO: SA0   [4]
-        // #TODO: CP15BEN [5] (Res0 if EL0 isn't capable of using AArch32)
-        // #TODO: nAA   [6] (Res0 if FEAT_LSE2 isn't available)
-        // #TODO: ITD   [7] (Res1 if EL0 isn't capable of using AArch32)
-        // #TODO: SED   [8] (Res1 if EL0 isn't capable of using AArch32)
-        // #TODO: UMA   [9]
-        // #TODO: EnRCTX [10] (Res0 if FEAT_SPECRES isn't available)
-        // #TODO: EOS   [11] (Res1 if FEAT_ExS isn't available)
-        // #TODO: I     [12]
-        // #TODO: EnDB  [13] (Res0 if FEAT_PAuth isn't available)
-        // #TODO: DZE   [14]
-        // #TODO: UCT   [15]
-        // #TODO: nTWI  [16]
-        // Reserved     [17]
-        // #TODO: nTWE  [18]
-        // #TODO: WXN   [19]
-        // #TODO: TSCXT [20] (Res1 if FEAT_CSV2_2 and FEAT_CSV2_1p2 isn't available)
-        // #TODO: IESB  [21] (Res0 if FEAT_IESB isn't available)
-        // #TODO: EIS   [22] (Res1 if FEAT_ExS isn't available)
-        // #TODO: SPAN  [23] (Res1 if FEAT_PAN isn't available)
-        // #TODO: EOE   [24]
-        // #TODO: EE    [25]
-        // #TODO: UCI   [26]
-        // #TODO: EnDA  [27] (Res0 if FEAT_PAuth isn't available)
-        // #TODO: nTLSMD [28] (Res1 if FEAT_LSMAOC isn't available)
-        // #TODO: LSMAOE [29] (Res1 if FEAT_LSMAOC isn't available)
-        // #TODO: EnIB  [30] (Res0 if FEAT_PAuth isn't available)
-        // #TODO: EnIA  [31] (Res0 if FEAT_PAuth isn't available)
-        // Reserved     [34:32]
-        // #TODO: BT0   [35] (Res0 if FEAT_BTI isn't available)
-        // #TODO: BT1   [36] (Res0 if FEAT_BTI isn't available)
-        // #TODO: ITFSB [37] (Res0 if FEAT_MTE2 isn't available)
-        // #TODO: TCF0  [39:38] (Res0 if FEAT_MTE isn't available)
-        // #TODO: TCF   [41:40] (Res0 if FEAT_MTE isn't available)
-        // #TODO: ATA0  [42] (Res0 if FEAT_MTE2 isn't available)
-        // #TODO: ATA   [43] (Res0 if FEAT_MTE2 isn't available)
-        // #TODO: DSSBS [44] (Res0 if FEAT_SSBS isn't available)
-        // #TODO: TWEDEn [45] (Res0 if FEAT_TWED isn't available)
-        // #TODO: TWEDEL [49:46] (Res0 if FEAT_TWED isn't available)
-        // Reserved     [53:50]
-        // #TODO: EnASR [54] (Res0 if FEAT_LS64 isn't available)
-        // #TODO: EnAS0 [55] (Res0 if FEAT_LS64 isn't available)
-        // #TODO: EnALS [56] (Res0 if FEAT_LS64 isn't available)
-        // #TODO: EPAN  [57] (Res0 if FEAT_PAN3 isn't available)
-        // Reserved     [63:58]
+        // A            [1]
+        // C            [2]
+        // SA           [3]
+        // SA0          [4]
+        // CP15BEN      [5]     (Res0 if EL0 isn't capable of using AArch32)
+        // nAA          [6]     (Res0 if FEAT_LSE2 not implemented)
+        // ITD          [7]     (Res1 if EL0 isn't capable of using AArch32)
+        // SED          [8]     (Res1 if EL0 isn't capable of using AArch32)
+        // UMA          [9]
+        // EnRCTX       [10]    (Res0 if FEAT_SPECRES not implemented)
+        // EOS          [11]    (Res1 if FEAT_ExS not implemented)
+        // I            [12]
+        // EnDB         [13]    (Res0 if FEAT_PAuth not implemented)
+        // DZE          [14]
+        // UCT          [15]
+        // nTWI         [16]
+        // Reserved     [17]    (Res0)
+        // nTWE         [18]
+        // WXN          [19]
+        // TSCXT        [20]    (Res1 if FEAT_CSV2_2 and FEAT_CSV2_1p2 not implemented)
+        // IESB         [21]    (Res0 if FEAT_IESB not implemented)
+        // EIS          [22]    (Res1 if FEAT_ExS not implemented)
+        // SPAN         [23]    (Res1 if FEAT_PAN not implemented)
+        // EOE          [24]
+        // EE           [25]
+        // UCI          [26]
+        // EnDA         [27]    (Res0 if FEAT_PAuth not implemented)
+        // nTLSMD       [28]    (Res1 if FEAT_LSMAOC not implemented)
+        // LSMAOE       [29]    (Res1 if FEAT_LSMAOC not implemented)
+        // EnIB         [30]    (Res0 if FEAT_PAuth not implemented)
+        // EnIA         [31]    (Res0 if FEAT_PAuth not implemented)
+        // Reserved     [34:32] (Res0)
+        // BT0          [35]    (Res0 if FEAT_BTI not implemented)
+        // BT1          [36]    (Res0 if FEAT_BTI not implemented)
+        // ITFSB        [37]    (Res0 if FEAT_MTE2 not implemented)
+        // TCF0         [39:38] (Res0 if FEAT_MTE not implemented)
+        // TCF          [41:40] (Res0 if FEAT_MTE not implemented)
+        // ATA0         [42]    (Res0 if FEAT_MTE2 not implemented)
+        // ATA          [43]    (Res0 if FEAT_MTE2 not implemented)
+        // DSSBS        [44]    (Res0 if FEAT_SSBS not implemented)
+        // TWEDEn       [45]    (Res0 if FEAT_TWED not implemented)
+        // TWEDEL       [49:46] (Res0 if FEAT_TWED not implemented)
+        // Reserved     [53:50] (Res0)
+        // EnASR        [54]    (Res0 if FEAT_LS64 not implemented)
+        // EnAS0        [55]    (Res0 if FEAT_LS64 not implemented)
+        // EnALS        [56]    (Res0 if FEAT_LS64 not implemented)
+        // EPAN         [57]    (Res0 if FEAT_PAN3 not implemented)
+        // Reserved     [63:58] (Res0)
 
         std::bitset<64> RegisterValue;
     };
@@ -640,27 +655,32 @@ namespace AArch64
 
         static constexpr unsigned MIndex_Shift = 0; // bits [3:0]
         static constexpr uint64_t MIndex_Mask = 0b1111;
-        // #TODO: M[4]  [4]
-        // Reserved     [5]
+        // M[4]         [4]
+        // Reserved     [5] (Res0)
         static constexpr unsigned FIndex = 6;
         static constexpr unsigned IIndex = 7;
         static constexpr unsigned AIndex = 8;
         static constexpr unsigned DIndex = 9;
-        // #TODO: BTYPE [11:10]
-        // #TODO: SSBS  [12]
-        // Reserved     [19:13]
-        // #TODO: IL    [20]
-        // #TODO: SS    [21]
-        // #TODO: PAN   [22]
-        // #TODO: UAO   [23]
-        // #TODO: DIT   [24]
-        // #TODO: TCO   [25]
-        // Reserved     [27:26]
-        // #TODO: V     [28]
-        // #TODO: C     [29]
-        // #TODO: Z     [30]
-        // #TODO: N     [31]
-        // Reserved:    [63:32]
+        // BTYPE        [11:10] (Res0 if FEAT_BTI not implemented)
+        // SSBS         [12]    (Res0 if FEAT_SSBS not implemented)
+        // ALLINT       [13]    (Res0 if FEAT_NMI not implemented)
+        // Reserved     [19:14] (Res0)
+        // IL           [20]
+        // SS           [21]
+        // PAN          [22]    (Res0 if FEAT_PAN not implemented)
+        // UAO          [23]    (Res0 if FEAT_UAO not implemented)
+        // DIT          [24]    (Res0 if FEAT_DIT not implemented)
+        // TCO          [25]    (Res0 if FEAT_MTE not implemented)
+        // Reserved     [27:26] (Res0)
+        // V            [28]
+        // C            [29]
+        // Z            [30]
+        // N            [31]
+        // PM           [32]    (Res0 if FEAT_EBEP not implemented)
+        // PPEND        [33]    (Res0 if FEAT_SEBEP not implemented)
+        // EXLOCK       [34]    (Res0 if FEAT_GCS not implemented)
+        // PACM         [35]    (Res0 if FEAT_PAuth_LR not implemented)
+        // Reserved:    [63:36] (Res0)
 
         std::bitset<64> RegisterValue;
     };
@@ -774,48 +794,48 @@ namespace AArch64
 
         static constexpr unsigned T0SZIndex_Shift = 0; // bits [5:0]
         static constexpr uint64_t T0SZIndex_Mask = 0b11'1111;
-        // Reserved     [6] (Res0)
-        // #TODO: EPD0  [7]
-        // #TODO: IRGN0 [9:8]
-        // #TODO: ORGN0 [11:10]
-        // #TODO: SH0   [13:12]
+        // Reserved     [6]     (Res0)
+        // EPD0         [7]
+        // IRGN0        [9:8]
+        // ORGN0        [11:10]
+        // SH0          [13:12]
         static constexpr unsigned TG0Index_Shift = 14; // bits [15:14]
         static constexpr uint64_t TG0Index_Mask = 0b11;
         static constexpr unsigned T1SZIndex_Shift = 16; // bits [21:16]
         static constexpr uint64_t T1SZIndex_Mask = 0b11'1111;
-        // #TODO: A1    [22]
-        // #TODO: EPD1  [23]
-        // #TODO: IRGN1 [25:24]
-        // #TODO: ORGN1 [27:26]
-        // #TODO: SH1   [29:28]
+        // A1           [22]
+        // EPD1         [23]
+        // IRGN1        [25:24]
+        // ORGN1        [27:26]
+        // SH1          [29:28]
         static constexpr unsigned TG1Index_Shift = 30; // bits [31:30]
         static constexpr uint64_t TG1Index_Mask = 0b11;
-        // #TODO: IPS   [34:32]
-        // Reserved     [35] (Res0)
-        // #TODO: AS    [36]
-        // #TODO: TBA0  [37]
-        // #TODO: TBA1  [38]
-        // #TODO: HA    [39] (Res0 if FEAT_HAFDBS not implemented)
-        // #TODO: HD    [40] (Res0 if FEAT_HAFDBS not implemented)
-        // #TODO: HPD0  [41] (Res0 if FEAT_HPDS not implemented)
-        // #TODO: HPD1  [42] (Res0 if FEAT_HPDS not implemented)
-        // #TODO: HWU059 [43] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: HWU060 [44] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: HWU061 [45] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: HWU062 [46] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: HWU159 [47] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: HWU160 [48] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: HWU161 [49] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: HWU162 [50] (RAZ/WI if FEAT_HPDS2 not implemented)
-        // #TODO: TBID0 [51] (Res0 if FEAT_PAuth not implemented)
-        // #TODO: TBID1 [52] (Res0 if FEAT_PAuth not implemented)
-        // #TODO: NFD0  [53] (Res0 if FEAT_SVE not implemented)
-        // #TODO: NFD1  [54] (Res0 if FEAT_SVE not implemented)
-        // #TODO: E0PD0 [55] (Res0 if FEAT_E0PD not implemented)
-        // #TODO: E0PD1 [56] (Res0 if FEAT_E0PD not implemented)
-        // #TODO: TCMA0 [57] (Res0 if FEAT_MTE2 not implemented)
-        // #TODO: TCMA1 [58] (Res0 if FEAT_MTE2 not implemented)
-        // #TODO: DS    [59] (Res0 if FEAT_LPA2 not implemented)
+        // IPS          [34:32]
+        // Reserved     [35]    (Res0)
+        // AS           [36]
+        // TBA0         [37]
+        // TBA1         [38]
+        // HA           [39]    (Res0 if FEAT_HAFDBS not implemented)
+        // HD           [40]    (Res0 if FEAT_HAFDBS not implemented)
+        // HPD0         [41]    (Res0 if FEAT_HPDS not implemented)
+        // HPD1         [42]    (Res0 if FEAT_HPDS not implemented)
+        // HWU059       [43]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // HWU060       [44]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // HWU061       [45]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // HWU062       [46]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // HWU159       [47]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // HWU160       [48]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // HWU161       [49]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // HWU162       [50]    (RAZ/WI if FEAT_HPDS2 not implemented)
+        // TBID0        [51]    (Res0 if FEAT_PAuth not implemented)
+        // TBID1        [52]    (Res0 if FEAT_PAuth not implemented)
+        // NFD0         [53]    (Res0 if FEAT_SVE not implemented)
+        // NFD1         [54]    (Res0 if FEAT_SVE not implemented)
+        // E0PD0        [55]    (Res0 if FEAT_E0PD not implemented)
+        // E0PD1        [56]    (Res0 if FEAT_E0PD not implemented)
+        // TCMA0        [57]    (Res0 if FEAT_MTE2 not implemented)
+        // TCMA1        [58]    (Res0 if FEAT_MTE2 not implemented)
+        // DS           [59]    (Res0 if FEAT_LPA2 not implemented)
         // Reserved     [63:60] (Res0)
 
         std::bitset<64> RegisterValue;
