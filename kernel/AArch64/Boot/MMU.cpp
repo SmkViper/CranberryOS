@@ -56,23 +56,6 @@ namespace AArch64
                         : // no clobbered registers
                     );
                 }
-
-                /**
-                 * Sets the tcr_el register to the given value. This controls stage 1 of the EL1 and 0 translation regime.
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TCR-EL1--Translation-Control-Register--EL1-
-                 * 
-                 * @param aValue The value to set to.
-                */
-                void SetTCR_EL1(uint64_t const aValue)
-                {
-                    // #TODO: Would be nice to have a bitfield value that was type safe to pass in
-                    asm volatile(
-                        "msr tcr_el1, %[value]"
-                        : // no outputs
-                        : [value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
             }
         }
 
@@ -230,8 +213,15 @@ namespace AArch64
             mair_el1.SetAttribute(MT_NORMAL_NC, MAIR_EL1::Attribute::NormalMemory());
             MAIR_EL1::Write(mair_el1);
 
-            // #TODO: Should make some nice type-safe wrappers for the register values
-            ASM::SetTCR_EL1(TCR_VALUE);
+            TCR_EL1 tcr_el1;
+            // user space will have 48 bits of address space, with 4kb granule
+            tcr_el1.T0SZ(48);
+            tcr_el1.TG0(TCR_EL1::T0Granule::Size4kb);
+            // kernel space will have 48 bits of address space, with 4kb granule
+            tcr_el1.T1SZ(48);
+            tcr_el1.TG1(TCR_EL1::T1Granule::Size4kb);
+            
+            TCR_EL1::Write(tcr_el1);
 
             auto sctlr_el1 = SCTLR_EL1::Read();
             sctlr_el1.M(true); // enable MMU

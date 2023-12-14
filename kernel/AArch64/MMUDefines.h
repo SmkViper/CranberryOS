@@ -111,20 +111,4 @@
 // #TODO: Why is NORMAL_NC, ACCESS, and ACCESS_PERMISSION specified? Low flags I thought were ignored for page table descriptors
 #define MMU_PTE_FLAGS (MM_TYPE_PAGE | (MT_NORMAL_NC << 2) | MM_ACCESS | MM_ACCESS_PERMISSION)
 
-/////////////////////////////////////////////////
-// Translation control register settings (TCR_EL1)
-/////////////////////////////////////////////////
-
-// Size offset of the memory region addressed by TTBR0_EL1. The size is 2^(64-value) bytes. So (64 - 48) will produce 2^48
-#define TCR_T0SZ (64 - 48)
-// Size offset of the memory region addressed by TTBR1_EL1. The size is 2^(64-value) bytes. So (64 - 48) will produce 2^48
-#define TCR_T1SZ ((64 - 48) << 16)
-// Granule size for TTBR0_EL1 - 0b00 = 4kb
-#define TCR_TG0_4K (0 << 14)
-// Granule size of TTBR1_EL1 - 0b10 = 4kb
-#define TCR_TG1_4K (2 << 30)
-
-// The value we set for TCR_EL1 - 4kb granule size for EL0 and EL1, and 2^48 size for each as well
-#define TCR_VALUE (TCR_T0SZ | TCR_T1SZ | TCR_TG0_4K | TCR_TG1_4K)
-
 #endif // KERNEL_AARCH64_MMU_DEFINES_H

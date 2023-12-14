@@ -143,7 +143,7 @@ namespace AArch64
     MAIR_EL1::Attribute MAIR_EL1::Attribute::NormalMemory()
     {
         // #TODO: Figure out if this needs to change and what these words mean
-        
+
         // Normal memory, outer non-cacheable
         // Normal memory, inner non-cacheable
         return Attribute{ 0b0100'0100 };
@@ -263,5 +263,89 @@ namespace AArch64
     SPSR_EL2::Mode SPSR_EL2::M() const
     {
         return ReadMultiBitValue<Mode>(RegisterValue, MIndex_Mask, MIndex_Shift);
+    }
+
+    void TCR_EL1::Write(TCR_EL1 const aValue)
+    {
+        uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        asm volatile(
+            "msr tcr_el1, %[value]"
+            : // no outputs
+            :[value] "r"(rawValue) // inputs
+            : // no bashed registers
+        );
+    }
+
+    TCR_EL1 TCR_EL1::Read()
+    {
+        uint64_t readRawValue = 0;
+        asm volatile(
+            "mrs %[value], tcr_el1"
+            :[value] "=r"(readRawValue) // outputs
+            : // no inputs
+            : // no bashed registers
+        );
+        return TCR_EL1{ readRawValue };
+    }
+
+    void TCR_EL1::T0SZ(uint8_t const aBits)
+    {
+        // #TODO: Panic if bits are out of range - might depend on the hardware, but anything over 52 is too much
+
+        // The address size in bytes is 2^(64 - TnSZ)
+        //
+        // So in order to convert the number of bits to the TnSZ value representing that number of bits, we need to
+        // use (64 - aBits).
+        //
+        // For example, if you want the address size to be 48 bits (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF),
+        // then (64 - TnSZ) must be 48, which means TnSZ should be 16, which is (64 - 48).
+        auto const encodedValue = (64 - aBits);
+        WriteMultiBitValue(RegisterValue, encodedValue, T0SZIndex_Mask, T0SZIndex_Shift);
+    }
+
+    uint8_t TCR_EL1::T0SZ() const
+    {
+        // The address size in bytes is 2^(64 - TnSZ)
+        //
+        // So in order to convert the TnSZ value to the number of bits in the address range, we just use 
+        // (64 - encodedValue)
+        auto const encodedValue = ReadMultiBitValue<uint8_t>(RegisterValue, T0SZIndex_Mask, T0SZIndex_Shift);
+        return 64 - encodedValue;
+    }
+
+    void TCR_EL1::TG0(T0Granule const aSize)
+    {
+        WriteMultiBitValue(RegisterValue, aSize, TG0Index_Mask, TG0Index_Shift);
+    }
+
+    TCR_EL1::T0Granule TCR_EL1::TG0()
+    {
+        return ReadMultiBitValue<T0Granule>(RegisterValue, TG0Index_Mask, TG0Index_Shift);
+    }
+
+    void TCR_EL1::T1SZ(uint8_t const aBits)
+    {
+        // #TODO: Panic if bits are out of range - might depend on the hardware, but anything over 52 is too much
+
+        // See T0SZ for explanation of encoding
+        auto const encodedValue = (64 - aBits);
+        WriteMultiBitValue(RegisterValue, encodedValue, T1SZIndex_Mask, T1SZIndex_Shift);
+    }
+
+    uint8_t TCR_EL1::T1SZ() const
+    {
+        // See T0SZ for explanation of encoding
+        auto const encodedValue = ReadMultiBitValue<uint8_t>(RegisterValue, T1SZIndex_Mask, T1SZIndex_Shift);
+        return 64 - encodedValue;
+    }
+
+    void TCR_EL1::TG1(T1Granule const aSize)
+    {
+        WriteMultiBitValue(RegisterValue, aSize, TG1Index_Mask, TG1Index_Shift);
+    }
+
+    TCR_EL1::T1Granule TCR_EL1::TG1()
+    {
+        return ReadMultiBitValue<T1Granule>(RegisterValue, TG1Index_Mask, TG1Index_Shift);
     }
 }

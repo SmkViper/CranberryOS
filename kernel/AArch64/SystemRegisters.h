@@ -4,6 +4,12 @@
 #include <bitset>
 #include <cstdint>
 
+// Terminology:
+// https://developer.arm.com/documentation/105565/latest/
+// Res0: Write 0 to initialize, then preserve value (read-modify-write)
+// Res1: Write 1 to initialize, then preserve value (read-modify-write)
+// RAZ/WI: Hardwired to read as 0 and ignore writes
+
 namespace AArch64
 {
     /**
@@ -381,7 +387,7 @@ namespace AArch64
             explicit Attribute(uint8_t const aValue)
                 : Value{ aValue }
             {}
-            
+
             uint8_t Value = 0;
         };
 
@@ -655,6 +661,162 @@ namespace AArch64
         // #TODO: Z     [30]
         // #TODO: N     [31]
         // Reserved:    [63:32]
+
+        std::bitset<64> RegisterValue;
+    };
+
+    /**
+     * Translation Control Register (EL1)
+     * https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TCR-EL1--Translation-Control-Register--EL1-
+    */
+    class TCR_EL1
+    {
+        static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
+    public:
+        /**
+         * Constructor - produces a value with all bits zeroed
+        */
+        TCR_EL1() = default;
+
+        /**
+         * Writes the given value to the TCR_EL1 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write(TCR_EL1 aValue);
+
+        /**
+         * Reads the current state of the TCR_EL1 register
+         * 
+         * @return The current state of the register
+        */
+        static TCR_EL1 Read();
+
+        /**
+         * T0SZ bits - controls the size of the memory region addressed by TTBR0_EL1
+         * 
+         * @param aBits the number of bits in the user region that can be used
+        */
+        void T0SZ(uint8_t aBits);
+
+        /**
+         * T0SZ bits - controls the size of the memory region addressed by TTBR0_EL1
+         * 
+         * @return The number of bits in the user region that can be used
+        */
+        uint8_t T0SZ() const;
+
+        enum class T0Granule: uint8_t
+        {
+            Size4kb = 0b00,
+            Size64kb = 0b01,
+            Size16kb = 0b10,
+        };
+
+        /**
+         * TG0 bits - controls the granule size of TTBR0_EL1
+         * 
+         * @param aSize The granule size for the user region
+        */
+        void TG0(T0Granule aSize);
+
+        /**
+         * TG0 bits - controls the granule size of TTBR0_EL1
+         * 
+         * @return The granule size for the user region
+        */
+        T0Granule TG0();
+
+        /**
+         * T1SZ bits - controls the size of the memory region addressed by TTBR1_EL1
+         * 
+         * @param aBits The number of bits in the kernel region that can be used
+        */
+        void T1SZ(uint8_t aBits);
+
+        /**
+         * T1SZ bits - controls the size of the memory region addressed by TTBR1_EL1
+         * 
+         * @return The number of bits in the kernel region that can be used
+        */
+        uint8_t T1SZ() const;
+
+        enum class T1Granule: uint8_t
+        {
+            Size16kb = 0b01,
+            Size4kb = 0b10,
+            Size64kb = 0b11,
+        };
+
+        /**
+         * TG1 bits - controls the granule size of TTBR1_EL1
+         * 
+         * @param aSize The granule size for the kernel region
+        */
+        void TG1(T1Granule aSize);
+
+        /**
+         * TG1 bits - controls the granule size of TTBR1_EL1
+         * 
+         * @return The granule size for the kernel region
+        */
+        T1Granule TG1();
+
+    private:
+        /**
+         * Create a register value from the given bits
+         * 
+         * @param aInitialValue The bits to start with
+        */
+        explicit TCR_EL1(uint64_t const aInitialValue)
+            : RegisterValue{ aInitialValue }
+        {}
+
+        static constexpr unsigned T0SZIndex_Shift = 0; // bits [5:0]
+        static constexpr uint64_t T0SZIndex_Mask = 0b11'1111;
+        // Reserved     [6] (Res0)
+        // #TODO: EPD0  [7]
+        // #TODO: IRGN0 [9:8]
+        // #TODO: ORGN0 [11:10]
+        // #TODO: SH0   [13:12]
+        static constexpr unsigned TG0Index_Shift = 14; // bits [15:14]
+        static constexpr uint64_t TG0Index_Mask = 0b11;
+        static constexpr unsigned T1SZIndex_Shift = 16; // bits [21:16]
+        static constexpr uint64_t T1SZIndex_Mask = 0b11'1111;
+        // #TODO: A1    [22]
+        // #TODO: EPD1  [23]
+        // #TODO: IRGN1 [25:24]
+        // #TODO: ORGN1 [27:26]
+        // #TODO: SH1   [29:28]
+        static constexpr unsigned TG1Index_Shift = 30; // bits [31:30]
+        static constexpr uint64_t TG1Index_Mask = 0b11;
+        // #TODO: IPS   [34:32]
+        // Reserved     [35] (Res0)
+        // #TODO: AS    [36]
+        // #TODO: TBA0  [37]
+        // #TODO: TBA1  [38]
+        // #TODO: HA    [39] (Res0 if FEAT_HAFDBS not implemented)
+        // #TODO: HD    [40] (Res0 if FEAT_HAFDBS not implemented)
+        // #TODO: HPD0  [41] (Res0 if FEAT_HPDS not implemented)
+        // #TODO: HPD1  [42] (Res0 if FEAT_HPDS not implemented)
+        // #TODO: HWU059 [43] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: HWU060 [44] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: HWU061 [45] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: HWU062 [46] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: HWU159 [47] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: HWU160 [48] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: HWU161 [49] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: HWU162 [50] (RAZ/WI if FEAT_HPDS2 not implemented)
+        // #TODO: TBID0 [51] (Res0 if FEAT_PAuth not implemented)
+        // #TODO: TBID1 [52] (Res0 if FEAT_PAuth not implemented)
+        // #TODO: NFD0  [53] (Res0 if FEAT_SVE not implemented)
+        // #TODO: NFD1  [54] (Res0 if FEAT_SVE not implemented)
+        // #TODO: E0PD0 [55] (Res0 if FEAT_E0PD not implemented)
+        // #TODO: E0PD1 [56] (Res0 if FEAT_E0PD not implemented)
+        // #TODO: TCMA0 [57] (Res0 if FEAT_MTE2 not implemented)
+        // #TODO: TCMA1 [58] (Res0 if FEAT_MTE2 not implemented)
+        // #TODO: DS    [59] (Res0 if FEAT_LPA2 not implemented)
+        // Reserved     [63:60] (Res0)
 
         std::bitset<64> RegisterValue;
     };
