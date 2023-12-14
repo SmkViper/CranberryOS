@@ -58,24 +58,6 @@ namespace AArch64
                 }
 
                 /**
-                 * Sets the mair_el1 register to the given value. This is the memory attribute encodings for index values
-                 * in the translation table.
-                 * See: https://developer.arm.com/documentation/ddi0595/2020-12/AArch64-Registers/MAIR-EL1--Memory-Attribute-Indirection-Register--EL1-
-                 * 
-                 * @param aValue The value to set to.
-                */
-                void SetMAIR_EL1(uint64_t const aValue)
-                {
-                    // #TODO: Would be nice to have a bitfield value that was type safe to pass in
-                    asm volatile(
-                        "msr mair_el1, %[value]"
-                        : // no outputs
-                        : [value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
-
-                /**
                  * Sets the tcr_el register to the given value. This controls stage 1 of the EL1 and 0 translation regime.
                  * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TCR-EL1--Translation-Control-Register--EL1-
                  * 
@@ -243,8 +225,12 @@ namespace AArch64
             // #TODO: Not sure why the __pg_dir pointer doesn't need to be adjusted.
             SwitchToPageTable(__pg_dir);
 
+            MAIR_EL1 mair_el1;
+            mair_el1.SetAttribute(MT_DEVICE_nGnRnE, MAIR_EL1::Attribute::DeviceMemory());
+            mair_el1.SetAttribute(MT_NORMAL_NC, MAIR_EL1::Attribute::NormalMemory());
+            MAIR_EL1::Write(mair_el1);
+
             // #TODO: Should make some nice type-safe wrappers for the register values
-            ASM::SetMAIR_EL1(MAIR_VALUE);
             ASM::SetTCR_EL1(TCR_VALUE);
 
             auto sctlr_el1 = SCTLR_EL1::Read();

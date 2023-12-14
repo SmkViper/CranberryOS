@@ -100,28 +100,6 @@
 #define MT_NORMAL_NC 0x1
 
 /////////////////////////////////////////////////
-// 8-bit flags at the above indices
-/////////////////////////////////////////////////
-
-// 0b0000'0000 - Device nGnRnE memory.
-// Non-gathering (one access in code = one access on bus)
-// Non-reordering (disallows reordering of access)
-// Non-early write acknowledgement (responses come from end slave, not buffering in the interconnect)
-#define MT_DEVICE_nGnRnE_FLAGS 0x00
-
-// 0b0100'0100
-// Normal memory, outer non-cacheable
-// Normal memory, inner non-cacheable
-#define MT_NORMAL_NC_FLAGS 0x44
-
-/////////////////////////////////////////////////
-// MAIR register initial value
-/////////////////////////////////////////////////
-
-// Storing the flags values in the MAIR register at their appropriate indices
-#define MAIR_VALUE (MT_DEVICE_nGnRnE_FLAGS << (8 * MT_DEVICE_nGnRnE)) | (MT_NORMAL_NC_FLAGS << (8 * MT_NORMAL_NC))
-
-/////////////////////////////////////////////////
 // Descriptor flags for various descriptor types
 /////////////////////////////////////////////////
 

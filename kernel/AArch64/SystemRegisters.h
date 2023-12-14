@@ -24,7 +24,7 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(CPACR_EL1 const aValue);
+        static void Write(CPACR_EL1 aValue);
 
         /**
          * Reads the current state of the CPACR_EL1 register
@@ -46,7 +46,7 @@ namespace AArch64
          * 
          * @param aTraps The traps for FPEN
         */
-        void FPEN(FPENTraps const aTraps);
+        void FPEN(FPENTraps aTraps);
 
         /**
          * FPEN bits - controls traps of floating point and SIMD instructions
@@ -61,7 +61,7 @@ namespace AArch64
          * 
          * @param aInitialValue The bits to start with
         */
-        CPACR_EL1(uint64_t const aInitialValue)
+        explicit CPACR_EL1(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 
@@ -100,7 +100,7 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(CPTR_EL2 const aValue);
+        static void Write(CPTR_EL2 aValue);
 
         /**
          * Reads the current state of the CPTR_EL2 register
@@ -129,7 +129,7 @@ namespace AArch64
          * 
          * @param aInitialValue The bits to start with
         */
-        CPTR_EL2(uint64_t const aInitialValue)
+        explicit CPTR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 
@@ -170,7 +170,7 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(HCR_EL2 const aValue);
+        static void Write(HCR_EL2 aValue);
 
         /**
          * Reads the current state of the HCR_EL2 register
@@ -199,7 +199,7 @@ namespace AArch64
          * 
          * @param aInitialValue The bits to start with
         */
-        HCR_EL2(uint64_t const aInitialValue)
+        explicit HCR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 
@@ -285,7 +285,7 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(HSTR_EL2 const aValue);
+        static void Write(HSTR_EL2 aValue);
 
         /**
          * Reads the current state of the HSTR_EL2 register
@@ -300,7 +300,7 @@ namespace AArch64
          * 
          * @param aInitialValue The bits to start with
         */
-        HSTR_EL2(uint64_t const aInitialValue)
+        explicit HSTR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 
@@ -326,6 +326,88 @@ namespace AArch64
     };
 
     /**
+     * Memory Attribute Indirection Register
+     * https://developer.arm.com/documentation/ddi0595/2020-12/AArch64-Registers/MAIR-EL1--Memory-Attribute-Indirection-Register--EL1-
+    */
+    class MAIR_EL1
+    {
+    public:
+        /**
+         * The number of attributes available
+        */
+        static constexpr size_t AttributeCount = 8;
+        
+        /**
+         * Constructor - produces a value with all attributes zeroed
+        */
+        MAIR_EL1() = default;
+
+        /**
+         * Writes the given value to the MAIR_EL1 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write(MAIR_EL1 aValue);
+
+        /**
+         * Reads the current state of the MAIR_EL1 register
+         * 
+         * @return The current state of the register
+        */
+        static MAIR_EL1 Read();
+
+        class Attribute
+        {
+            friend class MAIR_EL1;
+        public:
+            /**
+             * Obtain an attribute representing normal memory
+             * 
+             * @return An attribute representing normal memory
+            */
+            static Attribute NormalMemory();
+
+            /**
+             * Obtain an attribute representing device memory
+             * 
+             * @return An attribute representing device memory
+            */
+            static Attribute DeviceMemory();
+
+        private:
+            /**
+             * Creates an attribute with the given value
+            */
+            explicit Attribute(uint8_t const aValue)
+                : Value{ aValue }
+            {}
+            
+            uint8_t Value = 0;
+        };
+
+        /**
+         * Sets the attribute for the given index
+         * 
+         * @param aIndex The attribute to set (0 - AttributeCount)
+         * @param aAttribute The value to give it
+        */
+        void SetAttribute(size_t aIndex, Attribute aValue);
+
+        /**
+         * Gets the attribute at the given index
+         * 
+         * @param aIndex The attribute to get (0 - AttributeCount)
+         * @return The attribute in that slot
+        */
+        Attribute GetAttribute(size_t aIndex);
+
+    private:
+        explicit MAIR_EL1(uint64_t aRawValue);
+
+        uint8_t Attributes[AttributeCount] = { 0 };
+    };
+
+    /**
      * System Control Register (EL1)
      * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/SCTLR-EL1--System-Control-Register--EL1-
     */
@@ -345,7 +427,7 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(SCTLR_EL1 const aValue);
+        static void Write(SCTLR_EL1 aValue);
 
         /**
          * Reads the current state of the SCTLR_EL1 register
@@ -374,7 +456,7 @@ namespace AArch64
          * 
          * @param aInitialValue The bits to start with
         */
-        SCTLR_EL1(uint64_t const aInitialValue)
+        explicit SCTLR_EL1(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 
@@ -452,7 +534,7 @@ namespace AArch64
          * 
          * @param aValue Value to write
         */
-        static void Write(SPSR_EL2 const aValue);
+        static void Write(SPSR_EL2 aValue);
 
         /**
          * Reads the current state of the SPSR_EL2 register
@@ -475,7 +557,7 @@ namespace AArch64
          * 
          * @param aMode The mode for ERET
         */
-        void M(Mode const aMode);
+        void M(Mode aMode);
 
         /**
          * Mode bits - where to return to with ERET and whether to use its own stack or not
@@ -546,7 +628,7 @@ namespace AArch64
          * 
          * @param aInitialValue The bits to start with
         */
-        SPSR_EL2(uint64_t const aInitialValue)
+        explicit SPSR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 

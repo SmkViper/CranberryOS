@@ -1,5 +1,7 @@
 #include "SystemRegisters.h"
 
+#include <cstring>
+
 namespace AArch64
 {
     namespace
@@ -136,6 +138,75 @@ namespace AArch64
             : // no bashed registers
         );
         return HSTR_EL2{ readRawValue };
+    }
+
+    MAIR_EL1::Attribute MAIR_EL1::Attribute::NormalMemory()
+    {
+        // #TODO: Figure out if this needs to change and what these words mean
+        
+        // Normal memory, outer non-cacheable
+        // Normal memory, inner non-cacheable
+        return Attribute{ 0b0100'0100 };
+    }
+
+    MAIR_EL1::Attribute MAIR_EL1::Attribute::DeviceMemory()
+    {
+        // #TODO: Figure out if this needs to change and what these words mean
+
+        // Device nGnRnE memory
+        // Non-gathering (one access in code = one access on bus)
+        // Non-reordering (disallows reordering of access)
+        // Non-early write acknowledgement (responses come from end slave, not buffering in the interconnect)
+        return Attribute{ 0b0000'0000 };
+    }
+
+    /**
+     * Construct the register data from a raw 64-bit value from the register
+     * 
+     * @param aRawValue The raw register value to insert
+    */
+    MAIR_EL1::MAIR_EL1(uint64_t const aRawValue)
+    {
+        static_assert(sizeof(uint64_t) == sizeof(MAIR_EL1::Attributes), "Unexpected size mismatch");
+        std::memcpy(Attributes, &aRawValue, sizeof(Attributes));
+    }
+
+    void MAIR_EL1::Write(MAIR_EL1 const aValue)
+    {
+        static_assert(sizeof(uint64_t) == sizeof(MAIR_EL1::Attributes), "Unexpected size mismatch");
+        uint64_t rawValue = 0;
+        std::memcpy(&rawValue, aValue.Attributes, sizeof(rawValue));
+        
+        asm volatile(
+            "msr mair_el1, %[value]"
+            : // no outputs
+            :[value] "r"(rawValue) // inputs
+            : // no bashed registers
+        );
+    }
+
+    MAIR_EL1 MAIR_EL1::Read()
+    {
+        uint64_t readRawValue = 0;
+        asm volatile(
+            "mrs %[value], mair_el1"
+            :[value] "=r"(readRawValue) // outputs
+            : // no inputs
+            : // no bashed registers
+        );
+        return MAIR_EL1{ readRawValue };
+    }
+
+    void MAIR_EL1::SetAttribute(size_t const aIndex, Attribute const aValue)
+    {
+        // #TODO: Panic if index is out of range
+        Attributes[aIndex] = aValue.Value;
+    }
+
+    MAIR_EL1::Attribute MAIR_EL1::GetAttribute(size_t const aIndex)
+    {
+        // #TODO: Panic if index is out of range
+        return Attribute{ Attributes[aIndex] };
     }
 
     void SCTLR_EL1::Write(SCTLR_EL1 const aValue)
