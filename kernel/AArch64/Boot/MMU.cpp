@@ -218,6 +218,7 @@ namespace AArch64
             tcr_el1.T0SZ(48);
             tcr_el1.TG0(TCR_EL1::T0Granule::Size4kb);
             // kernel space will have 48 bits of address space, with 4kb granule
+            // #TODO: Sync with VA_START somehow?
             tcr_el1.T1SZ(48);
             tcr_el1.TG1(TCR_EL1::T1Granule::Size4kb);
             
