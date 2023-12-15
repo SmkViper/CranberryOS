@@ -203,7 +203,7 @@ namespace AArch64
         Attributes[aIndex] = aValue.Value;
     }
 
-    MAIR_EL1::Attribute MAIR_EL1::GetAttribute(size_t const aIndex)
+    MAIR_EL1::Attribute MAIR_EL1::GetAttribute(size_t const aIndex) const
     {
         // #TODO: Panic if index is out of range
         return Attribute{ Attributes[aIndex] };
@@ -318,7 +318,7 @@ namespace AArch64
         WriteMultiBitValue(RegisterValue, aSize, TG0Index_Mask, TG0Index_Shift);
     }
 
-    TCR_EL1::T0Granule TCR_EL1::TG0()
+    TCR_EL1::T0Granule TCR_EL1::TG0() const
     {
         return ReadMultiBitValue<T0Granule>(RegisterValue, TG0Index_Mask, TG0Index_Shift);
     }
@@ -344,8 +344,64 @@ namespace AArch64
         WriteMultiBitValue(RegisterValue, aSize, TG1Index_Mask, TG1Index_Shift);
     }
 
-    TCR_EL1::T1Granule TCR_EL1::TG1()
+    TCR_EL1::T1Granule TCR_EL1::TG1() const
     {
         return ReadMultiBitValue<T1Granule>(RegisterValue, TG1Index_Mask, TG1Index_Shift);
+    }
+
+    void TTBRn_EL1::Write0(TTBRn_EL1 const aValue)
+    {
+        uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        asm volatile(
+            "msr ttbr0_el1, %[value]"
+            : // no outputs
+            :[value] "r"(rawValue) // inputs
+            : // no bashed registers
+        );
+    }
+
+    void TTBRn_EL1::Write1(TTBRn_EL1 const aValue)
+    {
+        uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        asm volatile(
+            "msr ttbr1_el1, %[value]"
+            : // no outputs
+            :[value] "r"(rawValue) // inputs
+            : // no bashed registers
+        );
+    }
+
+    TTBRn_EL1 TTBRn_EL1::Read0()
+    {
+        uint64_t readRawValue = 0;
+        asm volatile(
+            "mrs %[value], ttbr0_el1"
+            :[value] "=r"(readRawValue) // outputs
+            : // no inputs
+            : // no bashed registers
+        );
+        return TTBRn_EL1{ readRawValue };
+    }
+
+    TTBRn_EL1 TTBRn_EL1::Read1()
+    {
+        uint64_t readRawValue = 0;
+        asm volatile(
+            "mrs %[value], ttbr1_el1"
+            :[value] "=r"(readRawValue) // outputs
+            : // no inputs
+            : // no bashed registers
+        );
+        return TTBRn_EL1{ readRawValue };
+    }
+
+    void TTBRn_EL1::BADDR(uintptr_t const aBaseAddress)
+    {
+        WriteMultiBitValue(RegisterValue, aBaseAddress, BADDRIndex_Mask, BADDRIndex_Shift);
+    }
+
+    uintptr_t TTBRn_EL1::BADDR() const
+    {
+        return ReadMultiBitValue<uint64_t>(RegisterValue, BADDRIndex_Mask, BADDRIndex_Shift);
     }
 }

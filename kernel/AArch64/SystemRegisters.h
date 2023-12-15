@@ -412,7 +412,7 @@ namespace AArch64
          * @param aIndex The attribute to get (0 - AttributeCount)
          * @return The attribute in that slot
         */
-        Attribute GetAttribute(size_t aIndex);
+        Attribute GetAttribute(size_t aIndex) const;
 
     private:
         explicit MAIR_EL1(uint64_t aRawValue);
@@ -500,7 +500,7 @@ namespace AArch64
         // EnDB         [13]    (Res0 if FEAT_PAuth not implemented)
         // DZE          [14]
         // UCT          [15]
-        // nTWI         [16]
+        // nTWI                     [16]
         // Reserved     [17]    (Res0)
         // nTWE         [18]
         // WXN          [19]
@@ -745,7 +745,7 @@ namespace AArch64
          * 
          * @return The granule size for the user region
         */
-        T0Granule TG0();
+        T0Granule TG0() const;
 
         /**
          * T1SZ bits - controls the size of the memory region addressed by TTBR1_EL1
@@ -780,7 +780,7 @@ namespace AArch64
          * 
          * @return The granule size for the kernel region
         */
-        T1Granule TG1();
+        T1Granule TG1() const;
 
     private:
         /**
@@ -837,6 +837,84 @@ namespace AArch64
         // TCMA1        [58]    (Res0 if FEAT_MTE2 not implemented)
         // DS           [59]    (Res0 if FEAT_LPA2 not implemented)
         // Reserved     [63:60] (Res0)
+
+        std::bitset<64> RegisterValue;
+    };
+
+    /**
+     * Translation Table Base Register (0/1) (EL1)
+     * https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR0-EL1--Translation-Table-Base-Register-0--EL1-
+     * https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR1-EL1--Translation-Table-Base-Register-1--EL1-
+    */
+    class TTBRn_EL1
+    {
+        static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
+    public:
+        /**
+         * Constructor - produces a value with all bits zeroed
+        */
+        TTBRn_EL1() = default;
+
+        /**
+         * Writes the given value to the TTBR0_EL1 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write0(TTBRn_EL1 aValue);
+
+        /**
+         * Writes the given value to the TTBR1_EL1 register
+         * 
+         * @param aValue Value to write
+        */
+        static void Write1(TTBRn_EL1 aValue);
+
+        /**
+         * Reads the current state of the TTBR0_EL1 register
+         * 
+         * @return The current state of the register
+        */
+        static TTBRn_EL1 Read0();
+
+        /**
+         * Reads the current state of the TTBR1_EL1 register
+         * 
+         * @return The current state of the register
+        */
+        static TTBRn_EL1 Read1();
+
+        /**
+         * BADDR bits - Translation table base address
+         * 
+         * @param aBaseAddress The table base address
+        */
+        void BADDR(uintptr_t aBaseAddress);
+
+        /**
+         * BADDR bits - Translation table base address
+         * 
+         * @return The table base address
+        */
+        uintptr_t BADDR() const;
+
+    private:
+        /**
+         * Create a register value from the given bits
+         * 
+         * @param aInitialValue The bits to start with
+        */
+        explicit TTBRn_EL1(uint64_t const aInitialValue)
+            : RegisterValue{ aInitialValue }
+        {}
+
+        // CnP          [0]
+        // not shifting because the data isn't shifted when stored, we just mask off the top and bottom bits
+        static constexpr unsigned BADDRIndex_Shift = 0; // bits [47:1]
+        static constexpr uint64_t BADDRIndex_Mask = 0x0000'FFFF'FFFF'FFFEULL;
+        // ASID         [63:48] (if implementation only supports 8 bits of ASID, then the top 8 bits are Res0)
+
+        // Sanity check to make sure we're masking what we think we are
+        static_assert((0xFFFF'0000'0000'0000ULL & (BADDRIndex_Mask << BADDRIndex_Shift) & 1) == 0, "Bitfields overlap");
 
         std::bitset<64> RegisterValue;
     };

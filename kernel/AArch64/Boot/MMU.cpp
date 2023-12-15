@@ -17,48 +17,6 @@ namespace AArch64
 {
     namespace Boot
     {
-        // #TODO: Really should consolidate all these ASM calls in one location for re-use
-        namespace ASM
-        {
-            namespace
-            {
-                /**
-                 * Sets the ttbr0_el1 register to the given value. This sets up the translation table for stage 1
-                 * translation from the lower virtual address range (upper bits all 0) in EL0 and 1.
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR0-EL1--Translation-Table-Base-Register-0--EL1-
-                 * 
-                 * @param aValue The value to set to.
-                */
-                void SetTTBR0_EL1(uintptr_t const aValue)
-                {
-                    asm volatile(
-                        "msr ttbr0_el1, %[value]"
-                        : // no output
-                        : [value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
-
-                /**
-                 * Sets the ttbr1_el1 register to the given value. This sets up the translation table for stage 1
-                 * translation from the higher virtual address range (upper bits all 1) in EL0 and 1.
-                 * See: https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR1-EL1--Translation-Table-Base-Register-1--EL1-
-                 * 
-                 * @param aValue The value to set to.
-                */
-                void SetTTBR1_EL1(uintptr_t const aValue)
-                {
-                    // #TODO: Would be nice to have a bitfield value that was type safe to pass in
-                    asm volatile(
-                        "msr ttbr1_el1, %[value]"
-                        : // no output
-                        : [value] "r"(aValue) // inputs
-                        : // no clobbered registers
-                    );
-                }
-            }
-        }
-
         namespace
         {
             class PageBumpAllocator
@@ -170,8 +128,13 @@ namespace AArch64
             */
             void SwitchToPageTable(uint8_t* const apTable)
             {
-                ASM::SetTTBR0_EL1(reinterpret_cast<uintptr_t>(apTable));
-                ASM::SetTTBR1_EL1(reinterpret_cast<uintptr_t>(apTable));
+                // the apTable pointer gets the top 16 bits masked out (because it becomes the ASID), so we don't have
+                // to do any adjustment to it to account for it being on a virtual kernel address
+                // #TODO: In theory, but the debugger shows it at the physical address for an unknown reason.
+                TTBRn_EL1 ttbrn_el1;
+                ttbrn_el1.BADDR(reinterpret_cast<uintptr_t>(apTable));
+                TTBRn_EL1::Write0(ttbrn_el1); // table for user space (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF)
+                TTBRn_EL1::Write1(ttbrn_el1); // table for kernel space (0xFFFF'0000'0000'0000 - 0xFFFF'FFFF'FFFF'FFFF)
             }
         }
     
@@ -205,7 +168,6 @@ namespace AArch64
 
         void EnableMMU()
         {
-            // #TODO: Not sure why the __pg_dir pointer doesn't need to be adjusted.
             SwitchToPageTable(__pg_dir);
 
             MAIR_EL1 mair_el1;
