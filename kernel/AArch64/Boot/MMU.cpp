@@ -10,7 +10,9 @@
 
 extern "C"
 {
+    // from link.ld
     extern uint8_t __pg_dir[];
+    extern uint8_t __pg_dir_end[]; // past the end
 }
 
 namespace AArch64
@@ -142,7 +144,7 @@ namespace AArch64
         {
             // #TODO: Currently unclear why the address stored in __pg_dir appears to be the physical address and not
             // the virtual address. But this seems to work for now.
-            PageBumpAllocator allocator{__pg_dir, __pg_dir + PG_DIR_SIZE};
+            PageBumpAllocator allocator{ __pg_dir, __pg_dir_end };
 
             // #TODO: This is all rather hard-coded and should be made more flexible based off of external information
             // like the actual kernel size.

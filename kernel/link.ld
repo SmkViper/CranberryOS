@@ -93,6 +93,9 @@ SECTIONS
 
     . = ALIGN(4K);
     __pg_dir = .;
+    . += 1M; /* #TODO: we're reserving 1mb for now, but should come up with a real value at some point */
+    __pg_dir_end = .;
+
     _end = .;
 
     /* strip out some general unimportant stuff we don't need */

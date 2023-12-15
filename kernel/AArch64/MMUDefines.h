@@ -56,10 +56,6 @@
 // How far to shift the virtual address to get the Page Middle Directory index
 #define PMD_SHIFT PAGE_SHIFT + TABLE_SHIFT
 
-// The full size of the page directory (must match the size reserved in the linker script). We store a single PGD, PUD,
-// and PMD, each a page in size.
-#define PG_DIR_SIZE (3 * PAGE_SIZE)
-
 /////////////////////////////////////////////////
 // Page Descriptor Layout:
 // +------------------+---------+------------------+-------------+-------+
