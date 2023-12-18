@@ -50,15 +50,11 @@
 #define PTRS_PER_TABLE (1 << TABLE_SHIFT)
 
 // How far to shift the virtual address to get the Page Global Directory index
-#define PGD_SHIFT PAGE_SHIFT + 3*TABLE_SHIFT
+#define PGD_SHIFT (PAGE_SHIFT + 3*TABLE_SHIFT)
 // How far to shift the virtual address to get the Page Upper Directory index
-#define PUD_SHIFT PAGE_SHIFT + 2*TABLE_SHIFT
+#define PUD_SHIFT (PAGE_SHIFT + 2*TABLE_SHIFT)
 // How far to shift the virtual address to get the Page Middle Directory index
-#define PMD_SHIFT PAGE_SHIFT + TABLE_SHIFT
-
-// The full size of the page directory (must match the size reserved in the linker script). We store a single PGD, PUD,
-// and PMD, each a page in size.
-#define PG_DIR_SIZE (3 * PAGE_SIZE)
+#define PMD_SHIFT (PAGE_SHIFT + TABLE_SHIFT)
 
 /////////////////////////////////////////////////
 // Page Descriptor Layout:
@@ -100,28 +96,6 @@
 #define MT_NORMAL_NC 0x1
 
 /////////////////////////////////////////////////
-// 8-bit flags at the above indices
-/////////////////////////////////////////////////
-
-// 0b0000'0000 - Device nGnRnE memory.
-// Non-gathering (one access in code = one access on bus)
-// Non-reordering (disallows reordering of access)
-// Non-early write acknowledgement (responses come from end slave, not buffering in the interconnect)
-#define MT_DEVICE_nGnRnE_FLAGS 0x00
-
-// 0b0100'0100
-// Normal memory, outer non-cacheable
-// Normal memory, inner non-cacheable
-#define MT_NORMAL_NC_FLAGS 0x44
-
-/////////////////////////////////////////////////
-// MAIR register initial value
-/////////////////////////////////////////////////
-
-// Storing the flags values in the MAIR register at their appropriate indices
-#define MAIR_VALUE (MT_DEVICE_nGnRnE_FLAGS << (8 * MT_DEVICE_nGnRnE)) | (MT_NORMAL_NC_FLAGS << (8 * MT_NORMAL_NC))
-
-/////////////////////////////////////////////////
 // Descriptor flags for various descriptor types
 /////////////////////////////////////////////////
 
@@ -132,21 +106,5 @@
 // Flags for a descriptor that points at a page
 // #TODO: Why is NORMAL_NC, ACCESS, and ACCESS_PERMISSION specified? Low flags I thought were ignored for page table descriptors
 #define MMU_PTE_FLAGS (MM_TYPE_PAGE | (MT_NORMAL_NC << 2) | MM_ACCESS | MM_ACCESS_PERMISSION)
-
-/////////////////////////////////////////////////
-// Translation control register settings (TCR_EL1)
-/////////////////////////////////////////////////
-
-// Size offset of the memory region addressed by TTBR0_EL1. The size is 2^(64-value) bytes. So (64 - 48) will produce 2^48
-#define TCR_T0SZ (64 - 48)
-// Size offset of the memory region addressed by TTBR1_EL1. The size is 2^(64-value) bytes. So (64 - 48) will produce 2^48
-#define TCR_T1SZ ((64 - 48) << 16)
-// Granule size for TTBR0_EL1 - 0b00 = 4kb
-#define TCR_TG0_4K (0 << 14)
-// Granule size of TTBR1_EL1 - 0b10 = 4kb
-#define TCR_TG1_4K (2 << 30)
-
-// The value we set for TCR_EL1 - 4kb granule size for EL0 and EL1, and 2^48 size for each as well
-#define TCR_VALUE (TCR_T0SZ | TCR_T1SZ | TCR_TG0_4K | TCR_TG1_4K)
 
 #endif // KERNEL_AARCH64_MMU_DEFINES_H

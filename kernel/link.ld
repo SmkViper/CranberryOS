@@ -13,6 +13,8 @@ SECTIONS
     /* 0x00080000 is the physical address the Raspberry Pi GPU will load the kernel at */
     . = KERNEL_MAPPING_BASE + 0x00080000;
 
+    __kernel_image = .;
+
     .text.boot ALIGN(4K) : AT (ADDR(.text.boot) - KERNEL_MAPPING_BASE) {
         *(.text.boot) /* boot code section - must be first */
         CMakeFiles/kernel8.elf.dir/ARM/Boot/* (.text) /* make sure the code in the boot folder is in this section */
@@ -93,7 +95,10 @@ SECTIONS
 
     . = ALIGN(4K);
     __pg_dir = .;
-    _end = .;
+    . += 8M; /* #TODO: we're reserving 8mb for now, but should come up with a real value at some point */
+    __pg_dir_end = .;
+
+    __kernel_image_end = .;
 
     /* strip out some general unimportant stuff we don't need */
     /DISCARD/ : { *(.comment) *(.note*) }
