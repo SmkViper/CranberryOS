@@ -8,6 +8,8 @@
 #include "MMU.h"
 #include "Output.h"
 
+// Address translation documentation: https://documentation-service.arm.com/static/5efa1d23dbdee951c1ccdec5?token=
+
 extern "C"
 {
     // from link.ld
@@ -21,6 +23,21 @@ namespace AArch64
     {
         namespace
         {
+            /**
+             * Inserts an instruction barrier which ensures that all instructions following this respect any MMU
+             * changes
+            */
+            void InstructionBarrier()
+            {
+                // #TODO: Should probably be moved to a common location once we know who else might care
+                asm volatile(
+                    "isb"
+                    : // no outputs
+                    : // no inputs
+                    : // no bashed registers
+                );
+            }
+
             class PageBumpAllocator
             {
             public:
@@ -188,9 +205,15 @@ namespace AArch64
             
             TCR_EL1::Write(tcr_el1);
 
+            // Make sure the above changes are seen before enabling the MMU
+            InstructionBarrier();
+
             auto sctlr_el1 = SCTLR_EL1::Read();
             sctlr_el1.M(true); // enable MMU
             SCTLR_EL1::Write(sctlr_el1);
+
+            // Make sure the MMU being enabled is seen by anything following this function
+            InstructionBarrier();
         }
     }
 }
