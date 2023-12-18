@@ -15,6 +15,8 @@ extern "C"
     // from link.ld
     extern uint8_t __pg_dir[];
     extern uint8_t __pg_dir_end[]; // past the end
+    extern uint8_t __kernel_image[];
+    extern uint8_t __kernel_image_end[];
 }
 
 namespace AArch64
@@ -92,51 +94,89 @@ namespace AArch64
             };
 
             /**
-             * Sets up a page table entry for the given virtual address.
+             * Converts a page table descriptor to a pointer to the next page table
              * 
-             * @param apTable The table to put the entry into
-             * @param apNextTable The next table in the chain for the virtual address
-             * @param aTargetVirtualAddress The target virtual address to map
-             * @param aIndexShift Shift that needs to be applied to the virtual address in order to get the current
-             * table index
+             * @param aDescriptor The descriptor to convert
+             * 
+             * @return The page table the descriptor points at
             */
-            void CreateTableEntry(uintptr_t* const apTable, uintptr_t* const apNextTable, uintptr_t const aTargetVirtualAddress, uint8_t const aIndexShift)
+            uint64_t* DescriptorToPointer(uint64_t const aDescriptor)
             {
-                // shift the address to strip off anything to the right of the table index, then AND it with the
-                // maximum index to strip off anything to the left, ending up with the index this table is for
-                uintptr_t const index = (aTargetVirtualAddress >> aIndexShift) & (PTRS_PER_TABLE - 1);
-
-                // flag the descriptor as pointing at a table, and being valid
-                uint64_t const nextPageEntry = reinterpret_cast<uintptr_t>(apNextTable) | MM_TYPE_PAGE_TABLE;
-                
-                // store the descriptor into the table at the index
-                apTable[index] = nextPageEntry;
+                // #TODO: The descriptor probably should just be its own type
+                auto const DescriptorMask = ~0b11;
+                return reinterpret_cast<uint64_t*>(aDescriptor & DescriptorMask);
             }
 
             /**
-             * Fills out the page middle directory
+             * Inserts all the required data into the page tables for a level 3 table (which points at 4kb pages)
+             * covering the given virtual address.
              * 
-             * @param apTableStart Pointer to the PMD being filled
-             * @param aTargetPhysicalRegion Start of the physical region being mapped
-             * @param aVirtualStart Virtual address of the first section being mapped
-             * @param aVirtualEnd Virtual address of the last section being mapped
-             * @param aFlags The flags to be put into the descriptor
+             * @param arAllocator The allocator to use for getting new pages
+             * @param apRootPage The root level 0 table
+             * @param aVirtualAddress The virtual address we want to map and need a table for
+             * 
+             * @return The level 3 table covering the given virtual address (making it if necessary)
             */
-            void CreateBlockMap(uint64_t* const apTableStart, uintptr_t const aTargetPhysicalRegion, uintptr_t const aVirtualStart, uintptr_t const aVirtualEnd, uintptr_t const aFlags)
+            uint64_t* InsertPageTable(PageBumpAllocator& arAllocator, uint64_t* const apRootPage, uint64_t const aVirtualAddress)
             {
-                auto const startIndex = (aVirtualStart >> SECTION_SHIFT) & (PTRS_PER_TABLE - 1);
-                auto const endIndex = (aVirtualEnd >> SECTION_SHIFT) & (PTRS_PER_TABLE - 1);
+                // #TODO: Can probably be cleaned up to reduce rudundancy
 
-                // Double-shifting to trim off the low bits and apply the flags in the now empty space to form the
-                // block descriptor
-                auto curBlockDescriptor = ((aTargetPhysicalRegion >> SECTION_SHIFT) << SECTION_SHIFT) | aFlags;
-
-                // #TODO: Should really just make endIndex be one-past-the-end, then caller doesn't need to do
-                // -SECTION_SIZE
-                for (auto curIndex = startIndex; curIndex <= endIndex; ++curIndex)
+                // Level 0 table points to level 1 table (512GB range)
+                auto const level1TableIndex = (aVirtualAddress >> PGD_SHIFT) & (PTRS_PER_TABLE - 1);
+                if (apRootPage[level1TableIndex] == 0)
                 {
-                    apTableStart[curIndex] = curBlockDescriptor;
-                    curBlockDescriptor += SECTION_SIZE;
+                    apRootPage[level1TableIndex] = reinterpret_cast<uint64_t>(arAllocator.Allocate());
+                    apRootPage[level1TableIndex] |= MM_TYPE_PAGE_TABLE;
+                }
+
+                // Level 1 table points to level 2 table (1GB range)
+                auto const plevel1Table = DescriptorToPointer(apRootPage[level1TableIndex]);
+                auto const level2TableIndex = (aVirtualAddress >> PUD_SHIFT) & (PTRS_PER_TABLE - 1);
+                if (plevel1Table[level2TableIndex] == 0)
+                {
+                    plevel1Table[level2TableIndex] = reinterpret_cast<uint64_t>(arAllocator.Allocate());
+                    plevel1Table[level2TableIndex] |= MM_TYPE_PAGE_TABLE;
+                }
+
+                // Level 2 table points to level 3 table (2MB range)
+                auto const plevel2Table = DescriptorToPointer(plevel1Table[level2TableIndex]);
+                auto const level3TableIndex = (aVirtualAddress >> PMD_SHIFT) & (PTRS_PER_TABLE - 1);
+                if (plevel2Table[level3TableIndex] == 0)
+                {
+                    plevel2Table[level3TableIndex] = reinterpret_cast<uint64_t>(arAllocator.Allocate());
+                    plevel2Table[level3TableIndex] |= MM_TYPE_PAGE_TABLE;
+                }
+
+                return DescriptorToPointer(plevel2Table[level3TableIndex]);
+            }
+
+            /**
+             * Inserts entries into the page table to map the given virtual address to the memory block starting at the
+             * given physical address, with the given flags.
+             * 
+             * @param arAllocator Allocator for memory pages
+             * @param apRootPage The root page table
+             * @param aVAStart The start of the virtual address range to map
+             * @param aVAEnd The end of the virtual address range to map
+             * @param aPhysicalAddress The physical address to map to
+             * @param aFlags The flags for the new entries
+            */
+            void InsertEntriesForMemoryRange(PageBumpAllocator& arAllocator, uint64_t* const apRootPage, uint64_t const aVAStart, uint64_t const aVAEnd,
+                uint64_t const aPhysicalAddress, uint64_t const aFlags)
+            {
+                auto curPA = aPhysicalAddress;
+                for (auto curVA = aVAStart; curVA < aVAEnd;)
+                {
+                    // Level 3 table points to 4kb blocks
+                    auto const plevel3Table = InsertPageTable(arAllocator, apRootPage, curVA);
+
+                    auto const blockIndex = (curVA >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
+                    auto& rblockEntry = plevel3Table[blockIndex];
+                    rblockEntry = curPA;
+                    rblockEntry |= aFlags;
+
+                    curVA += PAGE_SIZE; 
+                    curPA += PAGE_SIZE;
                 }
             }
 
@@ -163,26 +203,38 @@ namespace AArch64
             // the virtual address. But this seems to work for now.
             PageBumpAllocator allocator{ __pg_dir, __pg_dir_end };
 
-            // #TODO: This is all rather hard-coded and should be made more flexible based off of external information
-            // like the actual kernel size.
+            // #TODO: Should make physical and virtual address types to easily differentiate between the two
 
-            // allocate the three pages we need for the mapping we're doing
-            auto const ppageGlobalDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
-            auto const ppageUpperDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
-            auto const ppageMiddleDirectory = reinterpret_cast<uintptr_t*>(allocator.Allocate());
+            // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
+            // they need based on device tree information
+            auto const deviceBasePA = static_cast<uintptr_t>(DEVICE_BASE);
+            auto const deviceEndPA = static_cast<uintptr_t>(deviceBasePA + 0x00FF'FFFF);
 
-            CreateTableEntry(ppageGlobalDirectory, ppageUpperDirectory, VA_START, PGD_SHIFT);
-            CreateTableEntry(ppageUpperDirectory, ppageMiddleDirectory, VA_START, PUD_SHIFT);
+            // Calculate the range of the kernel image in 2MB blocks (since 2MB is the size of the blocks pointed at by
+            // the level 2 table since we're running with 4KB granule)
+            // #TODO: Why are these symbols from the linker script pointing at physical addresses?
+            auto const kernelBasePA = reinterpret_cast<uintptr_t>(__kernel_image) & (~static_cast<uintptr_t>(0x001F'FFFF));
+            auto const kernelEndPA = (reinterpret_cast<uintptr_t>(__kernel_image_end) & (~static_cast<uintptr_t>(0x001F'FFFF)) + 0x0020'0000 - 1);
 
-            // #TODO: We should be making sure we only map what we need, not "everything". And definitely not
-            // hardcoding how much physical memory we have. That should be left up to the real memory manager which
-            // will know the memory information from the device tree.
+            auto const startOfKernelRangeVA = kernelBasePA + VA_START;
+            auto const endOfKernelRangeVA = kernelEndPA + VA_START;
+            auto const startOfDeviceRangeVA = deviceBasePA + VA_START;
+            auto const endOfDeviceRangeVA = deviceEndPA + VA_START;
 
-            // Map all memory from 0 up to DEVICE_BASE as regular memory (- SECTION_SIZE because the function expects
-            // the end value to be the address of the last section to map)
-            CreateBlockMap(ppageMiddleDirectory, 0, VA_START, (VA_START + DEVICE_BASE - SECTION_SIZE), MMU_FLAGS);
-            // Map all memory from the DEVICE_BASE up to the end of physical memory as MMIO memory
-            CreateBlockMap(ppageMiddleDirectory, DEVICE_BASE, (VA_START + DEVICE_BASE), (VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE), MMU_DEVICE_FLAGS);
+            auto const prootPage = reinterpret_cast<uint64_t*>(allocator.Allocate());
+
+            // #TODO: Should really be a custom type
+            auto const normalMemory = MM_ACCESS | MM_TYPE_PAGE | (MT_NORMAL_NC << 2);
+            auto const deviceMemory = MM_ACCESS | MM_TYPE_PAGE | (MT_DEVICE_nGnRnE << 2);
+
+            // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
+            // be pointing at the physical addresses)
+            InsertEntriesForMemoryRange(allocator, prootPage, kernelBasePA, kernelEndPA, kernelBasePA, normalMemory);
+            InsertEntriesForMemoryRange(allocator, prootPage, deviceBasePA, deviceEndPA, deviceBasePA, deviceMemory);
+
+            // Now map the kernel and devices into high memory
+            InsertEntriesForMemoryRange(allocator, prootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, normalMemory);
+            InsertEntriesForMemoryRange(allocator, prootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, deviceMemory);
         }
 
         void EnableMMU()

@@ -50,11 +50,11 @@
 #define PTRS_PER_TABLE (1 << TABLE_SHIFT)
 
 // How far to shift the virtual address to get the Page Global Directory index
-#define PGD_SHIFT PAGE_SHIFT + 3*TABLE_SHIFT
+#define PGD_SHIFT (PAGE_SHIFT + 3*TABLE_SHIFT)
 // How far to shift the virtual address to get the Page Upper Directory index
-#define PUD_SHIFT PAGE_SHIFT + 2*TABLE_SHIFT
+#define PUD_SHIFT (PAGE_SHIFT + 2*TABLE_SHIFT)
 // How far to shift the virtual address to get the Page Middle Directory index
-#define PMD_SHIFT PAGE_SHIFT + TABLE_SHIFT
+#define PMD_SHIFT (PAGE_SHIFT + TABLE_SHIFT)
 
 /////////////////////////////////////////////////
 // Page Descriptor Layout:
