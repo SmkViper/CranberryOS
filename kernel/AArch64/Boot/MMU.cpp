@@ -235,6 +235,13 @@ namespace AArch64
             // Now map the kernel and devices into high memory
             InsertEntriesForMemoryRange(allocator, prootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, normalMemory);
             InsertEntriesForMemoryRange(allocator, prootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, deviceMemory);
+
+            // Map everything between the kernel range and device range for now
+            // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
+            // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
+            // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
+            // kernel space
+            InsertEntriesForMemoryRange(allocator, prootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA - 1, endOfKernelRangeVA + 1, normalMemory);
         }
 
         void EnableMMU()
