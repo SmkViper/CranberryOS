@@ -464,7 +464,7 @@ namespace AArch64
         bool M() const { return RegisterValue[MIndex]; }
 
     private:
-        /**            (1 << 13);
+        /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with

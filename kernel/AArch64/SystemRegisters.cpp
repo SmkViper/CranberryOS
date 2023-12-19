@@ -1,43 +1,10 @@
 #include "SystemRegisters.h"
 
 #include <cstring>
+#include "../Utils.h"
 
 namespace AArch64
 {
-    namespace
-    {
-        /**
-         * Writes a multi-bit value to a bitset
-         * 
-         * @param arBitset The bitset to modify
-         * @param aValue The value to write
-         * @param aMask An un-shifted mask for the bits to write
-         * @param aShit How much to shift the value before writing
-        */
-        template<typename EnumType, size_t BitsetSize>
-        void WriteMultiBitValue(std::bitset<BitsetSize>& arBitset, EnumType const aValue, uint64_t const aMask, uint64_t const aShift)
-        {
-            arBitset &= std::bitset<64>{ ~(aMask << aShift) };
-            auto const maskedValue = (static_cast<uint64_t>(aValue) & aMask) << aShift;
-            arBitset |= std::bitset<64>{ maskedValue };
-        }
-
-        /**
-         * Reads a multi-bit value from a bitset
-         * 
-         * @param aBitset The bitset to read
-         * @param aMask An un-shifted mask fro the bits to read
-         * @param aShift How much to shift the value after reading
-         * @return The read bits, casted to EnumType
-        */
-        template<typename EnumType, size_t BitsetSize>
-        EnumType ReadMultiBitValue(std::bitset<BitsetSize> const& aBitset, uint64_t const aMask, uint64_t const aShift)
-        {
-            auto const shiftedMask = aMask << aShift;
-            return static_cast<EnumType>((aBitset & std::bitset<64>{ shiftedMask }).to_ulong() >> aShift);
-        }
-    }
-    
     void CPACR_EL1::Write(CPACR_EL1 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
@@ -143,6 +110,8 @@ namespace AArch64
     MAIR_EL1::Attribute MAIR_EL1::Attribute::NormalMemory()
     {
         // #TODO: Figure out if this needs to change and what these words mean
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Normal-memory
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
 
         // Normal memory, outer non-cacheable
         // Normal memory, inner non-cacheable
@@ -152,6 +121,8 @@ namespace AArch64
     MAIR_EL1::Attribute MAIR_EL1::Attribute::DeviceMemory()
     {
         // #TODO: Figure out if this needs to change and what these words mean
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Device-memory
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
 
         // Device nGnRnE memory
         // Non-gathering (one access in code = one access on bus)
