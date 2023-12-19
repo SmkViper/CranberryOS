@@ -294,11 +294,9 @@ namespace AArch64
 
         // The address size in bytes is 2^(64 - TnSZ)
         //
-        // So in order to convert the number of bits to the TnSZ value representing that number of bits, we need to
-        // use (64 - aBits).
-        //
-        // For example, if you want the address size to be 48 bits (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF),
-        // then (64 - TnSZ) must be 48, which means TnSZ should be 16, which is (64 - 48).
+        // So in other words, TnSZ is the number of bits in the address space that is reserved to be either all 0 or
+        // all 1 to designate whether it's user or kernel space. Since we let our users give us the number of non-
+        // reserved bits, we subtract that from 64 to get the reserved bit count.
         auto const encodedValue = (64 - aBits);
         WriteMultiBitValue(RegisterValue, encodedValue, T0SZIndex_Mask, T0SZIndex_Shift);
     }
@@ -307,8 +305,8 @@ namespace AArch64
     {
         // The address size in bytes is 2^(64 - TnSZ)
         //
-        // So in order to convert the TnSZ value to the number of bits in the address range, we just use 
-        // (64 - encodedValue)
+        // So in order to convert the TnSZ value from the number of reserved bits to the number of bits in the address
+        // range, we just use (64 - encodedValue)
         auto const encodedValue = ReadMultiBitValue<uint8_t>(RegisterValue, T0SZIndex_Mask, T0SZIndex_Shift);
         return 64 - encodedValue;
     }
