@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include "../../MemoryManager.h"
 #include "../MMUDefines.h"
 #include "../SystemRegisters.h"
 #include "MMU.h"
@@ -216,10 +217,10 @@ namespace AArch64
             auto const kernelBasePA = reinterpret_cast<uintptr_t>(__kernel_image) & (~static_cast<uintptr_t>(0x001F'FFFF));
             auto const kernelEndPA = (reinterpret_cast<uintptr_t>(__kernel_image_end) & (~static_cast<uintptr_t>(0x001F'FFFF)) + 0x0020'0000 - 1);
 
-            auto const startOfKernelRangeVA = kernelBasePA + VA_START;
-            auto const endOfKernelRangeVA = kernelEndPA + VA_START;
-            auto const startOfDeviceRangeVA = deviceBasePA + VA_START;
-            auto const endOfDeviceRangeVA = deviceEndPA + VA_START;
+            auto const startOfKernelRangeVA = kernelBasePA + MemoryManager::KernalVirtualAddressStart;
+            auto const endOfKernelRangeVA = kernelEndPA + MemoryManager::KernalVirtualAddressStart;
+            auto const startOfDeviceRangeVA = deviceBasePA + MemoryManager::KernalVirtualAddressStart;
+            auto const endOfDeviceRangeVA = deviceEndPA + MemoryManager::KernalVirtualAddressStart;
 
             auto const prootPage = reinterpret_cast<uint64_t*>(allocator.Allocate());
 
@@ -258,7 +259,7 @@ namespace AArch64
             tcr_el1.T0SZ(48);
             tcr_el1.TG0(TCR_EL1::T0Granule::Size4kb);
             // kernel space will have 48 bits of address space, with 4kb granule
-            // #TODO: Sync with VA_START somehow?
+            // #TODO: Sync with KernalVirtualAddressStart somehow?
             tcr_el1.T1SZ(48);
             tcr_el1.TG1(TCR_EL1::T1Granule::Size4kb);
             

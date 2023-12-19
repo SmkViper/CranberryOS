@@ -1,6 +1,6 @@
 #include <cstdint>
 #include "../../Main.h"
-#include "../MMUDefines.h"
+#include "../../MemoryManager.h"
 #include "ExceptionLevel.h"
 #include "MMU.h"
 
@@ -36,12 +36,12 @@ extern "C"
             : "x0" // bashed registers
         );
 
-        // Adjust the stack pointer by VA_START so it points into kernel space
+        // Adjust the stack pointer by KernalVirtualAddressStart so it points into kernel space
         asm volatile(
             "mov x0, %[base] \n"
             "add sp, sp, x0 \n"
             : // no outputs
-            : [base] "r"(VA_START)
+            : [base] "r"(MemoryManager::KernalVirtualAddressStart)
             : "x0" // bashed registers
         );
 

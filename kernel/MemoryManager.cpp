@@ -50,8 +50,9 @@ namespace MemoryManager
                 {
                     PageInUse[curPage] = true;
                     auto newPageStart = LowMemoryC + (curPage * PageSizeC); // physical address
-                    // have to add the VA_START because that's where the physical address is mapped to in kernel space
-                    memset(reinterpret_cast<void*>(newPageStart + VA_START), 0, PAGE_SIZE);
+                    // have to add the KernalVirtualAddressStart because that's where the physical address is mapped to
+                    // in kernel space
+                    memset(reinterpret_cast<void*>(newPageStart + KernalVirtualAddressStart), 0, PAGE_SIZE);
                     return reinterpret_cast<void*>(newPageStart);
                 }
             }
@@ -136,28 +137,28 @@ namespace MemoryManager
 
             const auto ppageGlobalDirectory = arTask.MemoryState.pPageGlobalDirectory;
             auto newTable = false;
-            const auto ppageUpperDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageGlobalDirectory) + VA_START, PGD_SHIFT, aVirtualAddress, newTable);
+            const auto ppageUpperDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageGlobalDirectory) + KernalVirtualAddressStart, PGD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageUpperDirectory;
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto ppageMiddleDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageUpperDirectory) + VA_START, PUD_SHIFT, aVirtualAddress, newTable);
+            const auto ppageMiddleDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageUpperDirectory) + KernalVirtualAddressStart, PUD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageMiddleDirectory;
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto ppageTableEntry = MapTable(reinterpret_cast<uintptr_t>(ppageMiddleDirectory) + VA_START, PMD_SHIFT, aVirtualAddress, newTable);
+            const auto ppageTableEntry = MapTable(reinterpret_cast<uintptr_t>(ppageMiddleDirectory) + KernalVirtualAddressStart, PMD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageTableEntry;
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            MapTableEntry(reinterpret_cast<uintptr_t>(ppageTableEntry) + VA_START, aVirtualAddress, apPhysicalPage);
+            MapTableEntry(reinterpret_cast<uintptr_t>(ppageTableEntry) + KernalVirtualAddressStart, aVirtualAddress, apPhysicalPage);
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{apPhysicalPage, aVirtualAddress};
             ++arTask.MemoryState.UserPagesCount;
         }
@@ -171,7 +172,7 @@ namespace MemoryManager
             return nullptr;
         }
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + VA_START);
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernalVirtualAddressStart);
     }
 
     void* AllocateUserPage(Scheduler::TaskStruct& arTask, const uintptr_t aVirtualAddress)
@@ -184,7 +185,7 @@ namespace MemoryManager
 
         MapPage(arTask, aVirtualAddress, pphysicalPage);
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + VA_START);
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernalVirtualAddressStart);
     }
 
     bool CopyVirtualMemory(Scheduler::TaskStruct& arDestinationTask, const Scheduler::TaskStruct& aCurrentTask)

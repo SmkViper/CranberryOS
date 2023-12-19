@@ -11,7 +11,7 @@ namespace Scheduler
 
 namespace MemoryManager
 {
-    constexpr uintptr_t KernalVirtualAddressStart = VA_START;
+    constexpr uintptr_t KernalVirtualAddressStart = 0xFFFF'0000'0000'0000;
     
     /**
      * Allocates a page of memory in the kernel virtual address space

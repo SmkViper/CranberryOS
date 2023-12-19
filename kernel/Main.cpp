@@ -4,6 +4,7 @@
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
 #include "Main.h"
+#include "MemoryManager.h"
 #include "MiniUart.h"
 #include "Print.h"
 #include "Scheduler.h"
@@ -104,7 +105,7 @@ namespace Kernel
         Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
         Print::FormatToMiniUART("_start: {:x}\r\n", aStartPointer);
         // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
-        //DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(static_cast<uintptr_t>(aDTBPointer) + VA_START));
+        //DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(static_cast<uintptr_t>(aDTBPointer) + MemoryManager::KernalVirtualAddressStart));
 
         UnitTests::Run();
 

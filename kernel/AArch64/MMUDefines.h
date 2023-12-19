@@ -5,9 +5,6 @@
 
 // #TODO: Clean all this up in some way so we don't have so many #defines polluting the global namespace
 
-// Any address starting here refers to kernel-mapped memory
-#define VA_START 0xFFFF000000000000
-
 // Base address for all device MMIO access
 #define DEVICE_BASE 0x3F000000
 
