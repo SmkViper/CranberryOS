@@ -11,7 +11,9 @@ namespace Scheduler
 
 namespace MemoryManager
 {
+    // #TODO These should be special types indicating the type of pointer
     constexpr uintptr_t KernalVirtualAddressStart = 0xFFFF'0000'0000'0000;
+    constexpr uintptr_t DeviceBaseAddress = 0x3F00'0000;
     
     /**
      * Allocates a page of memory in the kernel virtual address space

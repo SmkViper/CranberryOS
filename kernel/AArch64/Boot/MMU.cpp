@@ -208,7 +208,7 @@ namespace AArch64
 
             // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
             // they need based on device tree information
-            auto const deviceBasePA = static_cast<uintptr_t>(DEVICE_BASE);
+            auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
             auto const deviceEndPA = static_cast<uintptr_t>(deviceBasePA + 0x00FF'FFFF);
 
             // Calculate the range of the kernel image in 2MB blocks (since 2MB is the size of the blocks pointed at by

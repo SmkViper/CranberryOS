@@ -5,12 +5,6 @@
 
 // #TODO: Clean all this up in some way so we don't have so many #defines polluting the global namespace
 
-// Base address for all device MMIO access
-#define DEVICE_BASE 0x3F000000
-
-// Hardcoded 1GB of memory for the RPi
-#define PHYS_MEMORY_SIZE 0x40000000
-
 /////////////////////////////////////////////////
 // Virtual address layout:
 // +------+-----------+-----------+-----------+-----------+-------------+

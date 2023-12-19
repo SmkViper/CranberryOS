@@ -27,7 +27,7 @@ namespace MemoryManager
         constexpr auto LowMemoryC = LOW_MEMORY; // reserve 4mb of low memory, which is enough to cover our kernel
         // don't run into any of the memory-mapped perhipherals (NOT using the PeripheralBaseAddr because that's an
         // absolute addr, and we want relative for our paging calculations)
-        constexpr auto HighMemoryC = DEVICE_BASE;
+        constexpr auto HighMemoryC = DeviceBaseAddress;
 
         constexpr auto PagingMemoryC = HighMemoryC - LowMemoryC;
         constexpr auto PageCountC = PagingMemoryC / PageSizeC;
