@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "AArch64/CPU.h"
+#include "MemoryManager.h"
 #include "Print.h"
 #include "Utils.h"
 
@@ -20,7 +21,7 @@ namespace
     // Test "framework"
     ///////////////////////////////////////////////////////////////////////////
 
-    // TODO
+    // #TODO
     // Make into some sort of terminal output library to control colors, positions, etc.
 
     /**
@@ -552,6 +553,15 @@ namespace
     }
 
     ///////////////////////////////////////////////////////////////////////////
+    // MemoryManager.h tests
+    ///////////////////////////////////////////////////////////////////////////
+
+    static_assert(MemoryManager::CalculateBlockStart(0x1, 0x1000) == 0x0, "Unexpected block start");
+    static_assert(MemoryManager::CalculateBlockEnd(0x1, 0x1000) == 0x0FFF, "Unexpected block end");
+    static_assert(MemoryManager::CalculateBlockStart(0x1024, 0x1000) == 0x1000, "Unexpected block start");
+    static_assert(MemoryManager::CalculateBlockEnd(0x1024, 0x1000) == 0x1FFF, "Unexpected block end");
+
+    ///////////////////////////////////////////////////////////////////////////
     // Print.h tests
     ///////////////////////////////////////////////////////////////////////////
 
@@ -683,6 +693,46 @@ namespace
         char buffer[256];
         Print::FormatToBuffer(buffer, "Hello {} world {} again", "new");
         EmitTestResult(strcmp(buffer, "Hello new world {1} again") == 0, "Print::FormatToBuffer out of range braces");
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Utils.h tests
+    ///////////////////////////////////////////////////////////////////////////
+
+    // #TODO: no obvious way to test MemoryMappedIO functions at this time
+    // #TODO: no obvious way to test Timing functions at this time
+
+    /**
+     * Ensure WriteMultiBitValue and ReadMultiBitValue set and read the expected bits
+    */
+    void ReadWriteMultiBitValueTest()
+    {
+        static constexpr uint64_t inputValue = 0xABCD; // larger than the mask to ensure we're masking
+        static constexpr uint64_t mask = 0xFF;
+        static constexpr uint64_t shift = 3;
+
+        std::bitset<64> bitset;
+        WriteMultiBitValue(bitset, inputValue, mask, shift);
+        EmitTestResult(bitset.to_ullong() == 0x0000'0000'0000'0668, "Write multi bit value mask/shift");
+        EmitTestResult(ReadMultiBitValue<uint64_t>(bitset, mask, shift) == 0xCD, "Read/write multi bit value round-trip");
+    }
+
+    /**
+     * Ensure WriteMultiBitValue and ReadMultiBitValue work with enum values
+    */
+    void ReadWriteMultiBitEnumTest()
+    {
+        enum class TestEnum: uint8_t
+        {
+            Value = 0b101
+        };
+        static constexpr uint64_t mask = 0b111;
+        static constexpr uint64_t shift = 3;
+
+        std::bitset<64> bitset;
+        WriteMultiBitValue(bitset, TestEnum::Value, mask, shift);
+        EmitTestResult(bitset.to_ullong() == 0x0000'0000'0000'0028, "Write multi bit enum mask/shift");
+        EmitTestResult(ReadMultiBitValue<TestEnum>(bitset, mask, shift) == TestEnum::Value, "Read/write multi bit enum round-trip");
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -851,6 +901,9 @@ namespace UnitTests
         PrintMismatchedBracesTest();
         PrintInvalidBraceContentsTest();
         PrintOutOfRangeBracesTest();
+
+        ReadWriteMultiBitValueTest();
+        ReadWriteMultiBitEnumTest();
     }
 
     void RunPostStaticDestructors()

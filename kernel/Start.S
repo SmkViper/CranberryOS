@@ -51,8 +51,8 @@ continue_boot:
     // #TODO: There's likely a better way to do this, hopefully in a way that
     // doesn't risk stomping anything before our kernel start point, but we'll
     // have to investigate the memory mapping on boot. Old version used
-    // LOW_MEMORY for the stack root, which covered the first 4MB of address
-    // space (and therefore ran the risk of bashing the kernel image)
+    // then end of a 4MB block for the stack root, which ran the risk of
+    // bashing the kernel image.
     adrp    x19, _start          // Loads the offset to the page where _start is
     add     x19, x19, :lo12:_start // Add in the offset to the actual _start symbol
     mov     sp, x19

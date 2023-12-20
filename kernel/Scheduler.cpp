@@ -453,7 +453,7 @@ namespace Scheduler
         // We'll be basically reserving two pages of memory for the process for now. One for the code, and one for the
         // stack. The stack pointer won't be pre-allocated, as we'll allow the interrupt to trap access and map the
         // page for us, hence why we can just blindly set StackPointer here.
-        pstate->StackPointer = 2 * PAGE_SIZE;
+        pstate->StackPointer = 2 * MemoryManager::PageSize;
 
         const auto pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, 0);
         if (pcodePage == nullptr)

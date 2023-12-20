@@ -3,6 +3,8 @@
 
 #include <cstdint>
 #include <cstring>
+#include "../../MemoryManager.h"
+#include "../MemoryDescriptor.h"
 #include "../MMUDefines.h"
 #include "../SystemRegisters.h"
 #include "MMU.h"
@@ -58,11 +60,11 @@ namespace AArch64
                     {
                         Panic("Bump allocator start is past the end");
                     }
-                    if (reinterpret_cast<uintptr_t>(pStart) % PAGE_SIZE != 0)
+                    if (reinterpret_cast<uintptr_t>(pStart) % MemoryManager::PageSize != 0)
                     {
                         Panic("Bump allocator start address is not aligned to a page size");
                     }
-                    if (reinterpret_cast<uintptr_t>(pEnd) % PAGE_SIZE != 0)
+                    if (reinterpret_cast<uintptr_t>(pEnd) % MemoryManager::PageSize != 0)
                     {
                         Panic("Bump allocator start address is not aligned to a page size");
                     }
@@ -81,9 +83,9 @@ namespace AArch64
                     }
 
                     auto const pret = pCurrent;
-                    pCurrent = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pCurrent) + PAGE_SIZE);
+                    pCurrent = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pCurrent) + MemoryManager::PageSize);
 
-                    std::memset(pret, 0, PAGE_SIZE);
+                    std::memset(pret, 0, MemoryManager::PageSize);
                     return pret;
                 }
 
@@ -92,20 +94,6 @@ namespace AArch64
                 void* pEnd = nullptr;
                 void* pCurrent = nullptr;
             };
-
-            /**
-             * Converts a page table descriptor to a pointer to the next page table
-             * 
-             * @param aDescriptor The descriptor to convert
-             * 
-             * @return The page table the descriptor points at
-            */
-            uint64_t* DescriptorToPointer(uint64_t const aDescriptor)
-            {
-                // #TODO: The descriptor probably should just be its own type
-                auto const DescriptorMask = ~0b11;
-                return reinterpret_cast<uint64_t*>(aDescriptor & DescriptorMask);
-            }
 
             /**
              * Inserts all the required data into the page tables for a level 3 table (which points at 4kb pages)
@@ -122,32 +110,42 @@ namespace AArch64
                 // #TODO: Can probably be cleaned up to reduce rudundancy
 
                 // Level 0 table points to level 1 table (512GB range)
-                auto const level1TableIndex = (aVirtualAddress >> PGD_SHIFT) & (PTRS_PER_TABLE - 1);
+                auto const level1TableIndex = (aVirtualAddress >> PGD_SHIFT) & (MemoryManager::PointersPerTable - 1);
                 if (apRootPage[level1TableIndex] == 0)
                 {
-                    apRootPage[level1TableIndex] = reinterpret_cast<uint64_t>(arAllocator.Allocate());
-                    apRootPage[level1TableIndex] |= MM_TYPE_PAGE_TABLE;
+                    Descriptor::Table tableDescriptor;
+                    tableDescriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
+                    Descriptor::Table::Write(tableDescriptor, apRootPage, level1TableIndex);
                 }
 
+                // #TODO: We're assuming level 1 and 2 tables only contain pages and not blocks, which is going to be
+                // the case for how our code is currently written. Would be safer to have code that can handle the type
+                // of descriptor based on which table is being read.
+
                 // Level 1 table points to level 2 table (1GB range)
-                auto const plevel1Table = DescriptorToPointer(apRootPage[level1TableIndex]);
-                auto const level2TableIndex = (aVirtualAddress >> PUD_SHIFT) & (PTRS_PER_TABLE - 1);
+                auto const level1Entry = Descriptor::Table::Read(apRootPage, level1TableIndex);
+                auto const plevel1Table = reinterpret_cast<uint64_t*>(level1Entry.Address());
+                auto const level2TableIndex = (aVirtualAddress >> PUD_SHIFT) & (MemoryManager::PointersPerTable - 1);
                 if (plevel1Table[level2TableIndex] == 0)
                 {
-                    plevel1Table[level2TableIndex] = reinterpret_cast<uint64_t>(arAllocator.Allocate());
-                    plevel1Table[level2TableIndex] |= MM_TYPE_PAGE_TABLE;
+                    Descriptor::Table tableDescriptor;
+                    tableDescriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
+                    Descriptor::Table::Write(tableDescriptor, plevel1Table, level2TableIndex);
                 }
 
                 // Level 2 table points to level 3 table (2MB range)
-                auto const plevel2Table = DescriptorToPointer(plevel1Table[level2TableIndex]);
-                auto const level3TableIndex = (aVirtualAddress >> PMD_SHIFT) & (PTRS_PER_TABLE - 1);
+                auto const level2Entry = Descriptor::Table::Read(plevel1Table, level2TableIndex);
+                auto const plevel2Table = reinterpret_cast<uint64_t*>(level2Entry.Address());
+                auto const level3TableIndex = (aVirtualAddress >> PMD_SHIFT) & (MemoryManager::PointersPerTable - 1);
                 if (plevel2Table[level3TableIndex] == 0)
                 {
-                    plevel2Table[level3TableIndex] = reinterpret_cast<uint64_t>(arAllocator.Allocate());
-                    plevel2Table[level3TableIndex] |= MM_TYPE_PAGE_TABLE;
+                    Descriptor::Table tableDescriptor;
+                    tableDescriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
+                    Descriptor::Table::Write(tableDescriptor, plevel2Table, level3TableIndex);
                 }
 
-                return DescriptorToPointer(plevel2Table[level3TableIndex]);
+                auto const level3Entry = Descriptor::Table::Read(plevel2Table, level3TableIndex);
+                return reinterpret_cast<uint64_t*>(level3Entry.Address());
             }
 
             /**
@@ -159,10 +157,10 @@ namespace AArch64
              * @param aVAStart The start of the virtual address range to map
              * @param aVAEnd The end of the virtual address range to map
              * @param aPhysicalAddress The physical address to map to
-             * @param aFlags The flags for the new entries
+             * @param aMAIRIndex The index into the MAIR register for the attributes for this memory
             */
             void InsertEntriesForMemoryRange(PageBumpAllocator& arAllocator, uint64_t* const apRootPage, uint64_t const aVAStart, uint64_t const aVAEnd,
-                uint64_t const aPhysicalAddress, uint64_t const aFlags)
+                uint64_t const aPhysicalAddress, uint8_t const aMAIRIndex)
             {
                 auto curPA = aPhysicalAddress;
                 for (auto curVA = aVAStart; curVA < aVAEnd;)
@@ -170,13 +168,17 @@ namespace AArch64
                     // Level 3 table points to 4kb blocks
                     auto const plevel3Table = InsertPageTable(arAllocator, apRootPage, curVA);
 
-                    auto const blockIndex = (curVA >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
-                    auto& rblockEntry = plevel3Table[blockIndex];
-                    rblockEntry = curPA;
-                    rblockEntry |= aFlags;
+                    Descriptor::Page pageEntry;
+                    pageEntry.Address(curPA);
+                    pageEntry.AF(true); // don't fault when accessed
+                    pageEntry.AP(Descriptor::Page::AccessPermissions::KernelRWUserNone); // only kernel can access
+                    pageEntry.AttrIndx(aMAIRIndex);
 
-                    curVA += PAGE_SIZE; 
-                    curPA += PAGE_SIZE;
+                    auto const blockIndex = (curVA >> PAGE_SHIFT) & (MemoryManager::PointersPerTable - 1);
+                    Descriptor::Page::Write(pageEntry, plevel3Table, blockIndex);
+
+                    curVA += MemoryManager::PageSize; 
+                    curPA += MemoryManager::PageSize;
                 }
             }
 
@@ -207,41 +209,38 @@ namespace AArch64
 
             // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
             // they need based on device tree information
-            auto const deviceBasePA = static_cast<uintptr_t>(DEVICE_BASE);
+            auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
             auto const deviceEndPA = static_cast<uintptr_t>(deviceBasePA + 0x00FF'FFFF);
 
-            // Calculate the range of the kernel image in 2MB blocks (since 2MB is the size of the blocks pointed at by
-            // the level 2 table since we're running with 4KB granule)
+            // Calculate the range of the kernel image in L2 block size
+            // #TODO: Originally this was done so we didn't have to set up 4k pages and could instead use 2MB blocks,
+            // but it may not make sense anymore, especially since we later want to flag certain areas as read-only
             // #TODO: Why are these symbols from the linker script pointing at physical addresses?
-            auto const kernelBasePA = reinterpret_cast<uintptr_t>(__kernel_image) & (~static_cast<uintptr_t>(0x001F'FFFF));
-            auto const kernelEndPA = (reinterpret_cast<uintptr_t>(__kernel_image_end) & (~static_cast<uintptr_t>(0x001F'FFFF)) + 0x0020'0000 - 1);
+            auto const kernelBasePA = MemoryManager::CalculateBlockStart(reinterpret_cast<uintptr_t>(__kernel_image), MemoryManager::L2BlockSize);
+            auto const kernelEndPA = MemoryManager::CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end), MemoryManager::L2BlockSize);
 
-            auto const startOfKernelRangeVA = kernelBasePA + VA_START;
-            auto const endOfKernelRangeVA = kernelEndPA + VA_START;
-            auto const startOfDeviceRangeVA = deviceBasePA + VA_START;
-            auto const endOfDeviceRangeVA = deviceEndPA + VA_START;
+            auto const startOfKernelRangeVA = kernelBasePA + MemoryManager::KernalVirtualAddressStart;
+            auto const endOfKernelRangeVA = kernelEndPA + MemoryManager::KernalVirtualAddressStart;
+            auto const startOfDeviceRangeVA = deviceBasePA + MemoryManager::KernalVirtualAddressStart;
+            auto const endOfDeviceRangeVA = deviceEndPA + MemoryManager::KernalVirtualAddressStart;
 
             auto const prootPage = reinterpret_cast<uint64_t*>(allocator.Allocate());
 
-            // #TODO: Should really be a custom type
-            auto const normalMemory = MM_ACCESS | MM_TYPE_PAGE | (MT_NORMAL_NC << 2);
-            auto const deviceMemory = MM_ACCESS | MM_TYPE_PAGE | (MT_DEVICE_nGnRnE << 2);
-
             // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
             // be pointing at the physical addresses)
-            InsertEntriesForMemoryRange(allocator, prootPage, kernelBasePA, kernelEndPA, kernelBasePA, normalMemory);
-            InsertEntriesForMemoryRange(allocator, prootPage, deviceBasePA, deviceEndPA, deviceBasePA, deviceMemory);
+            InsertEntriesForMemoryRange(allocator, prootPage, kernelBasePA, kernelEndPA, kernelBasePA, MT_NORMAL_NC);
+            InsertEntriesForMemoryRange(allocator, prootPage, deviceBasePA, deviceEndPA, deviceBasePA, MT_DEVICE_nGnRnE);
 
             // Now map the kernel and devices into high memory
-            InsertEntriesForMemoryRange(allocator, prootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, normalMemory);
-            InsertEntriesForMemoryRange(allocator, prootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, deviceMemory);
+            InsertEntriesForMemoryRange(allocator, prootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, MT_NORMAL_NC);
+            InsertEntriesForMemoryRange(allocator, prootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, MT_DEVICE_nGnRnE);
 
             // Map everything between the kernel range and device range for now
             // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
             // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
             // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
             // kernel space
-            InsertEntriesForMemoryRange(allocator, prootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA - 1, endOfKernelRangeVA + 1, normalMemory);
+            InsertEntriesForMemoryRange(allocator, prootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA - 1, endOfKernelRangeVA + 1, MT_NORMAL_NC);
         }
 
         void EnableMMU()
@@ -253,13 +252,20 @@ namespace AArch64
             mair_el1.SetAttribute(MT_NORMAL_NC, MAIR_EL1::Attribute::NormalMemory());
             MAIR_EL1::Write(mair_el1);
 
+            // IMPORTANT: Do not change granule size or address bits, because we have a lot of constants that depend on
+            // these being set to 4kb and 48 bits respectively.
+            static constexpr uint64_t LowAddressBits = 48;
+            static_assert((~((1ULL << LowAddressBits) - 1)) == MemoryManager::KernalVirtualAddressStart, "Bit count doesn't match VA start");
+            // *4 because we have four tables in our MMU setup
+            static_assert(LowAddressBits == Descriptor::PageOffsetBits + (Descriptor::TableIndexBits * 4), "Bit count doesn't match descriptor bit count");
+            static_assert(MemoryManager::PageSize == 0x1000, "Expect page size to be 4kb");
+
             TCR_EL1 tcr_el1;
             // user space will have 48 bits of address space, with 4kb granule
-            tcr_el1.T0SZ(48);
+            tcr_el1.T0SZ(LowAddressBits);
             tcr_el1.TG0(TCR_EL1::T0Granule::Size4kb);
             // kernel space will have 48 bits of address space, with 4kb granule
-            // #TODO: Sync with VA_START somehow?
-            tcr_el1.T1SZ(48);
+            tcr_el1.T1SZ(LowAddressBits);
             tcr_el1.TG1(TCR_EL1::T1Granule::Size4kb);
             
             TCR_EL1::Write(tcr_el1);

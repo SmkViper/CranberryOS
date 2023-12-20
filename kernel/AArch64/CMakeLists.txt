@@ -2,6 +2,7 @@ target_sources(kernel8.elf
     PRIVATE
         CPU.h CPU.cpp
         ExceptionVectorDefines.h
+        MemoryDescriptor.h MemoryDescriptor.cpp
         MMUDefines.h
         RegisterDefines.h
         SchedulerDefines.h

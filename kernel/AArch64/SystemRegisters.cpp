@@ -1,43 +1,10 @@
 #include "SystemRegisters.h"
 
 #include <cstring>
+#include "../Utils.h"
 
 namespace AArch64
 {
-    namespace
-    {
-        /**
-         * Writes a multi-bit value to a bitset
-         * 
-         * @param arBitset The bitset to modify
-         * @param aValue The value to write
-         * @param aMask An un-shifted mask for the bits to write
-         * @param aShit How much to shift the value before writing
-        */
-        template<typename EnumType, size_t BitsetSize>
-        void WriteMultiBitValue(std::bitset<BitsetSize>& arBitset, EnumType const aValue, uint64_t const aMask, uint64_t const aShift)
-        {
-            arBitset &= std::bitset<64>{ ~(aMask << aShift) };
-            auto const maskedValue = (static_cast<uint64_t>(aValue) & aMask) << aShift;
-            arBitset |= std::bitset<64>{ maskedValue };
-        }
-
-        /**
-         * Reads a multi-bit value from a bitset
-         * 
-         * @param aBitset The bitset to read
-         * @param aMask An un-shifted mask fro the bits to read
-         * @param aShift How much to shift the value after reading
-         * @return The read bits, casted to EnumType
-        */
-        template<typename EnumType, size_t BitsetSize>
-        EnumType ReadMultiBitValue(std::bitset<BitsetSize> const& aBitset, uint64_t const aMask, uint64_t const aShift)
-        {
-            auto const shiftedMask = aMask << aShift;
-            return static_cast<EnumType>((aBitset & std::bitset<64>{ shiftedMask }).to_ulong() >> aShift);
-        }
-    }
-    
     void CPACR_EL1::Write(CPACR_EL1 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
@@ -143,6 +110,8 @@ namespace AArch64
     MAIR_EL1::Attribute MAIR_EL1::Attribute::NormalMemory()
     {
         // #TODO: Figure out if this needs to change and what these words mean
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Normal-memory
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
 
         // Normal memory, outer non-cacheable
         // Normal memory, inner non-cacheable
@@ -152,6 +121,8 @@ namespace AArch64
     MAIR_EL1::Attribute MAIR_EL1::Attribute::DeviceMemory()
     {
         // #TODO: Figure out if this needs to change and what these words mean
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Device-memory
+        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
 
         // Device nGnRnE memory
         // Non-gathering (one access in code = one access on bus)
@@ -294,11 +265,9 @@ namespace AArch64
 
         // The address size in bytes is 2^(64 - TnSZ)
         //
-        // So in order to convert the number of bits to the TnSZ value representing that number of bits, we need to
-        // use (64 - aBits).
-        //
-        // For example, if you want the address size to be 48 bits (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF),
-        // then (64 - TnSZ) must be 48, which means TnSZ should be 16, which is (64 - 48).
+        // So in other words, TnSZ is the number of bits in the address space that is reserved to be either all 0 or
+        // all 1 to designate whether it's user or kernel space. Since we let our users give us the number of non-
+        // reserved bits, we subtract that from 64 to get the reserved bit count.
         auto const encodedValue = (64 - aBits);
         WriteMultiBitValue(RegisterValue, encodedValue, T0SZIndex_Mask, T0SZIndex_Shift);
     }
@@ -307,8 +276,8 @@ namespace AArch64
     {
         // The address size in bytes is 2^(64 - TnSZ)
         //
-        // So in order to convert the TnSZ value to the number of bits in the address range, we just use 
-        // (64 - encodedValue)
+        // So in order to convert the TnSZ value from the number of reserved bits to the number of bits in the address
+        // range, we just use (64 - encodedValue)
         auto const encodedValue = ReadMultiBitValue<uint8_t>(RegisterValue, T0SZIndex_Mask, T0SZIndex_Shift);
         return 64 - encodedValue;
     }

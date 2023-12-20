@@ -2,14 +2,18 @@
 
 #include <cstdint>
 #include <cstring>
+#include "AArch64/MemoryDescriptor.h"
 #include "AArch64/MMUDefines.h"
 #include "Peripherals/Base.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"
 
-// Functions defined in MemoryManager.S
 extern "C"
 {
+    // from link.ld
+    extern uint8_t __kernel_image_end[];
+
+    // Functions defined in MemoryManager.S
     /**
      * Set the current page global directory
      * 
@@ -22,19 +26,24 @@ namespace MemoryManager
 {
     namespace
     {
-        // #TODO: Pulling from macros for now, hopefully can clean this up a lot later
-        constexpr auto PageSizeC = PAGE_SIZE; // 4k pages
-        constexpr auto LowMemoryC = LOW_MEMORY; // reserve 4mb of low memory, which is enough to cover our kernel
-        // don't run into any of the memory-mapped perhipherals (NOT using the PeripheralBaseAddr because that's an
-        // absolute addr, and we want relative for our paging calculations)
-        constexpr auto HighMemoryC = DEVICE_BASE;
+        /**
+         * Calculates the start of paging memory based on the end of the kernel image
+         * 
+         * @return The physical address that starts our paging memory
+        */
+        uintptr_t CalculatePagingMemoryPAStart()
+        {
+            // #TODO: Need new types for virtual/physical addresses
+            // #TODO: Why is __kernel_image_end here a virtual address when in the boot process it's a physical
+            // address?
+            return CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end) - KernalVirtualAddressStart, L2BlockSize) + 1;
+        }
 
-        constexpr auto PagingMemoryC = HighMemoryC - LowMemoryC;
-        constexpr auto PageCountC = PagingMemoryC / PageSizeC;
+        constexpr auto PageMask = ~(PageSize - 1);
 
-        constexpr auto PageMaskC = 0xffff'ffff'ffff'f000;
-
-        bool PageInUse[PageCountC] = {false};
+        // #TODO: Hardcoding only 64 pages for now, we need something better for this (probably once we calculate what
+        // is available from the device tree)
+        std::bitset<64> PageInUse;
 
         /**
          * Allocate a page of memory
@@ -44,15 +53,17 @@ namespace MemoryManager
         void* GetFreePage()
         {
             // Very simple for now, just find the first unused page and return it
-            for (auto curPage = 0ull; curPage < PageCountC; ++curPage)
+            auto const pageMemoryStartPA = CalculatePagingMemoryPAStart();
+            for (auto curPage = 0ull; curPage < PageInUse.size(); ++curPage)
             {
                 if (!PageInUse[curPage])
                 {
                     PageInUse[curPage] = true;
-                    auto newPageStart = LowMemoryC + (curPage * PageSizeC); // physical address
-                    // have to add the VA_START because that's where the physical address is mapped to in kernel space
-                    memset(reinterpret_cast<void*>(newPageStart + VA_START), 0, PAGE_SIZE);
-                    return reinterpret_cast<void*>(newPageStart);
+                    auto newPageStartPA = pageMemoryStartPA + (curPage * PageSize); // physical address
+                    // have to add the KernalVirtualAddressStart because that's where the physical address is mapped to
+                    // in kernel space
+                    memset(reinterpret_cast<void*>(newPageStartPA + KernalVirtualAddressStart), 0, PageSize);
+                    return reinterpret_cast<void*>(newPageStartPA);
                 }
             }
             return nullptr;
@@ -66,7 +77,8 @@ namespace MemoryManager
         void FreePage(void* apPage)
         {
             // #TODO: Double-check that the page is valid
-            const auto index = (reinterpret_cast<uintptr_t>(apPage) - LowMemoryC) / PageSizeC;
+            auto const pageMemoryStart = CalculatePagingMemoryPAStart();
+            const auto index = (reinterpret_cast<uintptr_t>(apPage) - pageMemoryStart) / PageSize;
             PageInUse[index] = false;
         }
 
@@ -87,18 +99,21 @@ namespace MemoryManager
             auto ptable = reinterpret_cast<uintptr_t*>(aTableVirtualAddress);
 
             // mask out the bits for this particular table index
-            const auto index = (aUserVirtualAddress >> aShift) & (PTRS_PER_TABLE - 1);
+            const auto index = (aUserVirtualAddress >> aShift) & (PointersPerTable - 1);
             if (ptable[index] == 0u)
             {
                 // this part hasn't been set up yet, so add an entry
                 arNewTable = true;
-                const auto pnextLevelTable = GetFreePage();
-                const auto newEntry = reinterpret_cast<uintptr_t>(pnextLevelTable) | MM_TYPE_PAGE_TABLE;
-                ptable[index] = newEntry;
 
-                return pnextLevelTable;
+                AArch64::Descriptor::Table tableDescriptor;
+                auto const pnewPage = GetFreePage();
+                tableDescriptor.Address(reinterpret_cast<uintptr_t>(pnewPage));
+
+                AArch64::Descriptor::Table::Write(tableDescriptor, ptable, index);
+
+                return pnewPage;
             }
-            return reinterpret_cast<void*>(ptable[index] & PageMaskC);
+            return reinterpret_cast<void*>(ptable[index] & PageMask);
         }
 
         /**
@@ -113,9 +128,14 @@ namespace MemoryManager
             // each table is just an array of pointers
             auto ptable = reinterpret_cast<uintptr_t*>(aTableVirtualAddress);
 
-            const auto index = (aUserVirtualAddress >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
-            const auto entry = reinterpret_cast<uintptr_t>(apPhysicalPage) | MMU_PTE_FLAGS;
-            ptable[index] = entry;
+            AArch64::Descriptor::Page pageDescriptor;
+            pageDescriptor.Address(reinterpret_cast<uintptr_t>(apPhysicalPage));
+            pageDescriptor.AttrIndx(MT_NORMAL_NC); // normal memory
+            pageDescriptor.AF(true); // don't trap on access
+            pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it
+            
+            auto const index = (aUserVirtualAddress >> PAGE_SHIFT) & (PointersPerTable - 1);
+            AArch64::Descriptor::Page::Write(pageDescriptor, ptable, index);
         }
 
         /**
@@ -136,28 +156,28 @@ namespace MemoryManager
 
             const auto ppageGlobalDirectory = arTask.MemoryState.pPageGlobalDirectory;
             auto newTable = false;
-            const auto ppageUpperDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageGlobalDirectory) + VA_START, PGD_SHIFT, aVirtualAddress, newTable);
+            const auto ppageUpperDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageGlobalDirectory) + KernalVirtualAddressStart, PGD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageUpperDirectory;
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto ppageMiddleDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageUpperDirectory) + VA_START, PUD_SHIFT, aVirtualAddress, newTable);
+            const auto ppageMiddleDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageUpperDirectory) + KernalVirtualAddressStart, PUD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageMiddleDirectory;
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto ppageTableEntry = MapTable(reinterpret_cast<uintptr_t>(ppageMiddleDirectory) + VA_START, PMD_SHIFT, aVirtualAddress, newTable);
+            const auto ppageTableEntry = MapTable(reinterpret_cast<uintptr_t>(ppageMiddleDirectory) + KernalVirtualAddressStart, PMD_SHIFT, aVirtualAddress, newTable);
             if (newTable)
             {
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageTableEntry;
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            MapTableEntry(reinterpret_cast<uintptr_t>(ppageTableEntry) + VA_START, aVirtualAddress, apPhysicalPage);
+            MapTableEntry(reinterpret_cast<uintptr_t>(ppageTableEntry) + KernalVirtualAddressStart, aVirtualAddress, apPhysicalPage);
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{apPhysicalPage, aVirtualAddress};
             ++arTask.MemoryState.UserPagesCount;
         }
@@ -171,7 +191,7 @@ namespace MemoryManager
             return nullptr;
         }
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + VA_START);
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernalVirtualAddressStart);
     }
 
     void* AllocateUserPage(Scheduler::TaskStruct& arTask, const uintptr_t aVirtualAddress)
@@ -184,7 +204,7 @@ namespace MemoryManager
 
         MapPage(arTask, aVirtualAddress, pphysicalPage);
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + VA_START);
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernalVirtualAddressStart);
     }
 
     bool CopyVirtualMemory(Scheduler::TaskStruct& arDestinationTask, const Scheduler::TaskStruct& aCurrentTask)
@@ -196,7 +216,7 @@ namespace MemoryManager
             {
                 return false;
             }
-            memcpy(pkernelVA, reinterpret_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress), PAGE_SIZE);
+            memcpy(pkernelVA, reinterpret_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress), PageSize);
         }
         return true;
     }
@@ -222,7 +242,7 @@ extern "C"
                 return -1;
             }
 
-            MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMaskC, pnewPage);
+            MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMask, pnewPage);
             return 0;
         }
         return -1;
