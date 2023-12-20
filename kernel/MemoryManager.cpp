@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include "AArch64/MemoryDescriptor.h"
 #include "AArch64/MMUDefines.h"
 #include "Peripherals/Base.h"
 #include "Scheduler.h"
@@ -114,9 +115,14 @@ namespace MemoryManager
             // each table is just an array of pointers
             auto ptable = reinterpret_cast<uintptr_t*>(aTableVirtualAddress);
 
-            const auto index = (aUserVirtualAddress >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
-            const auto entry = reinterpret_cast<uintptr_t>(apPhysicalPage) | MMU_PTE_FLAGS;
-            ptable[index] = entry;
+            AArch64::Descriptor::Page pageDescriptor;
+            pageDescriptor.Address(reinterpret_cast<uintptr_t>(apPhysicalPage));
+            pageDescriptor.AttrIndx(MT_NORMAL_NC); // normal memory
+            pageDescriptor.AF(true); // don't trap on access
+            pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it
+            
+            auto const index = (aUserVirtualAddress >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
+            AArch64::Descriptor::Page::Write(pageDescriptor, ptable, index);
         }
 
         /**

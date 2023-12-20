@@ -94,8 +94,5 @@
 #define MMU_FLAGS (MM_TYPE_BLOCK | (MT_NORMAL_NC << 2) | MM_ACCESS)
 // Flags for a descriptor that points at a block of device nGnRnE memory
 #define MMU_DEVICE_FLAGS (MM_TYPE_BLOCK | (MT_DEVICE_nGnRnE << 2) | MM_ACCESS)
-// Flags for a descriptor that points at a page
-// #TODO: Why is NORMAL_NC, ACCESS, and ACCESS_PERMISSION specified? Low flags I thought were ignored for page table descriptors
-#define MMU_PTE_FLAGS (MM_TYPE_PAGE | (MT_NORMAL_NC << 2) | MM_ACCESS | MM_ACCESS_PERMISSION)
 
 #endif // KERNEL_AARCH64_MMU_DEFINES_H
