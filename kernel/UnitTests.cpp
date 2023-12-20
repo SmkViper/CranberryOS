@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "AArch64/CPU.h"
+#include "MemoryManager.h"
 #include "Print.h"
 #include "Utils.h"
 
@@ -20,7 +21,7 @@ namespace
     // Test "framework"
     ///////////////////////////////////////////////////////////////////////////
 
-    // TODO
+    // #TODO
     // Make into some sort of terminal output library to control colors, positions, etc.
 
     /**
@@ -550,6 +551,15 @@ namespace
             EmitTestResult(aDest.MoveCount == 1, "std::forward rvalue move");
         });
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // MemoryManager.h tests
+    ///////////////////////////////////////////////////////////////////////////
+
+    static_assert(MemoryManager::CalculateBlockStart(0x1, 0x1000) == 0x0, "Unexpected block start");
+    static_assert(MemoryManager::CalculateBlockEnd(0x1, 0x1000) == 0x0FFF, "Unexpected block end");
+    static_assert(MemoryManager::CalculateBlockStart(0x1024, 0x1000) == 0x1000, "Unexpected block start");
+    static_assert(MemoryManager::CalculateBlockEnd(0x1024, 0x1000) == 0x1FFF, "Unexpected block end");
 
     ///////////////////////////////////////////////////////////////////////////
     // Print.h tests

@@ -212,11 +212,12 @@ namespace AArch64
             auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
             auto const deviceEndPA = static_cast<uintptr_t>(deviceBasePA + 0x00FF'FFFF);
 
-            // Calculate the range of the kernel image in 2MB blocks (since 2MB is the size of the blocks pointed at by
-            // the level 2 table since we're running with 4KB granule)
+            // Calculate the range of the kernel image in L2 block size
+            // #TODO: Originally this was done so we didn't have to set up 4k pages and could instead use 2MB blocks,
+            // but it may not make sense anymore, especially since we later want to flag certain areas as read-only
             // #TODO: Why are these symbols from the linker script pointing at physical addresses?
-            auto const kernelBasePA = reinterpret_cast<uintptr_t>(__kernel_image) & (~static_cast<uintptr_t>(0x001F'FFFF));
-            auto const kernelEndPA = (reinterpret_cast<uintptr_t>(__kernel_image_end) & (~static_cast<uintptr_t>(0x001F'FFFF)) + 0x0020'0000 - 1);
+            auto const kernelBasePA = MemoryManager::CalculateBlockStart(reinterpret_cast<uintptr_t>(__kernel_image), MemoryManager::L2BlockSize);
+            auto const kernelEndPA = MemoryManager::CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end), MemoryManager::L2BlockSize);
 
             auto const startOfKernelRangeVA = kernelBasePA + MemoryManager::KernalVirtualAddressStart;
             auto const endOfKernelRangeVA = kernelEndPA + MemoryManager::KernalVirtualAddressStart;

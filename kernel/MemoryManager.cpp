@@ -8,9 +8,12 @@
 #include "Scheduler.h"
 #include "TaskStructs.h"
 
-// Functions defined in MemoryManager.S
 extern "C"
 {
+    // from link.ld
+    extern uint8_t __kernel_image_end[];
+
+    // Functions defined in MemoryManager.S
     /**
      * Set the current page global directory
      * 
@@ -23,18 +26,24 @@ namespace MemoryManager
 {
     namespace
     {
-        // #TODO: This likely isn't correct now that we add 8M of space in the kernel image
-        constexpr auto LowMemory = 2 * SECTION_SIZE; // reserve 4mb of low memory, which is enough to cover our kernel
-        // don't run into any of the memory-mapped perhipherals (NOT using the PeripheralBaseAddr because that's an
-        // absolute addr, and we want relative for our paging calculations)
-        constexpr auto HighMemoryC = DeviceBaseAddress;
+        /**
+         * Calculates the start of paging memory based on the end of the kernel image
+         * 
+         * @return The physical address that starts our paging memory
+        */
+        uintptr_t CalculatePagingMemoryPAStart()
+        {
+            // #TODO: Need new types for virtual/physical addresses
+            // #TODO: Why is __kernel_image_end here a virtual address when in the boot process it's a physical
+            // address?
+            return CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end) - KernalVirtualAddressStart, L2BlockSize) + 1;
+        }
 
-        constexpr auto PagingMemoryC = HighMemoryC - LowMemory;
-        constexpr auto PageCountC = PagingMemoryC / PageSize;
+        constexpr auto PageMask = ~(PageSize - 1);
 
-        constexpr auto PageMaskC = 0xffff'ffff'ffff'f000;
-
-        bool PageInUse[PageCountC] = {false};
+        // #TODO: Hardcoding only 64 pages for now, we need something better for this (probably once we calculate what
+        // is available from the device tree)
+        std::bitset<64> PageInUse;
 
         /**
          * Allocate a page of memory
@@ -44,16 +53,17 @@ namespace MemoryManager
         void* GetFreePage()
         {
             // Very simple for now, just find the first unused page and return it
-            for (auto curPage = 0ull; curPage < PageCountC; ++curPage)
+            auto const pageMemoryStartPA = CalculatePagingMemoryPAStart();
+            for (auto curPage = 0ull; curPage < PageInUse.size(); ++curPage)
             {
                 if (!PageInUse[curPage])
                 {
                     PageInUse[curPage] = true;
-                    auto newPageStart = LowMemory + (curPage * PageSize); // physical address
+                    auto newPageStartPA = pageMemoryStartPA + (curPage * PageSize); // physical address
                     // have to add the KernalVirtualAddressStart because that's where the physical address is mapped to
                     // in kernel space
-                    memset(reinterpret_cast<void*>(newPageStart + KernalVirtualAddressStart), 0, PageSize);
-                    return reinterpret_cast<void*>(newPageStart);
+                    memset(reinterpret_cast<void*>(newPageStartPA + KernalVirtualAddressStart), 0, PageSize);
+                    return reinterpret_cast<void*>(newPageStartPA);
                 }
             }
             return nullptr;
@@ -67,7 +77,8 @@ namespace MemoryManager
         void FreePage(void* apPage)
         {
             // #TODO: Double-check that the page is valid
-            const auto index = (reinterpret_cast<uintptr_t>(apPage) - LowMemory) / PageSize;
+            auto const pageMemoryStart = CalculatePagingMemoryPAStart();
+            const auto index = (reinterpret_cast<uintptr_t>(apPage) - pageMemoryStart) / PageSize;
             PageInUse[index] = false;
         }
 
@@ -102,7 +113,7 @@ namespace MemoryManager
 
                 return pnewPage;
             }
-            return reinterpret_cast<void*>(ptable[index] & PageMaskC);
+            return reinterpret_cast<void*>(ptable[index] & PageMask);
         }
 
         /**
@@ -231,7 +242,7 @@ extern "C"
                 return -1;
             }
 
-            MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMaskC, pnewPage);
+            MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMask, pnewPage);
             return 0;
         }
         return -1;
