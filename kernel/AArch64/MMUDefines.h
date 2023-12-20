@@ -86,13 +86,4 @@
 // Flags a page as normal non-cacheable memory
 #define MT_NORMAL_NC 0x1
 
-/////////////////////////////////////////////////
-// Descriptor flags for various descriptor types
-/////////////////////////////////////////////////
-
-// Flags for a descriptor that points at a block of normal non-cacheable memory
-#define MMU_FLAGS (MM_TYPE_BLOCK | (MT_NORMAL_NC << 2) | MM_ACCESS)
-// Flags for a descriptor that points at a block of device nGnRnE memory
-#define MMU_DEVICE_FLAGS (MM_TYPE_BLOCK | (MT_DEVICE_nGnRnE << 2) | MM_ACCESS)
-
 #endif // KERNEL_AARCH64_MMU_DEFINES_H
