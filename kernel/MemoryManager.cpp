@@ -23,15 +23,13 @@ namespace MemoryManager
 {
     namespace
     {
-        // #TODO: Pulling from macros for now, hopefully can clean this up a lot later
-        constexpr auto PageSizeC = PAGE_SIZE; // 4k pages
         constexpr auto LowMemoryC = LOW_MEMORY; // reserve 4mb of low memory, which is enough to cover our kernel
         // don't run into any of the memory-mapped perhipherals (NOT using the PeripheralBaseAddr because that's an
         // absolute addr, and we want relative for our paging calculations)
         constexpr auto HighMemoryC = DeviceBaseAddress;
 
         constexpr auto PagingMemoryC = HighMemoryC - LowMemoryC;
-        constexpr auto PageCountC = PagingMemoryC / PageSizeC;
+        constexpr auto PageCountC = PagingMemoryC / PageSize;
 
         constexpr auto PageMaskC = 0xffff'ffff'ffff'f000;
 
@@ -50,7 +48,7 @@ namespace MemoryManager
                 if (!PageInUse[curPage])
                 {
                     PageInUse[curPage] = true;
-                    auto newPageStart = LowMemoryC + (curPage * PageSizeC); // physical address
+                    auto newPageStart = LowMemoryC + (curPage * PageSize); // physical address
                     // have to add the KernalVirtualAddressStart because that's where the physical address is mapped to
                     // in kernel space
                     memset(reinterpret_cast<void*>(newPageStart + KernalVirtualAddressStart), 0, PAGE_SIZE);
@@ -68,7 +66,7 @@ namespace MemoryManager
         void FreePage(void* apPage)
         {
             // #TODO: Double-check that the page is valid
-            const auto index = (reinterpret_cast<uintptr_t>(apPage) - LowMemoryC) / PageSizeC;
+            const auto index = (reinterpret_cast<uintptr_t>(apPage) - LowMemoryC) / PageSize;
             PageInUse[index] = false;
         }
 

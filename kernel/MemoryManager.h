@@ -2,6 +2,7 @@
 #define KERNEL_MEMORY_MANAGER_H
 
 #include <cstdint>
+#include "AArch64/MemoryDescriptor.h"
 #include "AArch64/MMUDefines.h"
 
 namespace Scheduler
@@ -14,6 +15,9 @@ namespace MemoryManager
     // #TODO These should be special types indicating the type of pointer
     constexpr uintptr_t KernalVirtualAddressStart = 0xFFFF'0000'0000'0000;
     constexpr uintptr_t DeviceBaseAddress = 0x3F00'0000;
+
+    // page size depends on how many bits the descriptor uses to index into said page
+    constexpr size_t PageSize = 1ULL << AArch64::Descriptor::PageOffsetBits;
     
     /**
      * Allocates a page of memory in the kernel virtual address space

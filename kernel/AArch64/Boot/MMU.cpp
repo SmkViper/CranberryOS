@@ -257,7 +257,7 @@ namespace AArch64
             static_assert((~((1ULL << LowAddressBits) - 1)) == MemoryManager::KernalVirtualAddressStart, "Bit count doesn't match VA start");
             // *4 because we have four tables in our MMU setup
             static_assert(LowAddressBits == Descriptor::PageOffsetBits + (Descriptor::TableIndexBits * 4), "Bit count doesn't match descriptor bit count");
-            static_assert(Descriptor::PageSize == 0x1000, "Expect page size to be 4kb");
+            static_assert(MemoryManager::PageSize == 0x1000, "Expect page size to be 4kb");
 
             TCR_EL1 tcr_el1;
             // user space will have 48 bits of address space, with 4kb granule
