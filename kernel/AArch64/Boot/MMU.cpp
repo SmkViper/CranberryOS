@@ -110,7 +110,7 @@ namespace AArch64
                 // #TODO: Can probably be cleaned up to reduce rudundancy
 
                 // Level 0 table points to level 1 table (512GB range)
-                auto const level1TableIndex = (aVirtualAddress >> PGD_SHIFT) & (PTRS_PER_TABLE - 1);
+                auto const level1TableIndex = (aVirtualAddress >> PGD_SHIFT) & (MemoryManager::PointersPerTable - 1);
                 if (apRootPage[level1TableIndex] == 0)
                 {
                     Descriptor::Table tableDescriptor;
@@ -125,7 +125,7 @@ namespace AArch64
                 // Level 1 table points to level 2 table (1GB range)
                 auto const level1Entry = Descriptor::Table::Read(apRootPage, level1TableIndex);
                 auto const plevel1Table = reinterpret_cast<uint64_t*>(level1Entry.Address());
-                auto const level2TableIndex = (aVirtualAddress >> PUD_SHIFT) & (PTRS_PER_TABLE - 1);
+                auto const level2TableIndex = (aVirtualAddress >> PUD_SHIFT) & (MemoryManager::PointersPerTable - 1);
                 if (plevel1Table[level2TableIndex] == 0)
                 {
                     Descriptor::Table tableDescriptor;
@@ -136,7 +136,7 @@ namespace AArch64
                 // Level 2 table points to level 3 table (2MB range)
                 auto const level2Entry = Descriptor::Table::Read(plevel1Table, level2TableIndex);
                 auto const plevel2Table = reinterpret_cast<uint64_t*>(level2Entry.Address());
-                auto const level3TableIndex = (aVirtualAddress >> PMD_SHIFT) & (PTRS_PER_TABLE - 1);
+                auto const level3TableIndex = (aVirtualAddress >> PMD_SHIFT) & (MemoryManager::PointersPerTable - 1);
                 if (plevel2Table[level3TableIndex] == 0)
                 {
                     Descriptor::Table tableDescriptor;
@@ -174,7 +174,7 @@ namespace AArch64
                     pageEntry.AP(Descriptor::Page::AccessPermissions::KernelRWUserNone); // only kernel can access
                     pageEntry.AttrIndx(aMAIRIndex);
 
-                    auto const blockIndex = (curVA >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
+                    auto const blockIndex = (curVA >> PAGE_SHIFT) & (MemoryManager::PointersPerTable - 1);
                     Descriptor::Page::Write(pageEntry, plevel3Table, blockIndex);
 
                     curVA += MemoryManager::PageSize; 

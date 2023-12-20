@@ -18,6 +18,9 @@ namespace MemoryManager
 
     // page size depends on how many bits the descriptor uses to index into said page
     constexpr size_t PageSize = 1ULL << AArch64::Descriptor::PageOffsetBits;
+    // the number of pointers in a single table is based on how many bits we have to index the table
+    constexpr size_t PointersPerTable = 1ULL << AArch64::Descriptor::TableIndexBits;
+    static_assert(PointersPerTable * sizeof(AArch64::Descriptor::Fault) == PageSize, "Expected to be able to fit a table into a page");
     
     /**
      * Allocates a page of memory in the kernel virtual address space

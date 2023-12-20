@@ -35,9 +35,6 @@
 // Reserve "low memory" for the kernel (4mb)
 #define LOW_MEMORY (2 * SECTION_SIZE)
 
-// How many pointers can fit into a single table
-#define PTRS_PER_TABLE (1 << TABLE_SHIFT)
-
 // How far to shift the virtual address to get the Page Global Directory index
 #define PGD_SHIFT (PAGE_SHIFT + 3*TABLE_SHIFT)
 // How far to shift the virtual address to get the Page Upper Directory index

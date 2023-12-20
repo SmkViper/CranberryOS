@@ -27,8 +27,6 @@ namespace AArch64
         constexpr uint8_t PageOffsetBits = 12;
         constexpr uint8_t TableIndexBits = 9;
 
-        constexpr size_t PointersPerTable = 1ULL << TableIndexBits;
-
         // Table descriptor format: https://developer.arm.com/documentation/ddi0487/
         // Section D8.3
 

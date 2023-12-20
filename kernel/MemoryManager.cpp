@@ -87,7 +87,7 @@ namespace MemoryManager
             auto ptable = reinterpret_cast<uintptr_t*>(aTableVirtualAddress);
 
             // mask out the bits for this particular table index
-            const auto index = (aUserVirtualAddress >> aShift) & (PTRS_PER_TABLE - 1);
+            const auto index = (aUserVirtualAddress >> aShift) & (PointersPerTable - 1);
             if (ptable[index] == 0u)
             {
                 // this part hasn't been set up yet, so add an entry
@@ -122,7 +122,7 @@ namespace MemoryManager
             pageDescriptor.AF(true); // don't trap on access
             pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it
             
-            auto const index = (aUserVirtualAddress >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
+            auto const index = (aUserVirtualAddress >> PAGE_SHIFT) & (PointersPerTable - 1);
             AArch64::Descriptor::Page::Write(pageDescriptor, ptable, index);
         }
 
