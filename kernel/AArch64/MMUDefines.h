@@ -32,9 +32,6 @@
 // How large a section is (2mb)
 #define SECTION_SIZE (1 << SECTION_SHIFT)
 
-// Reserve "low memory" for the kernel (4mb)
-#define LOW_MEMORY (2 * SECTION_SIZE)
-
 // How far to shift the virtual address to get the Page Global Directory index
 #define PGD_SHIFT (PAGE_SHIFT + 3*TABLE_SHIFT)
 // How far to shift the virtual address to get the Page Upper Directory index
