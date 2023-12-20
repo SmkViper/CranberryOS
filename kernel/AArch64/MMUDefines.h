@@ -48,35 +48,6 @@
 #define PMD_SHIFT (PAGE_SHIFT + TABLE_SHIFT)
 
 /////////////////////////////////////////////////
-// Page Descriptor Layout:
-// +------------------+---------+------------------+-------------+-------+
-// | Upper attributes | Address | Lower attributes | Block/table | Valid |
-// +------------------+---------+------------------+-------------+-------+
-// 63                 47        11                 2             1       0
-//
-// Upper attributes - a set of attributes
-// Address - the actual address of the next page table or physical page/section. Since these are always page aligned,
-// the lower 12 bits of the address are always zero and can be re-used for other things.
-// Lower attributes - a set of attributes for block descriptors (ignored for table descriptors)
-// Block/table - a single bit that, if set, indicates that this points at a table instead of a block of memory
-// Valid - a single bit that flags whether what this points at is valid or not. If this is not set, a translation fault
-//   is generated
-/////////////////////////////////////////////////
-
-// 0b11 valid table descriptor
-#define MM_TYPE_PAGE_TABLE 0x3
-#define MM_TYPE_PAGE 0x3
-// 0b01 valid block descriptor
-#define MM_TYPE_BLOCK 0x1
-// Single bit flag that, when 1, means we won't generate an access flag fault when the memory is accessed
-#define MM_ACCESS (0x1 << 10)
-// 0b01 specifying read/write access from EL0 and higher
-#define MM_ACCESS_PERMISSION (0x1 << 6)
-
-// MAIR register values/indices so the MMU can compress flags from 8 bytes to 3 by indexing the 64-bit MAIR register
-// which is essentially in 8-bit chunks.
-
-/////////////////////////////////////////////////
 // Indicies into the MAIR register.
 // These select which 8-bit chunk of flags to use
 /////////////////////////////////////////////////

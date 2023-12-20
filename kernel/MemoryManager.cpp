@@ -94,11 +94,14 @@ namespace MemoryManager
             {
                 // this part hasn't been set up yet, so add an entry
                 arNewTable = true;
-                const auto pnextLevelTable = GetFreePage();
-                const auto newEntry = reinterpret_cast<uintptr_t>(pnextLevelTable) | MM_TYPE_PAGE_TABLE;
-                ptable[index] = newEntry;
 
-                return pnextLevelTable;
+                AArch64::Descriptor::Table tableDescriptor;
+                auto const pnewPage = GetFreePage();
+                tableDescriptor.Address(reinterpret_cast<uintptr_t>(pnewPage));
+
+                AArch64::Descriptor::Table::Write(tableDescriptor, ptable, index);
+
+                return pnewPage;
             }
             return reinterpret_cast<void*>(ptable[index] & PageMaskC);
         }
