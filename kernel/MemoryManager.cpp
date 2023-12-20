@@ -51,7 +51,7 @@ namespace MemoryManager
                     auto newPageStart = LowMemoryC + (curPage * PageSize); // physical address
                     // have to add the KernalVirtualAddressStart because that's where the physical address is mapped to
                     // in kernel space
-                    memset(reinterpret_cast<void*>(newPageStart + KernalVirtualAddressStart), 0, PAGE_SIZE);
+                    memset(reinterpret_cast<void*>(newPageStart + KernalVirtualAddressStart), 0, PageSize);
                     return reinterpret_cast<void*>(newPageStart);
                 }
             }
@@ -204,7 +204,7 @@ namespace MemoryManager
             {
                 return false;
             }
-            memcpy(pkernelVA, reinterpret_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress), PAGE_SIZE);
+            memcpy(pkernelVA, reinterpret_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress), PageSize);
         }
         return true;
     }

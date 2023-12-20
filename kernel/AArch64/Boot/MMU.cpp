@@ -60,11 +60,11 @@ namespace AArch64
                     {
                         Panic("Bump allocator start is past the end");
                     }
-                    if (reinterpret_cast<uintptr_t>(pStart) % PAGE_SIZE != 0)
+                    if (reinterpret_cast<uintptr_t>(pStart) % MemoryManager::PageSize != 0)
                     {
                         Panic("Bump allocator start address is not aligned to a page size");
                     }
-                    if (reinterpret_cast<uintptr_t>(pEnd) % PAGE_SIZE != 0)
+                    if (reinterpret_cast<uintptr_t>(pEnd) % MemoryManager::PageSize != 0)
                     {
                         Panic("Bump allocator start address is not aligned to a page size");
                     }
@@ -83,9 +83,9 @@ namespace AArch64
                     }
 
                     auto const pret = pCurrent;
-                    pCurrent = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pCurrent) + PAGE_SIZE);
+                    pCurrent = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pCurrent) + MemoryManager::PageSize);
 
-                    std::memset(pret, 0, PAGE_SIZE);
+                    std::memset(pret, 0, MemoryManager::PageSize);
                     return pret;
                 }
 
@@ -177,8 +177,8 @@ namespace AArch64
                     auto const blockIndex = (curVA >> PAGE_SHIFT) & (PTRS_PER_TABLE - 1);
                     Descriptor::Page::Write(pageEntry, plevel3Table, blockIndex);
 
-                    curVA += PAGE_SIZE; 
-                    curPA += PAGE_SIZE;
+                    curVA += MemoryManager::PageSize; 
+                    curPA += MemoryManager::PageSize;
                 }
             }
 

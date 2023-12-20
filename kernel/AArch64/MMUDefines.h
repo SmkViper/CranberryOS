@@ -29,8 +29,6 @@
 // Number of bits in the virtual address representing the offset into a 2mb section (bits 20:0)
 #define SECTION_SHIFT (PAGE_SHIFT + TABLE_SHIFT)
 
-// How large a page is (4k)
-#define PAGE_SIZE (1 << PAGE_SHIFT)
 // How large a section is (2mb)
 #define SECTION_SIZE (1 << SECTION_SHIFT)
 
