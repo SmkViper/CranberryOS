@@ -26,8 +26,6 @@
 #define PAGE_SHIFT 12
 // Number of bits in the virtual address representing the table index (9 bits each)
 #define TABLE_SHIFT 9
-// Number of bits in the virtual address representing the offset into a 2mb section (bits 20:0)
-#define SECTION_SHIFT (PAGE_SHIFT + TABLE_SHIFT)
 
 // How far to shift the virtual address to get the Page Global Directory index
 #define PGD_SHIFT (PAGE_SHIFT + 3*TABLE_SHIFT)

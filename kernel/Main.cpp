@@ -1,5 +1,4 @@
 #include "AArch64/CPU.h"
-#include "AArch64/MMUDefines.h"
 #include "Peripherals/DeviceTree.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"

@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include "AArch64/MemoryDescriptor.h"
-#include "AArch64/MMUDefines.h"
 
 namespace Scheduler
 {
@@ -19,7 +18,7 @@ namespace MemoryManager
     // sizes depend on how many bits the descriptor uses to index into pages or tables
     constexpr size_t PageSize = 1ULL << AArch64::Descriptor::PageOffsetBits;
     constexpr size_t L2BlockSize = 1ULL << (AArch64::Descriptor::PageOffsetBits + AArch64::Descriptor::TableIndexBits);
-    
+
     // the number of pointers in a single table is based on how many bits we have to index the table
     constexpr size_t PointersPerTable = 1ULL << AArch64::Descriptor::TableIndexBits;
     static_assert(PointersPerTable * sizeof(AArch64::Descriptor::Fault) == PageSize, "Expected to be able to fit a table into a page");
