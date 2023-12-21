@@ -205,7 +205,7 @@ namespace DeviceTree
          */
         void IndentOutput(uint32_t const aIndentLevel)
         {
-            for (auto curIndent = 0; curIndent < aIndentLevel; ++curIndent)
+            for (auto curIndent = 0u; curIndent < aIndentLevel; ++curIndent)
             {
                 MiniUART::SendString("  ");
             }
@@ -254,7 +254,7 @@ namespace DeviceTree
             // might normally be presented as bytes
             MiniUART::SendString("<?");
             auto pcurValueByte = apValue;
-            for (auto curByte = 0; curByte != aLen; ++curByte, ++pcurValueByte)
+            for (auto curByte = 0u; curByte != aLen; ++curByte, ++pcurValueByte)
             {
                 Print::FormatToMiniUART(" {:x}", *pcurValueByte);
             }

@@ -58,7 +58,7 @@ extern "C"
      * @param apThis Parameter to be passed to the function when it is called
      * @param apHandle Handle to the shared library associated with the function
      */
-    void __cxa_atexit(ExitFunction apExitFunction, void* apThis, void* apHandle)
+    void __cxa_atexit(ExitFunction /*apExitFunction*/, void* /*apThis*/, void* /*apHandle*/)
     {
         // TODO
     }

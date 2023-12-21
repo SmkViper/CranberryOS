@@ -2,8 +2,7 @@ function(CranberryOS_SetProjectWarnings aProject aWarningsAsErrors)
     set(clangWarnings
         # TODO: Re-add when we fix the warnings
         #-Wall
-        # TODO: Re-add when we fix the warnings
-        #-Wextra
+        -Wextra
         -Wshadow                # don't want variables shadowing
         -Wnon-virtual-dtor      # don't want classes with vtables not having virtual destructors
         -Wold-style-cast        # no c-style casts
