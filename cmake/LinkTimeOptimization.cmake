@@ -1,0 +1,10 @@
+macro(CranberryOS_EnableLTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        # #TODO: This is breaking the kernel for some reason, re-add when it starts working again
+        #set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    else()
+        message(SEND_ERROR "LTO not supported: ${output}")
+    endif()
+endmacro()
