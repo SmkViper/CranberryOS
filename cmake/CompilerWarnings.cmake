@@ -6,8 +6,7 @@ function(CranberryOS_SetProjectWarnings aProject aWarningsAsErrors)
         #-Wextra
         -Wshadow                # don't want variables shadowing
         -Wnon-virtual-dtor      # don't want classes with vtables not having virtual destructors
-        # TODO: Re-add when we fix the warnings
-        #-Wold-style-cast        # no c-style casts
+        -Wold-style-cast        # no c-style casts
         -Wcast-align            # casts that may cause performance issues
         -Wunused                # make sure nothing is unused
         -Woverloaded-virtual    # a virtual is overloaded (not overridden)
