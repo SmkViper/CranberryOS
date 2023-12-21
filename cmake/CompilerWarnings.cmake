@@ -15,8 +15,7 @@ function(CranberryOS_SetProjectWarnings aProject aWarningsAsErrors)
         -Wpedantic              # non-standard C++
         # TODO: Re-add when we fix the warnings
         #-Wconversion            # type conversions that lose data
-        # TODO: Re-add when we fix the warnings
-        #-Wsign-conversion
+        -Wsign-conversion
         -Wnull-dereference
         -Wdouble-promotion      # implicit float -> double conversion
         -Wformat=2              # issues around formatting functions (i.e. printf)
