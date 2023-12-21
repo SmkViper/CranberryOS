@@ -1,7 +1,6 @@
 function(CranberryOS_SetProjectWarnings aProject aWarningsAsErrors)
     set(clangWarnings
-        # TODO: Re-add when we fix the warnings
-        #-Wall
+        -Wall
         -Wextra
         -Wshadow                # don't want variables shadowing
         -Wnon-virtual-dtor      # don't want classes with vtables not having virtual destructors
