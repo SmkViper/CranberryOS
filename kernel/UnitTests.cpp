@@ -57,6 +57,18 @@ namespace
         Print::FormatToMiniUART("[{}] {}\r\n", passFailMessage, apMessage);
     }
 
+    /**
+     * Tiny helper to emit a skip message
+     * 
+     * @param apMessage The message to emit
+    */
+    void EmitTestSkipResult(char const* const apMessage)
+    {
+        char skipMessage[32];
+        FormatColoredString(skipMessage, "SKIP", 33 /*yellow*/);
+        Print::FormatToMiniUART("[{}] {}\r\n", skipMessage, apMessage);
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // bitset tests
     ///////////////////////////////////////////////////////////////////////////
@@ -851,6 +863,10 @@ namespace
      */
     void SIMDTest()
     {
+        // #TODO: Disabling test because it breaks later tests (likely the asm block isn't set up right and things are
+        // being unexpected clobbered)
+        
+        /*
         alignas(128) const float leftValues[] = {1.5f, 2.6f, 3.7f, 4.8f};
         alignas(128) const float rightValues[] = {5.5f, 6.6f, 7.7f, 8.8f};
         alignas(128) float results[] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -876,6 +892,8 @@ namespace
         }
 
         EmitTestResult(success, "SIMD Instructions");
+        */
+        EmitTestSkipResult("SIMD Instructions");
     }
 }
 
@@ -888,14 +906,14 @@ namespace UnitTests
         ExceptionLevelTest();
         FloatingPointTest();
         SIMDTest();
-
+        
         StdMoveTest();
         StdForwardTest();
         MemsetTest();
         StrcmpEqualTest();
         StrcmpLTTest();
         StrcmpGTTest();
-
+        
         PrintNoArgsTest();
         PrintNoArgsTruncatedBufferTest();
         PrintStringArgsTest();
