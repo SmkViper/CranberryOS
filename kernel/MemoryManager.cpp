@@ -74,6 +74,7 @@ namespace MemoryManager
          * 
          * @param apPage Physical address of the page to free
          */
+        /* Currently unused
         void FreePage(void* apPage)
         {
             // #TODO: Double-check that the page is valid
@@ -81,6 +82,7 @@ namespace MemoryManager
             const auto index = (reinterpret_cast<uintptr_t>(apPage) - pageMemoryStart) / PageSize;
             PageInUse[index] = false;
         }
+        */
 
         /**
          * Map a new table, or get the existing table for the specified table, shift, and virtual address

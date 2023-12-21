@@ -9,8 +9,7 @@ function(CranberryOS_SetProjectWarnings aProject aWarningsAsErrors)
         # TODO: Re-add when we fix the warnings
         #-Wold-style-cast        # no c-style casts
         -Wcast-align            # casts that may cause performance issues
-        # TODO: Re-add when we fix the warnings
-        #-Wunused                # make sure nothing is unused
+        -Wunused                # make sure nothing is unused
         -Woverloaded-virtual    # a virtual is overloaded (not overridden)
         -Wpedantic              # non-standard C++
         -Wconversion            # type conversions that lose data

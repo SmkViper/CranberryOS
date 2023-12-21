@@ -20,7 +20,7 @@ namespace
 
     // Clear & reload flags
     constexpr uint32_t LocalTimerClearInterruptAck = 1u << 31;
-    constexpr uint32_t LocalTimerReload = 1u << 30;
+    // constexpr uint32_t LocalTimerReload = 1u << 30; // currently unused
 
     // Have to save this off so we can access it and set up the global timer to re-fire
     uint32_t GlobalTimerInterval = 0u;

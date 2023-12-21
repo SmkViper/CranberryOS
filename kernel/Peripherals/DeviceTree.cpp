@@ -283,11 +283,12 @@ namespace DeviceTree
         }
 
         /**
-         * Pretty-prints an unsigned 32-bit integer type
+         * Pretty-prints an unsigned 64-bit integer type
          * 
          * @param apValue Property value data
          * @param aLen Length of the value data
          */
+        /* Currently unused
         void PrettyPrintUInt64(uint8_t const* const apValue, size_t aLen)
         {
             if (aLen != sizeof(uint64_t))
@@ -302,6 +303,7 @@ namespace DeviceTree
                 Print::FormatToMiniUART("<{}>", value);
             }
         }
+        */
 
         /**
          * Pretty-prints a string type

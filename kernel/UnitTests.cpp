@@ -410,7 +410,12 @@ namespace
     {
         int MemberFunction() const;
     };
+
+    // Function is only used for static_assert tests, so suppress the warning that it will not be emitted
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunneeded-internal-declaration"
     int DummyFunction();
+    #pragma clang diagnostic pop
 
     template<typename>
     struct PointerMemberTraits {};
