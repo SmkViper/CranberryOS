@@ -28,10 +28,11 @@ namespace
     };
 
     using _Unwind_Action = int;
-    static constexpr _Unwind_Action _UA_SEARCH_PHASE = 1;
-    static constexpr _Unwind_Action _UA_CLEANUP_PHASE = 2;
-    static constexpr _Unwind_Action _UA_HANDLER_FRAME = 4;
-    static constexpr _Unwind_Action _UA_FORCE_UNWIND = 8;
+    // Unused for now
+    //static constexpr _Unwind_Action _UA_SEARCH_PHASE = 1;
+    //static constexpr _Unwind_Action _UA_CLEANUP_PHASE = 2;
+    //static constexpr _Unwind_Action _UA_HANDLER_FRAME = 4;
+    //static constexpr _Unwind_Action _UA_FORCE_UNWIND = 8;
 
     struct _Unwind_Exception;
     struct _Unwind_Context;
@@ -57,7 +58,7 @@ extern "C"
      * @param apThis Parameter to be passed to the function when it is called
      * @param apHandle Handle to the shared library associated with the function
      */
-    void __cxa_atexit(ExitFunction apExitFunction, void* apThis, void* apHandle)
+    void __cxa_atexit(ExitFunction /*apExitFunction*/, void* /*apThis*/, void* /*apHandle*/)
     {
         // TODO
     }

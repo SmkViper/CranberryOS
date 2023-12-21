@@ -13,9 +13,9 @@ namespace MiniUART
 
         // GPFSEL1 register controls pins 10-19
         auto selector = MemoryMappedIO::Get32(MemoryMappedIO::GPIO::FunctionSelect1Register);
-        selector &= ~(7<<12);   // zero out the three bits for GPIO pin 14
+        selector &= ~(7u<<12);   // zero out the three bits for GPIO pin 14
         selector |= 2<<12;      // set alt5 (Mini UART Transmit Data Pin) for GPIO pin 14
-        selector &= ~(7<<15);   // zero out the three bits for GPIO pin 15
+        selector &= ~(7u<<15);   // zero out the three bits for GPIO pin 15
         selector |= 2<<15;      // set alt5 (Mini UART Receive Data Pin) for GPIO pin 15
         MemoryMappedIO::Put32(MemoryMappedIO::GPIO::FunctionSelect1Register, selector);
 

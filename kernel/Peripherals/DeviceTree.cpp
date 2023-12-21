@@ -64,7 +64,7 @@ namespace DeviceTree
          */
         constexpr uint16_t BEToNative(uint16_t const aBigEndianNumber)
         {
-            return ((aBigEndianNumber & 0x00FF) << 8) | ((aBigEndianNumber & 0xFF00) >> 8);
+            return static_cast<uint16_t>((aBigEndianNumber & 0x00FF) << 8) | static_cast<uint16_t>((aBigEndianNumber & 0xFF00) >> 8);
         }
 
         /**
@@ -205,7 +205,7 @@ namespace DeviceTree
          */
         void IndentOutput(uint32_t const aIndentLevel)
         {
-            for (auto curIndent = 0; curIndent < aIndentLevel; ++curIndent)
+            for (auto curIndent = 0u; curIndent < aIndentLevel; ++curIndent)
             {
                 MiniUART::SendString("  ");
             }
@@ -254,7 +254,7 @@ namespace DeviceTree
             // might normally be presented as bytes
             MiniUART::SendString("<?");
             auto pcurValueByte = apValue;
-            for (auto curByte = 0; curByte != aLen; ++curByte, ++pcurValueByte)
+            for (auto curByte = 0u; curByte != aLen; ++curByte, ++pcurValueByte)
             {
                 Print::FormatToMiniUART(" {:x}", *pcurValueByte);
             }
@@ -283,11 +283,12 @@ namespace DeviceTree
         }
 
         /**
-         * Pretty-prints an unsigned 32-bit integer type
+         * Pretty-prints an unsigned 64-bit integer type
          * 
          * @param apValue Property value data
          * @param aLen Length of the value data
          */
+        /* Currently unused
         void PrettyPrintUInt64(uint8_t const* const apValue, size_t aLen)
         {
             if (aLen != sizeof(uint64_t))
@@ -302,6 +303,7 @@ namespace DeviceTree
                 Print::FormatToMiniUART("<{}>", value);
             }
         }
+        */
 
         /**
          * Pretty-prints a string type

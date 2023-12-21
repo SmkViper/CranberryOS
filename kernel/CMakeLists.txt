@@ -26,7 +26,7 @@ set_target_properties(kernel8.elf PROPERTIES LINK_DEPENDS "${CMAKE_CURRENT_SOURC
 target_compile_features(kernel8.elf PUBLIC cxx_std_17)
 
 # Bring in our standard library
-target_link_libraries(kernel8.elf PRIVATE kernel_stdlib)
+target_link_libraries(kernel8.elf PRIVATE kernel_stdlib CranberryOS_Options CranberryOS_Warnings)
 
 # Bring in each sub folder that we need (they have their own CMakeLists.txt files that will add appropriate
 # information to the targets)

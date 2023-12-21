@@ -42,7 +42,9 @@ namespace AArch64
             Fault() = default;
 
         private:
-            uint64_t DescriptorBits = 0;
+            // We don't actually use these bits directly (and a faulting descriptor is represented by any value with
+            // the low bit zeroed, but this gives us an easy one)
+            uint64_t DescriptorBits [[maybe_unused]] = 0;
         };
 
         /**

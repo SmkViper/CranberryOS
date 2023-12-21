@@ -21,6 +21,8 @@ add_library(kernel_stdlib
     ${HEADER_LIST}
 )
 
+target_link_libraries(kernel_stdlib PRIVATE CranberryOS_Options CranberryOS_Warnings)
+
 # Flag each file in the header list as a header file (i.e. not compiled). This is because, to follow
 # the standards, they don't have a ".h" extension
 set_property(SOURCE ${HEADER_LIST}

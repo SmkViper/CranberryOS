@@ -33,11 +33,11 @@ namespace
     // Timer IRQ0 is reserved by GPU
     static constexpr uint32_t SystemTimerIRQ1 = 1 << 1;
     // Timer IRQ2 is reserved by GPU
-    static constexpr uint32_t SystemTimerIRQ3 = 1 << 3;
+    // static constexpr uint32_t SystemTimerIRQ3 = 1 << 3;
 
     // Sourced from:
     // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
-    static constexpr uint32_t LocalTimerIRQ = 1u << 11;
+    // static constexpr uint32_t LocalTimerIRQ = 1u << 11;
 }
 
 extern "C"

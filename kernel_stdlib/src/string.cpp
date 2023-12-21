@@ -6,7 +6,7 @@ extern "C"
     {
         auto const pdestBytes = reinterpret_cast<char*>(apDest);
         auto const psourceBytes = reinterpret_cast<char const*>(apSource);
-        for (auto curByte = 0; curByte < aCount; ++curByte)
+        for (auto curByte = 0u; curByte < aCount; ++curByte)
         {
             pdestBytes[curByte] = psourceBytes[curByte];
         }
@@ -48,6 +48,6 @@ extern "C"
     {
         auto pend = apStr;
         for (; *pend != 0; ++pend) {}
-        return pend - apStr;
+        return static_cast<size_t>(pend - apStr);
     }
 }
