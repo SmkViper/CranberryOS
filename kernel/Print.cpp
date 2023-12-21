@@ -66,7 +66,7 @@ namespace
             const auto letterBase = aUppercase ? 'A' : 'a';
             retVal = letterBase + (aDigit - 10);
         }
-        return retVal;
+        return static_cast<char>(retVal);
     }
 
     /**

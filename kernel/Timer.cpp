@@ -107,7 +107,7 @@ namespace LocalTimer
 
         const auto ticksPerSecond = (SanitizeLocalTimerFrequency(Timing::GetSystemCounterClockFrequencyHz()) * 2u);
         const auto ticksPerMS = ticksPerSecond / 1000u;
-        const auto intervalTicks = aIntervalMS * ticksPerMS;
+        const auto intervalTicks = static_cast<uint32_t>(aIntervalMS * ticksPerMS);
 
         MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 
             intervalTicks | LocalTimerControlEnableInterrupt | LocalTimerControlEnableTimer

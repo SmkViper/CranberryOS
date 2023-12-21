@@ -13,8 +13,7 @@ function(CranberryOS_SetProjectWarnings aProject aWarningsAsErrors)
         #-Wunused                # make sure nothing is unused
         -Woverloaded-virtual    # a virtual is overloaded (not overridden)
         -Wpedantic              # non-standard C++
-        # TODO: Re-add when we fix the warnings
-        #-Wconversion            # type conversions that lose data
+        -Wconversion            # type conversions that lose data
         -Wsign-conversion
         -Wnull-dereference
         -Wdouble-promotion      # implicit float -> double conversion

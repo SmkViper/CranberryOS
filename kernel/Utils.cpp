@@ -36,6 +36,6 @@ namespace Timing
             : // no clobbered registers
         );
 
-        return frequency;
+        return static_cast<uint32_t>(frequency);
     }
 }

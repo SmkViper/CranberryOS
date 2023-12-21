@@ -64,7 +64,7 @@ namespace DeviceTree
          */
         constexpr uint16_t BEToNative(uint16_t const aBigEndianNumber)
         {
-            return ((aBigEndianNumber & 0x00FF) << 8) | ((aBigEndianNumber & 0xFF00) >> 8);
+            return static_cast<uint16_t>((aBigEndianNumber & 0x00FF) << 8) | static_cast<uint16_t>((aBigEndianNumber & 0xFF00) >> 8);
         }
 
         /**
