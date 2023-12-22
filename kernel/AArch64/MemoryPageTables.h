@@ -170,12 +170,28 @@ namespace AArch64
                 DescriptorT::Write(aValue, pTable, tableIndex);
             }
 
+            /**
+             * Gets the table's virtual address
+             * 
+             * @return The table's virtual address
+            */
+            uintptr_t GetTableVA() const
+            {
+                return reinterpret_cast<uintptr_t>(pTable);
+            }
+
         private:
             uint64_t* pTable = nullptr;
         };
 
         // Each entry covers 512GB of address space
         using Level0View = PageView<PageOffsetBits + TableIndexBits * 3, Descriptor::Fault, Descriptor::Table>;
+        // Each entry covers 1GB of address space
+        using Level1View = PageView<PageOffsetBits + TableIndexBits * 2, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
+        // Each entry covers 2MB of address space
+        using Level2View = PageView<PageOffsetBits + TableIndexBits, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
+        // Each entry covers 4KB of address space
+        using Level3View = PageView<PageOffsetBits, Descriptor::Fault, Descriptor::Page>;
     }
 }
 

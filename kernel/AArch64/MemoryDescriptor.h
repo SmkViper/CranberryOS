@@ -90,7 +90,7 @@ namespace AArch64
              * Constructor from a specific value
              * 
              * @param aValue The value to construct from
-            */
+             */
             Table(uint64_t aValue, Details::ValueConstructTag) : Table{ aValue } {}
 
             /**
@@ -117,7 +117,7 @@ namespace AArch64
              * @param aValue The value to check
              * 
              * @return True if the value is a descriptor of this type
-            */
+             */
             static bool IsType(uint64_t const aValue)
             {
                 return (aValue & Details::TypeMask) == Type;
@@ -169,13 +169,21 @@ namespace AArch64
         */
         class Block
         {
+            static constexpr uint64_t Type = 0b01;
         public:
             /**
              * Constructor, sets type bits, but everything else is zeroed
             */
             Block()
-                : Block{ 0b01 }
+                : Block{ Type }
             {}
+
+            /**
+             * Constructor from a specific value
+             * 
+             * @param aValue The value to construct from
+             */
+            Block(uint64_t aValue, Details::ValueConstructTag) : Block{ aValue } {}
 
             /**
              * Writes the given entry to the table
@@ -194,6 +202,18 @@ namespace AArch64
              * @return The read block entry
             */
             static Block Read(uint64_t apTable[], size_t aIndex);
+
+            /**
+             * Checks to see if the value represents a descriptor of this type
+             * 
+             * @param aValue The value to check
+             * 
+             * @return True if the value is a descriptor of this type
+             */
+            static bool IsType(uint64_t const aValue)
+            {
+                return (aValue & Details::TypeMask) == Type;
+            }
 
             /**
              * Sets index of the attributes for this block in the MIAR_ELx register
@@ -324,13 +344,21 @@ namespace AArch64
         */
         class Page
         {
+            static constexpr uint64_t Type = 0b11;
         public:
             /**
              * Constructor, sets type bits, but everything else is zeroed
             */
             Page()
-                : Page{ 0b11 }
+                : Page{ Type }
             {}
+
+            /**
+             * Constructor from a specific value
+             * 
+             * @param aValue The value to construct from
+             */
+            Page(uint64_t aValue, Details::ValueConstructTag) : Page{ aValue } {}
 
             /**
              * Writes the given entry to the table
@@ -350,6 +378,18 @@ namespace AArch64
             */
             static Page Read(uint64_t apTable[], size_t aIndex);
 
+            /**
+             * Checks to see if the value represents a descriptor of this type
+             * 
+             * @param aValue The value to check
+             * 
+             * @return True if the value is a descriptor of this type
+             */
+            static bool IsType(uint64_t const aValue)
+            {
+                return (aValue & Details::TypeMask) == Type;
+            }
+            
             /**
              * Sets index of the attributes for this page in the MIAR_ELx register
              * 
