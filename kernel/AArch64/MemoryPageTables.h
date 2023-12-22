@@ -73,12 +73,10 @@ namespace AArch64
 
         /**
          * An entry in a table
-        */
+         */
         template<typename... DescriptorTypes>
         class Entry
         {
-            friend class Level0View;
-
             template<typename T>
             static constexpr bool ValidType = ((std::is_same_v<T, DescriptorTypes>) || ...);
 
@@ -87,10 +85,19 @@ namespace AArch64
              * Constructs an entry from a descriptor. Only valid if DescriptorT is one of the types the entry allows
              * 
              * @param aDescriptor The descriptor to construct from
-            */
+             */
             template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
             explicit Entry(DescriptorT const aDescriptor)
                 : Value{ aDescriptor.GetValue() }
+            {}
+
+            /**
+             * Constructs an entry from the given raw value
+             * 
+             * @param aValue The value to make the entry from
+             */
+            explicit Entry(uint64_t const aValue)
+                : Value{ aValue }
             {}
 
             /**
@@ -98,7 +105,7 @@ namespace AArch64
              * 
              * @param aFunctor The functor to call, should have overloads of operator() for each descriptor type and
              * take them by value (modification's won't be sent back to this entry)
-            */
+             */
             template<typename FunctorT>
             void Visit(FunctorT const& aFunctor) const
             {
@@ -109,38 +116,28 @@ namespace AArch64
             }
 
         private:
-            /**
-             * Constructs an entry from the given value
-             * 
-             * @param aValue The value to make the entry from
-            */
-            explicit Entry(uint64_t const aValue)
-                : Value{ aValue }
-            {}
-
             uint64_t Value = 0;
         };
 
         /**
-         * A "view" of the level 0 page table. Each entry covers 512GB of address space
-        */
-        class Level0View
+         * A "view" of the page table
+         */
+        template<uint64_t AddressShift, class... DescriptorTypes>
+        class PageView
         {
-            static constexpr uint64_t AddressShift = PageOffsetBits + 3 * TableIndexBits;
             static constexpr uint64_t AddressMask = (PointersPerTable - 1);
 
             template<typename T>
-            static constexpr bool ValidType = (std::is_same_v<T, Descriptor::Fault> || std::is_same_v<T, Descriptor::Table>);
+            static constexpr bool ValidType = ((std::is_same_v<T, DescriptorTypes>) || ...);
         public:
-            // Level 0 table only supports fault and table entries
-            using Entry = PageTable::Entry<Descriptor::Fault, Descriptor::Table>;
+            using Entry = PageTable::Entry<DescriptorTypes...>;
 
             /**
-             * Constructor, layering a view over the given memory assumed to be the level 0 table
+             * Constructor, layering a view over the given memory assumed to be the table
              * 
              * @param apTable The table to make a view over - does not take ownership. Not expected to be null
             */
-            explicit Level0View(uint64_t* const apTable)
+            explicit PageView(uint64_t* const apTable)
                 : pTable{ apTable }
             {
                 // #TODO: Should probably assert if apTable is null
@@ -176,6 +173,9 @@ namespace AArch64
         private:
             uint64_t* pTable = nullptr;
         };
+
+        // Each entry covers 512GB of address space
+        using Level0View = PageView<PageOffsetBits + TableIndexBits * 3, Descriptor::Fault, Descriptor::Table>;
     }
 }
 
