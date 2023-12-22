@@ -2,7 +2,7 @@
 #define KERNEL_MEMORY_MANAGER_H
 
 #include <cstdint>
-#include "AArch64/MemoryDescriptor.h"
+#include "AArch64/MemoryPageTables.h"
 
 namespace Scheduler
 {
@@ -12,16 +12,14 @@ namespace Scheduler
 namespace MemoryManager
 {
     // #TODO These should be special types indicating the type of pointer
-    constexpr uintptr_t KernalVirtualAddressStart = 0xFFFF'0000'0000'0000;
+    constexpr uintptr_t KernelVirtualAddressStart = 0xFFFF'0000'0000'0000;
     constexpr uintptr_t DeviceBaseAddress = 0x3F00'0000;
 
     // sizes depend on how many bits the descriptor uses to index into pages or tables
-    constexpr size_t PageSize = 1ULL << AArch64::Descriptor::PageOffsetBits;
-    constexpr size_t L2BlockSize = 1ULL << (AArch64::Descriptor::PageOffsetBits + AArch64::Descriptor::TableIndexBits);
+    constexpr size_t PageSize = 1ULL << AArch64::PageTable::PageOffsetBits;
+    constexpr size_t L2BlockSize = 1ULL << (AArch64::PageTable::PageOffsetBits + AArch64::PageTable::TableIndexBits);
 
-    // the number of pointers in a single table is based on how many bits we have to index the table
-    constexpr size_t PointersPerTable = 1ULL << AArch64::Descriptor::TableIndexBits;
-    static_assert(PointersPerTable * sizeof(AArch64::Descriptor::Fault) == PageSize, "Expected to be able to fit a table into a page");
+    static_assert(AArch64::PageTable::PointersPerTable * sizeof(AArch64::Descriptor::Fault) == PageSize, "Expected to be able to fit a table into a page");
     
     /**
      * Allocates a page of memory in the kernel virtual address space

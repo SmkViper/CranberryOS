@@ -42,13 +42,21 @@ namespace Timing
 }
 
 /**
+ * Helper class so lambdas can be used with visit-like interfaces
+ */
+template<class... Ts> struct Overloaded : Ts...
+{ using Ts::operator()... ; };
+
+template<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
+/**
  * Writes a multi-bit value to a bitset
  * 
  * @param arBitset The bitset to modify
  * @param aValue The value to write
  * @param aMask An un-shifted mask for the bits to write
  * @param aShit How much to shift the value before writing
-*/
+ */
 template<typename SourceType, size_t BitsetSize>
 void WriteMultiBitValue(std::bitset<BitsetSize>& arBitset, SourceType const aValue, uint64_t const aMask, uint64_t const aShift)
 {
@@ -65,7 +73,7 @@ void WriteMultiBitValue(std::bitset<BitsetSize>& arBitset, SourceType const aVal
  * @param aMask An un-shifted mask fro the bits to read
  * @param aShift How much to shift the value after reading
  * @return The read bits, casted to SourceType
-*/
+ */
 template<typename SourceType, size_t BitsetSize>
 SourceType ReadMultiBitValue(std::bitset<BitsetSize> const& aBitset, uint64_t const aMask, uint64_t const aShift)
 {

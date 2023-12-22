@@ -6,40 +6,65 @@
 
 namespace AArch64
 {
+    namespace PageTable
+    {
+        namespace Details
+        {
+            struct VisitHelpers;
+        }
+    }
+
     namespace Descriptor
     {
-        /////////////////////////////////////////////////
-        // Virtual address layout:
-        // +------+-----------+-----------+-----------+-----------+-------------+
-        // |      | PGD Index | PUD Index | PMD Index | PTE Index | Page offset |
-        // +------+-----------+-----------+-----------+-----------+-------------+
-        // 63     47          38          29          20          11            0
-        //
-        // PGD Index - index into the Page Global Directory (level 0)
-        // PUD Index - index into the Page Upper Directory (level 1)
-        // PMD Index - index into the Page Middle Directory (level 2)
-        // PTE Index - index into the Page Table Directory (level 3)
-        // Page offset - offset of the physical address from the start of the page pointed at by the PTE entry
-        //
-        // For section mapping, the PTE Index is omitted, and bits 20:0 are used instead to offset into the 2mb section
-        // pointed at by the PMD entry
-        /////////////////////////////////////////////////
-        constexpr uint8_t PageOffsetBits = 12;
-        constexpr uint8_t TableIndexBits = 9;
-
         // Table descriptor format: https://developer.arm.com/documentation/ddi0487/
         // Section D8.3
+
+        namespace Details
+        {
+            constexpr uint64_t TypeMask = 0b11; // lowest two bits is the type
+
+            /**
+             * Tag to lock out certain constructors unless it's from an approved location
+            */
+            struct ValueConstructTag
+            {
+                // Let the entry visitors make descriptors from raw values
+                friend struct PageTable::Details::VisitHelpers;
+            private:
+                ValueConstructTag() {};
+            };
+        }
 
         /**
          * A fault descriptor (any descriptor where the lowest bit is 0). Causes a MMU fault if accessed
         */
         class Fault
         {
+            static constexpr uint64_t Type = 0b00;
         public:
             /**
              * Constructor, sets all bits to zero
             */
             Fault() = default;
+
+            /**
+             * Constructor from a specific value
+             * 
+             * @param aValue The value to construct from
+            */
+            Fault(uint64_t /*aValue*/, Details::ValueConstructTag) {}
+
+            /**
+             * Checks to see if the value represents a descriptor of this type
+             * 
+             * @param aValue The value to check
+             * 
+             * @return True if the value is a descriptor of this type
+            */
+            static bool IsType(uint64_t const aValue)
+            {
+                return (aValue & Details::TypeMask) == Type;
+            }
 
         private:
             // We don't actually use these bits directly (and a faulting descriptor is represented by any value with
@@ -52,13 +77,21 @@ namespace AArch64
         */
         class Table
         {
+            static constexpr uint64_t Type = 0b11;
         public:
             /**
              * Constructor, sets type bits, but everything else is zeroed
             */
             Table()
-                : Table{ 0b11 }
+                : Table{ Type }
             {}
+
+            /**
+             * Constructor from a specific value
+             * 
+             * @param aValue The value to construct from
+            */
+            Table(uint64_t aValue, Details::ValueConstructTag) : Table{ aValue } {}
 
             /**
              * Writes the given entry to the table
@@ -77,6 +110,18 @@ namespace AArch64
              * @return The read table entry
             */
             static Table Read(uint64_t apTable[], size_t aIndex);
+
+            /**
+             * Checks to see if the value represents a descriptor of this type
+             * 
+             * @param aValue The value to check
+             * 
+             * @return True if the value is a descriptor of this type
+            */
+            static bool IsType(uint64_t const aValue)
+            {
+                return (aValue & Details::TypeMask) == Type;
+            }
 
             /**
              * Sets the table address this entry points at

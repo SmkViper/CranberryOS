@@ -3,6 +3,7 @@ target_sources(kernel8.elf
         CPU.h CPU.cpp
         ExceptionVectorDefines.h
         MemoryDescriptor.h MemoryDescriptor.cpp
+        MemoryPageTables.h
         MMUDefines.h
         RegisterDefines.h
         SchedulerDefines.h
