@@ -139,19 +139,15 @@ namespace MemoryManager
          * @param aUserVirtualAddress User virtual address we want to map
          * @param apPhysicalPage The physical page to map
          */
-        void MapTableEntry(const uintptr_t aTableVirtualAddress, const uintptr_t aUserVirtualAddress, void* const apPhysicalPage)
+        void MapTableEntry(AArch64::PageTable::Level3View const aTable, const uintptr_t aUserVirtualAddress, void* const apPhysicalPage)
         {
-            // each table is just an array of pointers
-            auto ptable = reinterpret_cast<uintptr_t*>(aTableVirtualAddress);
-
             AArch64::Descriptor::Page pageDescriptor;
             pageDescriptor.Address(reinterpret_cast<uintptr_t>(apPhysicalPage));
             pageDescriptor.AttrIndx(MT_NORMAL_NC); // normal memory
             pageDescriptor.AF(true); // don't trap on access
             pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it
             
-            auto const index = (aUserVirtualAddress >> PAGE_SHIFT) & (AArch64::PageTable::PointersPerTable - 1);
-            AArch64::Descriptor::Page::Write(pageDescriptor, ptable, index);
+            aTable.SetEntryForVA(aUserVirtualAddress,pageDescriptor);
         }
 
         /**
@@ -194,7 +190,7 @@ namespace MemoryManager
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            MapTableEntry(pageTableEntry.GetTableVA(), aVirtualAddress, apPhysicalPage);
+            MapTableEntry(pageTableEntry, aVirtualAddress, apPhysicalPage);
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{apPhysicalPage, aVirtualAddress};
             ++arTask.MemoryState.UserPagesCount;
         }
