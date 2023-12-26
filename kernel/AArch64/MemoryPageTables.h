@@ -69,129 +69,129 @@ namespace AArch64
                     (TestAndVisit<DescriptorTypes>(aFunctor, aValue) || ...);
                 }
             };
+
+            /**
+             * An entry in a table
+             */
+            template<typename... DescriptorTypes>
+            class Entry
+            {
+                template<typename T>
+                static constexpr bool ValidType = ((std::is_same_v<T, DescriptorTypes>) || ...);
+
+            public:
+                /**
+                 * Constructs an entry from a descriptor. Only valid if DescriptorT is one of the types the entry allows
+                 * 
+                 * @param aDescriptor The descriptor to construct from
+                 */
+                template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
+                explicit Entry(DescriptorT const aDescriptor)
+                    : Value{ aDescriptor.GetValue() }
+                {}
+
+                /**
+                 * Constructs an entry from the given raw value
+                 * 
+                 * @param aValue The value to make the entry from
+                 */
+                explicit Entry(uint64_t const aValue)
+                    : Value{ aValue }
+                {}
+
+                /**
+                 * Calls functor with the descriptor type we're holding
+                 * 
+                 * @param aFunctor The functor to call, should have overloads of operator() for each descriptor type and
+                 * take them by value (modification's won't be sent back to this entry)
+                 */
+                template<typename FunctorT>
+                void Visit(FunctorT const& aFunctor) const
+                {
+                    // #TODO: Would be better if we matched std::visit and failed to compile if functor doesn't support all
+                    // descriptor types. And find a way to support modification of the entry directly. But we don't need
+                    // that yet
+                    VisitHelpers::VisitImpl<FunctorT, DescriptorTypes...>(aFunctor, Value);
+                }
+
+            private:
+                uint64_t Value = 0;
+            };
+
+            /**
+             * A "view" of the page table
+             */
+            template<uint64_t AddressShift, class... DescriptorTypes>
+            class PageView
+            {
+                static constexpr uint64_t AddressMask = (PointersPerTable - 1);
+
+                template<typename T>
+                static constexpr bool ValidType = ((std::is_same_v<T, DescriptorTypes>) || ...);
+            public:
+                using Entry = Entry<DescriptorTypes...>;
+
+                /**
+                 * Constructor, layering a view over the given memory assumed to be the table
+                 * 
+                 * @param apTable The table to make a view over - does not take ownership. Not expected to be null
+                */
+                explicit PageView(uint64_t* const apTable)
+                    : pTable{ apTable }
+                {
+                    // #TODO: Should probably assert if apTable is null
+                }
+
+                /**
+                 * Gets the entry for the specified virtual address
+                 * 
+                 * @param aVirtualAddress The address to get the entry for
+                 * @return The entry in the table that contains that address
+                */
+                Entry GetEntryForVA(uintptr_t const aVirtualAddress) const
+                {
+                    auto const tableIndex = (aVirtualAddress >> AddressShift) & AddressMask;
+                    // #TODO: Assert if tableIndex is out of range
+                    return Entry{ pTable[tableIndex] };
+                }
+
+                /**
+                 * Sets the entry for the specified virtual address
+                 * 
+                 * @param aVirtualAddress The address to set the entry for
+                 * @param aValue The value to set for that entry
+                */
+                template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
+                void SetEntryForVA(uintptr_t const aVirtualAddress, DescriptorT const aValue) const
+                {
+                    auto const tableIndex = (aVirtualAddress >> AddressShift) & AddressMask;
+                    // #TODO: Assert if tableIndex is out of range
+                    DescriptorT::Write(aValue, pTable, tableIndex);
+                }
+
+                /**
+                 * Gets the table's virtual address
+                 * 
+                 * @return The table's virtual address
+                */
+                uintptr_t GetTableVA() const
+                {
+                    return reinterpret_cast<uintptr_t>(pTable);
+                }
+
+            private:
+                uint64_t* pTable = nullptr;
+            };
         }
 
-        /**
-         * An entry in a table
-         */
-        template<typename... DescriptorTypes>
-        class Entry
-        {
-            template<typename T>
-            static constexpr bool ValidType = ((std::is_same_v<T, DescriptorTypes>) || ...);
-
-        public:
-            /**
-             * Constructs an entry from a descriptor. Only valid if DescriptorT is one of the types the entry allows
-             * 
-             * @param aDescriptor The descriptor to construct from
-             */
-            template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
-            explicit Entry(DescriptorT const aDescriptor)
-                : Value{ aDescriptor.GetValue() }
-            {}
-
-            /**
-             * Constructs an entry from the given raw value
-             * 
-             * @param aValue The value to make the entry from
-             */
-            explicit Entry(uint64_t const aValue)
-                : Value{ aValue }
-            {}
-
-            /**
-             * Calls functor with the descriptor type we're holding
-             * 
-             * @param aFunctor The functor to call, should have overloads of operator() for each descriptor type and
-             * take them by value (modification's won't be sent back to this entry)
-             */
-            template<typename FunctorT>
-            void Visit(FunctorT const& aFunctor) const
-            {
-                // #TODO: Would be better if we matched std::visit and failed to compile if functor doesn't support all
-                // descriptor types. And find a way to support modification of the entry directly. But we don't need
-                // that yet
-                Details::VisitHelpers::VisitImpl<FunctorT, DescriptorTypes...>(aFunctor, Value);
-            }
-
-        private:
-            uint64_t Value = 0;
-        };
-
-        /**
-         * A "view" of the page table
-         */
-        template<uint64_t AddressShift, class... DescriptorTypes>
-        class PageView
-        {
-            static constexpr uint64_t AddressMask = (PointersPerTable - 1);
-
-            template<typename T>
-            static constexpr bool ValidType = ((std::is_same_v<T, DescriptorTypes>) || ...);
-        public:
-            using Entry = PageTable::Entry<DescriptorTypes...>;
-
-            /**
-             * Constructor, layering a view over the given memory assumed to be the table
-             * 
-             * @param apTable The table to make a view over - does not take ownership. Not expected to be null
-            */
-            explicit PageView(uint64_t* const apTable)
-                : pTable{ apTable }
-            {
-                // #TODO: Should probably assert if apTable is null
-            }
-
-            /**
-             * Gets the entry for the specified virtual address
-             * 
-             * @param aVirtualAddress The address to get the entry for
-             * @return The entry in the table that contains that address
-            */
-            Entry GetEntryForVA(uintptr_t const aVirtualAddress) const
-            {
-                auto const tableIndex = (aVirtualAddress >> AddressShift) & AddressMask;
-                // #TODO: Assert if tableIndex is out of range
-                return Entry{ pTable[tableIndex] };
-            }
-
-            /**
-             * Sets the entry for the specified virtual address
-             * 
-             * @param aVirtualAddress The address to set the entry for
-             * @param aValue The value to set for that entry
-            */
-            template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
-            void SetEntryForVA(uintptr_t const aVirtualAddress, DescriptorT const aValue) const
-            {
-                auto const tableIndex = (aVirtualAddress >> AddressShift) & AddressMask;
-                // #TODO: Assert if tableIndex is out of range
-                DescriptorT::Write(aValue, pTable, tableIndex);
-            }
-
-            /**
-             * Gets the table's virtual address
-             * 
-             * @return The table's virtual address
-            */
-            uintptr_t GetTableVA() const
-            {
-                return reinterpret_cast<uintptr_t>(pTable);
-            }
-
-        private:
-            uint64_t* pTable = nullptr;
-        };
-
         // Each entry covers 512GB of address space
-        using Level0View = PageView<PageOffsetBits + TableIndexBits * 3, Descriptor::Fault, Descriptor::Table>;
+        using Level0View = Details::PageView<PageOffsetBits + TableIndexBits * 3, Descriptor::Fault, Descriptor::Table>;
         // Each entry covers 1GB of address space
-        using Level1View = PageView<PageOffsetBits + TableIndexBits * 2, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
+        using Level1View = Details::PageView<PageOffsetBits + TableIndexBits * 2, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
         // Each entry covers 2MB of address space
-        using Level2View = PageView<PageOffsetBits + TableIndexBits, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
+        using Level2View = Details::PageView<PageOffsetBits + TableIndexBits, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
         // Each entry covers 4KB of address space
-        using Level3View = PageView<PageOffsetBits, Descriptor::Fault, Descriptor::Page>;
+        using Level3View = Details::PageView<PageOffsetBits, Descriptor::Fault, Descriptor::Page>;
     }
 }
 
