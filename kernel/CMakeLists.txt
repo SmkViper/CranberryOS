@@ -11,7 +11,6 @@ add_executable(kernel8.elf
     MiniUart.h MiniUart.cpp
     Print.h Print.cpp
     Scheduler.h Scheduler.cpp Scheduler.S
-    Start.S
     SystemCall.cpp
     SystemCallDefines.h
     TaskStructs.h

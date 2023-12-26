@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <cstring>
 #include "AArch64/MemoryDescriptor.h"
-#include "AArch64/MMUDefines.h"
 #include "Peripherals/Base.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"
+#include "Utils.h"
 
 extern "C"
 {
@@ -36,7 +36,7 @@ namespace MemoryManager
             // #TODO: Need new types for virtual/physical addresses
             // #TODO: Why is __kernel_image_end here a virtual address when in the boot process it's a physical
             // address?
-            return CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end) - KernalVirtualAddressStart, L2BlockSize) + 1;
+            return CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end) - KernelVirtualAddressStart, L2BlockSize) + 1;
         }
 
         constexpr auto PageMask = ~(PageSize - 1);
@@ -60,9 +60,9 @@ namespace MemoryManager
                 {
                     PageInUse[curPage] = true;
                     auto newPageStartPA = pageMemoryStartPA + (curPage * PageSize); // physical address
-                    // have to add the KernalVirtualAddressStart because that's where the physical address is mapped to
+                    // have to add the KernelVirtualAddressStart because that's where the physical address is mapped to
                     // in kernel space
-                    memset(reinterpret_cast<void*>(newPageStartPA + KernalVirtualAddressStart), 0, PageSize);
+                    memset(reinterpret_cast<void*>(newPageStartPA + KernelVirtualAddressStart), 0, PageSize);
                     return reinterpret_cast<void*>(newPageStartPA);
                 }
             }
@@ -84,38 +84,55 @@ namespace MemoryManager
         }
         */
 
-        /**
+       /**
          * Map a new table, or get the existing table for the specified table, shift, and virtual address
          * 
-         * @param aTableVirtualAddress Kernel virtual address for the table
-         * @param aShift How much to shift the user virtual address to get the index into the table
+         * @param aTable The table to add the entry to
          * @param aUserVirtualAddress The user virtual address we want to map
          * @param arNewTable OUT: Set to true if a new table had to be made, otherwise false
          * @return The table for the specified address - new or existing
          */
-        void* MapTable(const uintptr_t aTableVirtualAddress, const uint64_t aShift, const uintptr_t aUserVirtualAddress, bool& arNewTable)
+        template<class LowerTableViewT, class TableViewT>
+        LowerTableViewT MapTable(TableViewT aTable, const uintptr_t aUserVirtualAddress, bool& arNewTable)
         {
+            // #TODO: Can we make a relationship between TableViewT and LowerTableViewT so it can be deduced?
+
             arNewTable = false; // assume we don't need a new table
 
-            // each table is just an array of pointers
-            auto ptable = reinterpret_cast<uintptr_t*>(aTableVirtualAddress);
+            auto const entry = aTable.GetEntryForVA(aUserVirtualAddress);
+            uintptr_t pagePA = 0;
+            entry.Visit(Overloaded{
+                [&arNewTable, &pagePA, aTable, aUserVirtualAddress](AArch64::Descriptor::Fault)
+                {
+                    // this part hasn't been set up yet, so add an entry
+                    arNewTable = true;
 
-            // mask out the bits for this particular table index
-            const auto index = (aUserVirtualAddress >> aShift) & (PointersPerTable - 1);
-            if (ptable[index] == 0u)
-            {
-                // this part hasn't been set up yet, so add an entry
-                arNewTable = true;
+                    AArch64::Descriptor::Table tableDescriptor;
+                    pagePA = reinterpret_cast<uintptr_t>(GetFreePage());
+                    tableDescriptor.Address(pagePA);
 
-                AArch64::Descriptor::Table tableDescriptor;
-                auto const pnewPage = GetFreePage();
-                tableDescriptor.Address(reinterpret_cast<uintptr_t>(pnewPage));
+                    aTable.SetEntryForVA(aUserVirtualAddress, tableDescriptor);
+                },
+                [&pagePA](AArch64::Descriptor::Table aTableDescriptor)
+                {
+                    pagePA = aTableDescriptor.Address();
+                },
+                [](AArch64::Descriptor::L1Block)
+                {
+                    // #TODO: Panic if this ever happens
+                },
+                [](AArch64::Descriptor::L2Block)
+                {
+                    // #TODO: Panic if this ever happens
+                },
+                [](AArch64::Descriptor::Page)
+                {
+                    // #TODO: Panic if this ever happens
+                }
+            });
 
-                AArch64::Descriptor::Table::Write(tableDescriptor, ptable, index);
-
-                return pnewPage;
-            }
-            return reinterpret_cast<void*>(ptable[index] & PageMask);
+            auto const pageVA = pagePA + KernelVirtualAddressStart;
+            return LowerTableViewT{ reinterpret_cast<uint64_t*>(pageVA) };
         }
 
         /**
@@ -125,19 +142,15 @@ namespace MemoryManager
          * @param aUserVirtualAddress User virtual address we want to map
          * @param apPhysicalPage The physical page to map
          */
-        void MapTableEntry(const uintptr_t aTableVirtualAddress, const uintptr_t aUserVirtualAddress, void* const apPhysicalPage)
+        void MapTableEntry(AArch64::PageTable::Level3View const aTable, const uintptr_t aUserVirtualAddress, void* const apPhysicalPage)
         {
-            // each table is just an array of pointers
-            auto ptable = reinterpret_cast<uintptr_t*>(aTableVirtualAddress);
-
             AArch64::Descriptor::Page pageDescriptor;
             pageDescriptor.Address(reinterpret_cast<uintptr_t>(apPhysicalPage));
-            pageDescriptor.AttrIndx(MT_NORMAL_NC); // normal memory
+            pageDescriptor.AttrIndx(NormalMAIRIndex); // normal memory
             pageDescriptor.AF(true); // don't trap on access
             pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it
             
-            auto const index = (aUserVirtualAddress >> PAGE_SHIFT) & (PointersPerTable - 1);
-            AArch64::Descriptor::Page::Write(pageDescriptor, ptable, index);
+            aTable.SetEntryForVA(aUserVirtualAddress,pageDescriptor);
         }
 
         /**
@@ -156,30 +169,31 @@ namespace MemoryManager
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto ppageGlobalDirectory = arTask.MemoryState.pPageGlobalDirectory;
+            auto const pageGlobalDirectoryVA = reinterpret_cast<uintptr_t>(arTask.MemoryState.pPageGlobalDirectory) + KernelVirtualAddressStart;
+            auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ reinterpret_cast<uint64_t*>(pageGlobalDirectoryVA) };
             auto newTable = false;
-            const auto ppageUpperDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageGlobalDirectory) + KernalVirtualAddressStart, PGD_SHIFT, aVirtualAddress, newTable);
+            auto const pageUpperDirectory = MapTable<AArch64::PageTable::Level1View>(pageGlobalDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
-                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageUpperDirectory;
+                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = reinterpret_cast<void*>(pageUpperDirectory.GetTableVA() - KernelVirtualAddressStart);
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto ppageMiddleDirectory = MapTable(reinterpret_cast<uintptr_t>(ppageUpperDirectory) + KernalVirtualAddressStart, PUD_SHIFT, aVirtualAddress, newTable);
+            const auto pageMiddleDirectory = MapTable<AArch64::PageTable::Level2View>(pageUpperDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
-                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageMiddleDirectory;
+                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = reinterpret_cast<void*>(pageMiddleDirectory.GetTableVA() - KernelVirtualAddressStart);
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto ppageTableEntry = MapTable(reinterpret_cast<uintptr_t>(ppageMiddleDirectory) + KernalVirtualAddressStart, PMD_SHIFT, aVirtualAddress, newTable);
+            const auto pageTableEntry = MapTable<AArch64::PageTable::Level3View>(pageMiddleDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
-                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = ppageTableEntry;
+                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = reinterpret_cast<void*>(pageTableEntry.GetTableVA() - KernelVirtualAddressStart);
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            MapTableEntry(reinterpret_cast<uintptr_t>(ppageTableEntry) + KernalVirtualAddressStart, aVirtualAddress, apPhysicalPage);
+            MapTableEntry(pageTableEntry, aVirtualAddress, apPhysicalPage);
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{apPhysicalPage, aVirtualAddress};
             ++arTask.MemoryState.UserPagesCount;
         }
@@ -193,7 +207,7 @@ namespace MemoryManager
             return nullptr;
         }
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernalVirtualAddressStart);
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernelVirtualAddressStart);
     }
 
     void* AllocateUserPage(Scheduler::TaskStruct& arTask, const uintptr_t aVirtualAddress)
@@ -206,7 +220,7 @@ namespace MemoryManager
 
         MapPage(arTask, aVirtualAddress, pphysicalPage);
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernalVirtualAddressStart);
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernelVirtualAddressStart);
     }
 
     bool CopyVirtualMemory(Scheduler::TaskStruct& arDestinationTask, const Scheduler::TaskStruct& aCurrentTask)

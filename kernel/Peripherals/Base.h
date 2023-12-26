@@ -16,11 +16,11 @@ namespace MemoryMappedIO
      * range (the "bus address"), so to figure out the value to use in the kernel (the "physical address") just trim
      * the top byte add the resulting value to this
      */
-    constexpr uintptr_t PeripheralBaseAddr = MemoryManager::KernalVirtualAddressStart + MemoryManager::DeviceBaseAddress;
+    constexpr uintptr_t PeripheralBaseAddr = MemoryManager::KernelVirtualAddressStart + MemoryManager::DeviceBaseAddress;
 
     // Local peripheral information sourced from BCM2836 ARM-local peripheral documentation
     // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
-    constexpr uintptr_t LocalPeripheralBaseAddr = MemoryManager::KernalVirtualAddressStart + 0x4000'0000;
+    constexpr uintptr_t LocalPeripheralBaseAddr = MemoryManager::KernelVirtualAddressStart + 0x4000'0000;
 }
 
 #endif // KERNEL_PERIPHERALS_BASE_H

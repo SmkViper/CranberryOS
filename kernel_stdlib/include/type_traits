@@ -252,6 +252,24 @@ namespace std
      */
     template<class __T>
     using decay_t = typename decay<__T>::type;
+
+    /**
+     * If value is true, then type will exist, otherwise it will not
+     */
+    template<bool __Value, class __T = void>
+    struct enable_if {};
+
+    /**
+     * If value is true, then type will exist, otherwise it will not
+     */
+    template<class __T>
+    struct enable_if<true, __T> { using type = __T; };
+
+    /**
+     * Deduces a type if value is true, otherwise triggers SFINAE
+     */
+    template<bool __Value, class __T = void>
+    using enable_if_t = typename enable_if<__Value, __T>::type;
 }
 
 #endif // __KERNEL_STDLIB_TYPE_TRAITS__
