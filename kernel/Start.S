@@ -12,8 +12,8 @@
 // the other three sleeping, requiring a memory write to wake each.
 //
 // IMPORTANT: Do not touch x0-x4, as they contain parameters from the firmware
-// that boot_kernel wants. Use x19-x28 which are non-volatile registers
-// (preserved by callee)
+// that boot_kernel wants. If the data needs to cross a function call boundary,
+// use x19-x28 which are non-volatile registers (preserved by callee)
 //
 // x0 (x20) = 32-bit pointer to the DTB in member (upper 4 bytes may not be
 //            cleared)
@@ -36,15 +36,15 @@ proc_hang:
 
 // Main processor starts here
 master:
-    // Load the start of the .bss segment into x0 and the count into x1 (32
+    // Load the start of the .bss segment into x5 and the count into x6 (32
     // bits) then loop and store zero into every 64-bit chunk
-    adr     x19, __bss_start
-    ldr     w1, =__bss_size_divided_by_8
-    cbz     w1, continue_boot
+    adr     x5, __bss_start
+    ldr     w6, =__bss_size_divided_by_8
+    cbz     w6, continue_boot
 clear_bss:
-    str     xzr, [x19], #8       // Stores 0 into *x0 and adds 8
-    sub     w1, w1, #1          // Decrement w1
-    cbnz    w1, clear_bss
+    str     xzr, [x5], #8       // Stores 0 into *x5 and adds 8
+    sub     w6, w6, #1          // Decrement w6
+    cbnz    w6, clear_bss       // If w6 is not 0, go to next chunk
 
 continue_boot:
     // Point our stack to start just before our code (it grows towards 0).
@@ -53,9 +53,9 @@ continue_boot:
     // have to investigate the memory mapping on boot. Old version used
     // then end of a 4MB block for the stack root, which ran the risk of
     // bashing the kernel image.
-    adrp    x19, _start          // Loads the offset to the page where _start is
-    add     x19, x19, :lo12:_start // Add in the offset to the actual _start symbol
-    mov     sp, x19
+    adrp    x5, _start          // Loads the offset to the page where _start is
+    add     x5, x5, :lo12:_start // Add in the offset to the actual _start symbol
+    mov     sp, x5
     bl      boot_kernel
 
     b       proc_hang           // hang the processor if boot_kernel ever exits
