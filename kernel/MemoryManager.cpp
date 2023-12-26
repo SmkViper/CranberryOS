@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <cstring>
 #include "AArch64/MemoryDescriptor.h"
-#include "AArch64/MMUDefines.h"
 #include "Peripherals/Base.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"
@@ -147,7 +146,7 @@ namespace MemoryManager
         {
             AArch64::Descriptor::Page pageDescriptor;
             pageDescriptor.Address(reinterpret_cast<uintptr_t>(apPhysicalPage));
-            pageDescriptor.AttrIndx(MT_NORMAL_NC); // normal memory
+            pageDescriptor.AttrIndx(NormalMAIRIndex); // normal memory
             pageDescriptor.AF(true); // don't trap on access
             pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it
             

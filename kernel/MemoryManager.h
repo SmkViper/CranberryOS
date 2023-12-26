@@ -20,7 +20,15 @@ namespace MemoryManager
     constexpr size_t L2BlockSize = 1ULL << (AArch64::PageTable::PageOffsetBits + AArch64::PageTable::TableIndexBits);
 
     static_assert(AArch64::PageTable::PointersPerTable * sizeof(AArch64::Descriptor::Fault) == PageSize, "Expected to be able to fit a table into a page");
-    
+
+    // #TODO: These should probably be unique types
+    // #TODO: We should look into making all this stuff cachable for performance, once we figure out how to manage
+    // caches
+
+    // Indicies into the MAIR register
+    constexpr uint8_t DeviceMAIRIndex = 0; // Device nGnRnE memory
+    constexpr uint8_t NormalMAIRIndex = 1; // Normal non-cachable memory
+
     /**
      * Allocates a page of memory in the kernel virtual address space
      * 

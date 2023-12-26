@@ -6,7 +6,6 @@
 #include "../../MemoryManager.h"
 #include "../../Utils.h"
 #include "../MemoryDescriptor.h"
-#include "../MMUDefines.h"
 #include "../SystemRegisters.h"
 #include "MMU.h"
 #include "Output.h"
@@ -240,19 +239,19 @@ namespace AArch64
 
             // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
             // be pointing at the physical addresses)
-            InsertEntriesForMemoryRange(allocator, rootPage, kernelBasePA, kernelEndPA, kernelBasePA, MT_NORMAL_NC);
-            InsertEntriesForMemoryRange(allocator, rootPage, deviceBasePA, deviceEndPA, deviceBasePA, MT_DEVICE_nGnRnE);
+            InsertEntriesForMemoryRange(allocator, rootPage, kernelBasePA, kernelEndPA, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, deviceBasePA, deviceEndPA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
 
             // Now map the kernel and devices into high memory
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, MT_NORMAL_NC);
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, MT_DEVICE_nGnRnE);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
 
             // Map everything between the kernel range and device range for now
             // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
             // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
             // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
             // kernel space
-            InsertEntriesForMemoryRange(allocator, rootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA - 1, endOfKernelRangeVA + 1, MT_NORMAL_NC);
+            InsertEntriesForMemoryRange(allocator, rootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA - 1, endOfKernelRangeVA + 1, MemoryManager::NormalMAIRIndex);
         }
 
         void EnableMMU()
@@ -260,8 +259,8 @@ namespace AArch64
             SwitchToPageTable(__pg_dir);
 
             MAIR_EL1 mair_el1;
-            mair_el1.SetAttribute(MT_DEVICE_nGnRnE, MAIR_EL1::Attribute::DeviceMemory());
-            mair_el1.SetAttribute(MT_NORMAL_NC, MAIR_EL1::Attribute::NormalMemory());
+            mair_el1.SetAttribute(MemoryManager::DeviceMAIRIndex, MAIR_EL1::Attribute::DeviceMemory());
+            mair_el1.SetAttribute(MemoryManager::NormalMAIRIndex, MAIR_EL1::Attribute::NormalMemory());
             MAIR_EL1::Write(mair_el1);
 
             // IMPORTANT: Do not change granule size or address bits, because we have a lot of constants that depend on
