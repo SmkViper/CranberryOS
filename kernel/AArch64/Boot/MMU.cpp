@@ -99,6 +99,42 @@ namespace AArch64
             };
 
             /**
+             * Gets or inserts a page table descriptor into the view for the given virtual address
+             * 
+             * @param arAllocator Allocator to use for getting new pages
+             * @param aTableView The table to check for the descriptor, or to insert a new descriptor into
+             * @param aVirtualAddress The virtual address the table will cover
+             */
+            template<class ChildTableT, class PageTableT>
+            ChildTableT GetOrInsertPageDescriptor(PageBumpAllocator& arAllocator, PageTableT const aTableView,
+                uint64_t const aVirtualAddress)
+            {
+                auto const entry = aTableView.GetEntryForVA(aVirtualAddress);
+                Descriptor::Table descriptor;
+                entry.Visit(Overloaded{
+                    [&descriptor, &arAllocator, &aTableView, aVirtualAddress](Descriptor::Fault)
+                    {
+                        descriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
+                        aTableView.SetEntryForVA(aVirtualAddress, descriptor);
+                    },
+                    [&descriptor](Descriptor::Table aTable)
+                    {
+                        descriptor = aTable;
+                    },
+                    [](Descriptor::L1Block)
+                    {
+                        Panic("Should not have level 1 blocks in boot tables");
+                    },
+                    [](Descriptor::L2Block)
+                    {
+                        Panic("Should not have level 2 blocks in boot tables");
+                    }
+                });
+
+                return ChildTableT{ reinterpret_cast<uint64_t*>( descriptor.Address() ) };
+            }
+
+            /**
              * Inserts all the required data into the page tables for a level 3 table (which points at 4kb pages)
              * covering the given virtual address.
              * 
@@ -107,53 +143,21 @@ namespace AArch64
              * @param aVirtualAddress The virtual address we want to map and need a table for
              * 
              * @return The level 3 table covering the given virtual address (making it if necessary)
-            */
-            uint64_t* InsertPageTable(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage, uint64_t const aVirtualAddress)
+             */
+            PageTable::Level3View InsertPageTable(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage, uint64_t const aVirtualAddress)
             {
-                // #TODO: Can probably be cleaned up to reduce rudundancy
-
-                // Level 0 table points to level 1 table (512GB range)
-                auto const level1Entry = aRootPage.GetEntryForVA(aVirtualAddress);
-                Descriptor::Table level1Descriptor;
-                level1Entry.Visit(Overloaded{
-                    [&level1Descriptor, &arAllocator, &aRootPage, aVirtualAddress](Descriptor::Fault)
-                    {
-                        level1Descriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
-                        aRootPage.SetEntryForVA(aVirtualAddress, level1Descriptor);
-                    },
-                    [&level1Descriptor](Descriptor::Table aTable)
-                    {
-                        level1Descriptor = aTable;
-                    }
-                });
-                                
                 // #TODO: We're assuming level 1 and 2 tables only contain pages and not blocks, which is going to be
                 // the case for how our code is currently written. Would be safer to have code that can handle the type
                 // of descriptor based on which table is being read.
 
+                // Level 0 table points to level 1 table (512GB range)
+                auto const level1Table = GetOrInsertPageDescriptor<PageTable::Level1View>(arAllocator, aRootPage, aVirtualAddress);
+
                 // Level 1 table points to level 2 table (1GB range)
-                auto const plevel1Table = reinterpret_cast<uint64_t*>(level1Descriptor.Address());
-                auto const level2TableIndex = (aVirtualAddress >> PUD_SHIFT) & (PageTable::PointersPerTable - 1);
-                if (plevel1Table[level2TableIndex] == 0)
-                {
-                    Descriptor::Table tableDescriptor;
-                    tableDescriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
-                    Descriptor::Table::Write(tableDescriptor, plevel1Table, level2TableIndex);
-                }
+                auto const level2Table = GetOrInsertPageDescriptor<PageTable::Level2View>(arAllocator, level1Table, aVirtualAddress);
 
                 // Level 2 table points to level 3 table (2MB range)
-                auto const level2Entry = Descriptor::Table::Read(plevel1Table, level2TableIndex);
-                auto const plevel2Table = reinterpret_cast<uint64_t*>(level2Entry.Address());
-                auto const level3TableIndex = (aVirtualAddress >> PMD_SHIFT) & (PageTable::PointersPerTable - 1);
-                if (plevel2Table[level3TableIndex] == 0)
-                {
-                    Descriptor::Table tableDescriptor;
-                    tableDescriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
-                    Descriptor::Table::Write(tableDescriptor, plevel2Table, level3TableIndex);
-                }
-
-                auto const level3Entry = Descriptor::Table::Read(plevel2Table, level3TableIndex);
-                return reinterpret_cast<uint64_t*>(level3Entry.Address());
+                return GetOrInsertPageDescriptor<PageTable::Level3View>(arAllocator, level2Table, aVirtualAddress);
             }
 
             /**
@@ -166,7 +170,7 @@ namespace AArch64
              * @param aVAEnd The end of the virtual address range to map
              * @param aPhysicalAddress The physical address to map to
              * @param aMAIRIndex The index into the MAIR register for the attributes for this memory
-            */
+             */
             void InsertEntriesForMemoryRange(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage,
                 uint64_t const aVAStart, uint64_t const aVAEnd, uint64_t const aPhysicalAddress,
                 uint8_t const aMAIRIndex)
@@ -175,7 +179,7 @@ namespace AArch64
                 for (auto curVA = aVAStart; curVA < aVAEnd;)
                 {
                     // Level 3 table points to 4kb blocks
-                    auto const plevel3Table = InsertPageTable(arAllocator, aRootPage, curVA);
+                    auto const level3Table = InsertPageTable(arAllocator, aRootPage, curVA);
 
                     Descriptor::Page pageEntry;
                     pageEntry.Address(curPA);
@@ -183,8 +187,7 @@ namespace AArch64
                     pageEntry.AP(Descriptor::Page::AccessPermissions::KernelRWUserNone); // only kernel can access
                     pageEntry.AttrIndx(aMAIRIndex);
 
-                    auto const blockIndex = (curVA >> PAGE_SHIFT) & (PageTable::PointersPerTable - 1);
-                    Descriptor::Page::Write(pageEntry, plevel3Table, blockIndex);
+                    level3Table.SetEntryForVA(curVA, pageEntry);
 
                     curVA += MemoryManager::PageSize; 
                     curPA += MemoryManager::PageSize;
