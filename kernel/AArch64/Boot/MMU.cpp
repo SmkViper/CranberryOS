@@ -34,9 +34,11 @@ namespace AArch64
             */
             void InstructionBarrier()
             {
-                // #TODO: Should probably be moved to a common location once we know who else might care
+                // #TODO: Should probably be moved to a common location once we know who else might care (MemoryManager
+                // does, with some additional lines)
                 asm volatile(
-                    "isb"
+                    "dsb ish\n" // data synchronization barrier to ensure everything is committed
+                    "isb"       // instruction synchronization barrier to ensure all instructions see the changes
                     : // no outputs
                     : // no inputs
                     : // no bashed registers
