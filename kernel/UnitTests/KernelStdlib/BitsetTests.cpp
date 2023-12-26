@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <cstdint>
+#include <utility>
 #include "../Framework.h"
 
 namespace UnitTests::KernelStdlib::Bitset
@@ -114,6 +115,152 @@ namespace UnitTests::KernelStdlib::Bitset
             return result;
         }
 
+        /**
+         * Helper for testing bit reference assignment
+         * 
+         * @param aDestPos The destination bit
+         * @param aSourcePos The source bit
+         * @return The value of the destination bit, which should be true
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool BitReferenceAssign(size_t const aDestPos, size_t const aSourcePos)
+        {
+            std::bitset<BitsetSize> value;
+            value[aSourcePos] = true;
+            value[aDestPos] = value[aSourcePos];
+            return value[aDestPos];
+        }
+
+        /**
+         * Helper for testing bit reference flip()
+         * 
+         * @param aPos Bit to flip
+         * @return Whether the bit flipped to true and false successfully
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool BitReferenceFlip(size_t const aPos)
+        {
+            std::bitset<BitsetSize> value;
+            value[aPos].flip();
+            auto const expectedTrue = static_cast<bool>(value[aPos]);
+            value[aPos].flip();
+            auto const expectedFalse = static_cast<bool>(value[aPos]);
+
+            return expectedTrue && !expectedFalse;
+        }
+
+        /**
+         * Helper for testing swap on bit references to the same container type
+         * 
+         * @param aPos Bit to swap
+         * @return Whether the swap happened successfully
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool BitReferenceSameSizeSwap(size_t const aPos)
+        {
+            using std::swap;
+
+            std::bitset<BitsetSize> value1, value2;
+            value1[aPos] = true;
+
+            swap(value1[aPos], value2[aPos]);
+
+            return !value1[aPos] && value2[aPos];
+        }
+
+        /**
+         * Helper for testing swap on bit references to different container type
+         * 
+         * @param aPos Bit to swap
+         * @return Whether the swap happened successfully
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool BitReferenceDifferentSizeSwap(size_t const aPos)
+        {
+            using std::swap;
+
+            std::bitset<BitsetSize> value1;
+            value1[aPos] = true;
+
+            std::bitset<16> value2;
+            constexpr unsigned value2Bit = 5;
+            swap(value1[aPos], value2[value2Bit]);
+
+            return !value1[aPos] && value2[value2Bit];
+        }
+
+        /**
+         * Helper for testing swap on bit references with a bool
+         * 
+         * @param aPos Bit to swap
+         * @return Whether the swap happened successfully
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool BitReferenceBoolSwap(size_t const aPos)
+        {
+            using std::swap;
+
+            std::bitset<BitsetSize> value1;
+            value1[aPos] = true;
+
+            bool otherBit = false;
+            swap(otherBit, value1[aPos]);
+            auto const firstPassed = otherBit && !value1[aPos];
+
+            swap(value1[aPos], otherBit);
+            auto const secondPassed = !otherBit && value1[aPos];
+
+            return firstPassed && secondPassed;
+        }
+
+        /**
+         * Helper for testing const bit reference conversion from non-const
+         * 
+         * @param aPos The position of the bit to set
+         * @return The value of the supposedly set bit
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool ConstBitReferenceConstruct(size_t const aPos)
+        {
+            std::bitset<BitsetSize> value;
+            value[aPos] = true;
+
+            typename decltype(value)::const_reference constBitRef = value[aPos];
+            return constBitRef;
+        }
+
+        /**
+         * Helper for testing const bit reference conversion to bool
+         * 
+         * @param aPos The position of the bit to set
+         * @return The value of the supposedly set bit
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool ConstBitReferenceBool(size_t const aPos)
+        {
+            std::bitset<BitsetSize> value;
+            value[aPos] = true;
+
+            std::bitset<BitsetSize> const& constValue = value;
+            return constValue[aPos];
+        }
+
+        /**
+         * Helper for testing const bit reference operator~
+         * 
+         * @param aPos The position of the bit to set
+         * @return The NOTed-value of the supposedly set bit
+         */
+        template<std::size_t BitsetSize>
+        constexpr bool ConstBitReferenceNot(size_t const aPos)
+        {
+            std::bitset<BitsetSize> value;
+            value[aPos] = true;
+
+            std::bitset<BitsetSize> const& constValue = value;
+            return ~constValue[aPos];
+        }
+
         // An empty bitset
         static_assert(sizeof(std::bitset<0>) == 1, "Unexpected size of empty bitset");
         static_assert(std::bitset<0>{}.to_ulong() == 0UL, "Expected constructor for bitset to zero");
@@ -135,6 +282,8 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(BitsetAnd<0>(0b11, 0b101).to_ulong() == 0, "Unexpected & result");
         static_assert(BitsetOr<0>(0b11, 0b101).to_ulong() == 0, "Unexpected | result");
         static_assert(BitsetXor<0>(0b11, 0b101).to_ulong() == 0, "Unexpected ^ result");
+        
+        // We don't test bit references for bitset<0> because it has no bits
 
         // A bitset that is exactly the right size for its internal type
         static_assert(sizeof(std::bitset<64>) == 8, "Unexpected size of full bitset");
@@ -153,7 +302,6 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(std::bitset<64>{ 0b11 }[1] == true, "Unexpected operator[] result");
         static_assert(BitsetIndexSet<64>(0b11, 2, true).to_ulong() == 0b111, "Unexpected operator[] (set) result");
         static_assert(BitsetIndexSet<64>(0b11, 1, false).to_ulong() == 0b001, "Unexpected operator[] (set) result");
-        static_assert(~(std::bitset<64>{ 0b11 }[1]) == false, "Unexpected ~operator[] result");
         static_assert(std::bitset<64>{ 10 }.to_ullong() == 10ULL, "Unexpected to_ullong() result");
         static_assert(std::bitset<64>{}.size() == 64, "Unexpected size() result");
         static_assert(std::bitset<64>{ 0b11 }.test(1) == true, "Unexpected test() result");
@@ -167,7 +315,19 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(BitsetAnd<64>(0b11, 0b101).to_ulong() == 0b001, "Unexpected & result");
         static_assert(BitsetOr<64>(0b11, 0b101).to_ulong() == 0b111, "Unexpected | result");
         static_assert(BitsetXor<64>(0b11, 0b101).to_ulong() == 0b110, "Unexpected ^ result");
-        // #TODO: Find a good way to test swap on bool refs
+
+        // Reference tests for bitset<64>
+        // operator bool tested by index tests above
+        static_assert(~(std::bitset<64>{ 0b11 }[1]) == false, "Unexpected bit reference ~ result");
+        // operator =(bool) tested by index tests above
+        static_assert(BitReferenceAssign<64>(10, 1), "Unexpected bit reference operator=(reference) result");
+        static_assert(BitReferenceFlip<64>(10), "Unexpected bit reference flip() result");
+        static_assert(BitReferenceSameSizeSwap<64>(10), "Unexpected bit reference swap same size result");
+        static_assert(BitReferenceDifferentSizeSwap<64>(10), "Unexpected bit reference swap different size result");
+        static_assert(BitReferenceBoolSwap<64>(10), "Unexpected bit reference swap bool& result");
+        static_assert(ConstBitReferenceConstruct<64>(10), "Unexpected const bit reference conversion result");
+        static_assert(ConstBitReferenceBool<64>(10), "Unexpected const bit reference bool() result");
+        static_assert(ConstBitReferenceNot<64>(10) == false, "Unexpected const bit reference operator~ result");
 
         // A bitset that is smaller than its internal type
         static_assert(sizeof(std::bitset<32>) == 8, "Unexpected size of partial bitset");
@@ -187,7 +347,6 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(std::bitset<32>{ 0b11 }[1] == true, "Unexpected operator[] result");
         static_assert(BitsetIndexSet<32>(0b11, 2, true).to_ulong() == 0b111, "Unexpected operator[] (set) result");
         static_assert(BitsetIndexSet<32>(0b11, 1, false).to_ulong() == 0b001, "Unexpected operator[] (set) result");
-        static_assert(~(std::bitset<32>{ 0b11 }[1]) == false, "Unexpected ~operator[] result");
         static_assert(std::bitset<32>{ 10 }.to_ullong() == 10ULL, "Unexpected to_ullong() result");
         static_assert(std::bitset<32>{}.size() == 32, "Unexpected size() result");
         static_assert(std::bitset<32>{ 0b11 }.test(1) == true, "Unexpected test() result");
@@ -201,7 +360,19 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(BitsetAnd<32>(0b11, 0b101).to_ulong() == 0b001, "Unexpected & result");
         static_assert(BitsetOr<32>(0b11, 0b101).to_ulong() == 0b111, "Unexpected | result");
         static_assert(BitsetXor<32>(0b11, 0b101).to_ulong() == 0b110, "Unexpected ^ result");
-        // #TODO: Find a good way to test swap on bool refs
+
+        // Reference tests for bitset<32>
+        // operator bool tested by index tests above
+        static_assert(~(std::bitset<32>{ 0b11 }[1]) == false, "Unexpected bit reference ~ result");
+        // operator =(bool) tested by index tests above
+        static_assert(BitReferenceAssign<32>(10, 1), "Unexpected bit reference operator=(reference) result");
+        static_assert(BitReferenceFlip<32>(10), "Unexpected bit reference flip() result");
+        static_assert(BitReferenceSameSizeSwap<32>(10), "Unexpected bit reference swap same size result");
+        static_assert(BitReferenceDifferentSizeSwap<32>(10), "Unexpected bit reference swap different size result");
+        static_assert(BitReferenceBoolSwap<32>(10), "Unexpected bit reference swap bool& result");
+        static_assert(ConstBitReferenceConstruct<32>(10), "Unexpected const bit reference conversion result");
+        static_assert(ConstBitReferenceBool<32>(10), "Unexpected const bit reference bool() result");
+        static_assert(ConstBitReferenceNot<32>(10) == false, "Unexpected const bit reference operator~ result");
 
         // A bitset that is larger than its internal type, partially filled
         static_assert(sizeof(std::bitset<96>) == 16, "Unexpected size of large bitset");
@@ -226,11 +397,23 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(std::bitset<96>{ 0 }.set(65, true).any() == true, "Unexpected any() result");
         static_assert(std::bitset<96>{ 0 }.none() == true, "Unexpected none() result");
         static_assert(std::bitset<96>{ 10 }.none() == false, "Unexpected none() result");
-        // #TODO: Find a good way to test swap on bool refs
+
+        // Reference tests for bitset<96>
+        // operator bool tested by index tests above
+        static_assert(~(std::bitset<96>{ 0 }.set(65, true)[65]) == false, "Unexpected bit reference ~ result");
+        // operator =(bool) tested by index tests above
+        static_assert(BitReferenceAssign<96>(85, 90), "Unexpected bit reference operator=(reference) result");
+        static_assert(BitReferenceFlip<96>(85), "Unexpected bit reference flip() result");
+        static_assert(BitReferenceSameSizeSwap<96>(85), "Unexpected bit reference swap same size result");
+        static_assert(BitReferenceDifferentSizeSwap<96>(85), "Unexpected bit reference swap different size result");
+        static_assert(BitReferenceBoolSwap<96>(85), "Unexpected bit reference swap bool& result");
+        static_assert(ConstBitReferenceConstruct<96>(85), "Unexpected const bit reference conversion result");
+        static_assert(ConstBitReferenceBool<96>(85), "Unexpected const bit reference bool() result");
+        static_assert(ConstBitReferenceNot<96>(85) == false, "Unexpected const bit reference operator~ result");
     }
 
     void Run()
     {
-        // #TODO: Runtime tests here
+        // #TODO: No tests yet, probably will want some when we have exceptions implemented for the things that throw
     }
 }

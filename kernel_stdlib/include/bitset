@@ -13,6 +13,7 @@ namespace std
         class _BitReference
         {
             friend typename _Container::_Self; // let the bitset access our private constructor
+            friend typename _Container::_ConstReference; // let the const reference access our data
             using _StorageType = typename _Container::_StorageType;
         public:
             /**

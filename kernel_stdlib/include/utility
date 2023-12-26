@@ -47,6 +47,18 @@ namespace std
         static_assert(!std::is_lvalue_reference_v<__T>, "Unexpected lvalue type for forward of rvalue");
         return static_cast<__T&&>(__aValue);
     }
+
+    template<class __T>
+    constexpr void swap(__T& __aLeft, __T& __aRight) noexcept
+    {
+        // #TODO: Should enable_if on this only if move constructible and move assignable
+        // #TODO: noexcept should be conditionalized based on nothrow_move_constructible and nothrow_move_assignable
+        __T __temp{ std::move(__aLeft) };
+        __aLeft = std::move(__aRight);
+        __aRight = std::move(__temp);
+    }
+
+    // #TODO: Need swap for arrays
 }
 
 #endif // __KERNEL_STDLIB_UTILITY__
