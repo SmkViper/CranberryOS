@@ -108,9 +108,9 @@ namespace AArch64
                 template<typename FunctorT>
                 void Visit(FunctorT const& aFunctor) const
                 {
-                    // #TODO: Would be better if we matched std::visit and failed to compile if functor doesn't support all
-                    // descriptor types. And find a way to support modification of the entry directly. But we don't need
-                    // that yet
+                    // #TODO: Would like to find a way to support modification of the entry directly, but we can work
+                    // around it for now. Maybe the Impl can make a local Entry on the stack, pass it in, then copy the
+                    // Value back
                     VisitHelpers::VisitImpl<FunctorT, DescriptorTypes...>(aFunctor, Value);
                 }
 
@@ -187,9 +187,9 @@ namespace AArch64
         // Each entry covers 512GB of address space
         using Level0View = Details::PageView<PageOffsetBits + TableIndexBits * 3, Descriptor::Fault, Descriptor::Table>;
         // Each entry covers 1GB of address space
-        using Level1View = Details::PageView<PageOffsetBits + TableIndexBits * 2, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
+        using Level1View = Details::PageView<PageOffsetBits + TableIndexBits * 2, Descriptor::Fault, Descriptor::Table, Descriptor::L1Block>;
         // Each entry covers 2MB of address space
-        using Level2View = Details::PageView<PageOffsetBits + TableIndexBits, Descriptor::Fault, Descriptor::Table, Descriptor::Block>;
+        using Level2View = Details::PageView<PageOffsetBits + TableIndexBits, Descriptor::Fault, Descriptor::Table, Descriptor::L2Block>;
         // Each entry covers 4KB of address space
         using Level3View = Details::PageView<PageOffsetBits, Descriptor::Fault, Descriptor::Page>;
     }

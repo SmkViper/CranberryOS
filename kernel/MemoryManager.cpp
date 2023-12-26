@@ -118,7 +118,11 @@ namespace MemoryManager
                 {
                     pagePA = aTableDescriptor.Address();
                 },
-                [](AArch64::Descriptor::Block)
+                [](AArch64::Descriptor::L1Block)
+                {
+                    // #TODO: Panic if this ever happens
+                },
+                [](AArch64::Descriptor::L2Block)
                 {
                     // #TODO: Panic if this ever happens
                 },
