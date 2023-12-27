@@ -9,6 +9,7 @@
 #include "AArch64/CPU.h"
 #include "UnitTests/KernelStdlib/BitsetTests.h"
 #include "UnitTests/KernelStdlib/CStringTests.h"
+#include "UnitTests/KernelStdlib/ExceptionTests.h"
 #include "UnitTests/Framework.h"
 #include "MemoryManager.h"
 #include "Print.h"
@@ -519,6 +520,7 @@ namespace UnitTests
         // No runtime tests for cstddef
         // No runtime tests for cstdint
         KernelStdlib::CString::Run();
+        KernelStdlib::Exception::Run();
         
         StdMoveTest();
         StdForwardTest();

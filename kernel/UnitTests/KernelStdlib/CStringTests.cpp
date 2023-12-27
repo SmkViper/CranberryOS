@@ -1,6 +1,7 @@
-#include <cstring>
+#include "CStringTests.h"
 
 #include <cstdint>
+#include <cstring>
 
 #include "../Framework.h"
 
