@@ -16,7 +16,6 @@ add_executable(kernel8.elf
     TaskStructs.h
     Timer.h Timer.cpp
     TypeInfo.cpp
-    UnitTests.h UnitTests.cpp
     user_Program.h user_Program.cpp
     user_SystemCall.h user_SystemCall.cpp user_SystemCall.S
     Utils.h Utils.cpp
