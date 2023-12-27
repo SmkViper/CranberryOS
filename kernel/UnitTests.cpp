@@ -14,6 +14,7 @@
 #include "UnitTests/KernelStdlib/TypeInfoTests.h"
 #include "UnitTests/KernelStdlib/UtilityTests.h"
 #include "UnitTests/Framework.h"
+#include "UnitTests/MemoryManagerTests.h"
 #include "MemoryManager.h"
 #include "Print.h"
 #include "Utils.h"
@@ -24,15 +25,6 @@
 namespace
 {
     using namespace ::UnitTests;
-
-    ///////////////////////////////////////////////////////////////////////////
-    // MemoryManager.h tests
-    ///////////////////////////////////////////////////////////////////////////
-
-    static_assert(MemoryManager::CalculateBlockStart(0x1, 0x1000) == 0x0, "Unexpected block start");
-    static_assert(MemoryManager::CalculateBlockEnd(0x1, 0x1000) == 0x0FFF, "Unexpected block end");
-    static_assert(MemoryManager::CalculateBlockStart(0x1024, 0x1000) == 0x1000, "Unexpected block start");
-    static_assert(MemoryManager::CalculateBlockEnd(0x1024, 0x1000) == 0x1FFF, "Unexpected block end");
 
     ///////////////////////////////////////////////////////////////////////////
     // Print.h tests
@@ -373,6 +365,8 @@ namespace UnitTests
         KernelStdlib::TypeInfo::Run();
         // No runtime tests for type_traits
         KernelStdlib::Utility::Run();
+
+        MemoryManager::Run();
         
         PrintNoArgsTest();
         PrintNoArgsTruncatedBufferTest();
