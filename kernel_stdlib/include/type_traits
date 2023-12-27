@@ -184,7 +184,7 @@ namespace std
     {
         // Tiny helper to add the type using statement to anything derived from it
         template<class __T>
-        struct type_identity {using type = __T;};
+        struct __type_identity {using type = __T;};
 
         // Pair of overloads to attempt to add a pointer to __T. If a pointer cannot be added to
         // __T, then the int overload will be removed from the overload set, leaving the vararg
@@ -192,9 +192,9 @@ namespace std
         // to __T, then overload resolution will pick the int version, since it's a better match
         // for the dummy int parameter passed by add_pointer
         template<class __T>
-        auto __try_add_pointer(int) -> type_identity<typename std::remove_reference_t<__T>*>;
+        auto __try_add_pointer(int) -> __type_identity<typename std::remove_reference_t<__T>*>;
         template<class __T>
-        auto __try_add_pointer(...) -> type_identity<__T>;
+        auto __try_add_pointer(...) -> __type_identity<__T>;
     }
 
     /**

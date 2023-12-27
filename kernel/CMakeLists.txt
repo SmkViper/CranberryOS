@@ -16,7 +16,6 @@ add_executable(kernel8.elf
     TaskStructs.h
     Timer.h Timer.cpp
     TypeInfo.cpp
-    UnitTests.h UnitTests.cpp
     user_Program.h user_Program.cpp
     user_SystemCall.h user_SystemCall.cpp user_SystemCall.S
     Utils.h Utils.cpp
@@ -31,6 +30,7 @@ target_link_libraries(kernel8.elf PRIVATE kernel_stdlib CranberryOS_Options Cran
 # information to the targets)
 add_subdirectory(AArch64)
 add_subdirectory(Peripherals)
+add_subdirectory(UnitTests)
 
 # GPU can't read elf files, so we have to extract the contents out to an img file so it can blindly load the file and
 # start execution at the expected offset

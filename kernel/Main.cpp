@@ -1,5 +1,6 @@
 #include "AArch64/CPU.h"
 #include "Peripherals/DeviceTree.h"
+#include "UnitTests/Framework.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
 #include "Main.h"
@@ -8,7 +9,6 @@
 #include "Print.h"
 #include "Scheduler.h"
 #include "Timer.h"
-#include "UnitTests.h"
 #include "user_Program.h"
 #include "Utils.h"
 

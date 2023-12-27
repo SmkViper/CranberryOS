@@ -19,7 +19,7 @@ set(CMAKE_C_COMPILER_TARGET ${triple})
 set(CMAKE_CXX_COMPILER_TARGET ${triple})
 
 set(CMAKE_C_FLAGS_INIT           "-ffreestanding -nostdinc -nostdlib -mcpu=cortex-a53+nosimd")
-set(CMAKE_CXX_FLAGS_INIT         "${CMAKE_C_FLAGS} -nostdinc++")
+set(CMAKE_CXX_FLAGS_INIT         "${CMAKE_C_FLAGS} -nostdinc++ -fno-rtti")
 
 set(CMAKE_EXE_LINKER_FLAGS  "-fuse-ld=lld -nostdlib" CACHE INTERNAL "")
 
