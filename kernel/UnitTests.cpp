@@ -12,6 +12,7 @@
 #include "UnitTests/KernelStdlib/ExceptionTests.h"
 #include "UnitTests/KernelStdlib/NewTests.h"
 #include "UnitTests/KernelStdlib/TypeInfoTests.h"
+#include "UnitTests/KernelStdlib/UtilityTests.h"
 #include "UnitTests/Framework.h"
 #include "MemoryManager.h"
 #include "Print.h"
@@ -23,70 +24,6 @@
 namespace
 {
     using namespace ::UnitTests;
-
-    ///////////////////////////////////////////////////////////////////////////
-    // utility tests
-    ///////////////////////////////////////////////////////////////////////////
-
-    struct MoveCopyCountStruct
-    {
-        MoveCopyCountStruct() = default;
-        MoveCopyCountStruct([[maybe_unused]] const MoveCopyCountStruct& aOther): CopyCount{1} {}
-        MoveCopyCountStruct([[maybe_unused]] MoveCopyCountStruct&& amOther): MoveCount{1} {}
-        MoveCopyCountStruct& operator=([[maybe_unused]] const MoveCopyCountStruct& aOther)
-        {
-            ++CopyCount;
-            return *this;
-        }
-        MoveCopyCountStruct& operator=([[maybe_unused]] MoveCopyCountStruct&& amOther)
-        {
-            ++MoveCount;
-            return *this;
-        }
-
-        uint32_t MoveCount = 0;
-        uint32_t CopyCount = 0;
-    };
-
-    /**
-     * Ensure std::move moves the type
-     */
-    void StdMoveTest()
-    {
-        MoveCopyCountStruct source;
-        auto dest = MoveCopyCountStruct{std::move(source)};
-
-        EmitTestResult(dest.MoveCount == 1, "std::move");
-    }
-
-    /**
-     * Helper to get us a forwarding ref (requires templates - templated lamdas are in C++20)
-     * 
-     * @param aForwardingRef The forwarding ref to forward to the destination object
-     * @param aResultFunctor The functor to call with the destination object
-     */
-    template<typename T, typename FunctorType>
-    void StdForwardTestHelper(T&& aForwardingRef, const FunctorType& aResultFunctor)
-    {
-        auto dest = MoveCopyCountStruct{std::forward<T>(aForwardingRef)};
-        aResultFunctor(dest);
-    }
-
-    /**
-     * Ensure std::forward forwards the type
-     */
-    void StdForwardTest()
-    {
-        MoveCopyCountStruct lvalueSource;
-        StdForwardTestHelper(lvalueSource, [](const MoveCopyCountStruct& aDest)
-        {
-            EmitTestResult(aDest.CopyCount == 1, "std::forward lvalue copy");
-        });
-        StdForwardTestHelper(std::move(lvalueSource), [](const MoveCopyCountStruct& aDest)
-        {
-            EmitTestResult(aDest.MoveCount == 1, "std::forward rvalue move");
-        });
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // MemoryManager.h tests
@@ -435,9 +372,7 @@ namespace UnitTests
         KernelStdlib::New::Run();
         KernelStdlib::TypeInfo::Run();
         // No runtime tests for type_traits
-        
-        StdMoveTest();
-        StdForwardTest();
+        KernelStdlib::Utility::Run();
         
         PrintNoArgsTest();
         PrintNoArgsTruncatedBufferTest();

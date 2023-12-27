@@ -9,4 +9,5 @@ target_sources(kernel8.elf
         NewTests.h NewTests.cpp
         TypeInfoTests.h TypeInfoTests.cpp
         TypeTraitsTests.cpp
+        UtilityTests.h UtilityTests.cpp
 )
