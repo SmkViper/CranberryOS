@@ -3,4 +3,5 @@ target_sources(kernel8.elf
         BitsetTests.h BitsetTests.cpp
         CLimitsTests.cpp
         CStdDefTests.cpp
+        CStdIntTests.cpp
 )
