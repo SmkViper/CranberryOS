@@ -3,6 +3,7 @@ target_sources(kernel8.elf
         Framework.h Framework.cpp
         MemoryManagerTests.h MemoryManagerTests.cpp
         PrintTests.h PrintTests.cpp
+        UtilsTests.h UtilsTests.cpp
 )
 
 add_subdirectory(KernelStdlib)
