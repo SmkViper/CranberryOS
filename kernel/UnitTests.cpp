@@ -11,6 +11,7 @@
 #include "UnitTests/KernelStdlib/CStringTests.h"
 #include "UnitTests/KernelStdlib/ExceptionTests.h"
 #include "UnitTests/KernelStdlib/NewTests.h"
+#include "UnitTests/KernelStdlib/TypeInfoTests.h"
 #include "UnitTests/Framework.h"
 #include "MemoryManager.h"
 #include "Print.h"
@@ -432,6 +433,8 @@ namespace UnitTests
         KernelStdlib::CString::Run();
         KernelStdlib::Exception::Run();
         KernelStdlib::New::Run();
+        KernelStdlib::TypeInfo::Run();
+        // No runtime tests for type_traits
         
         StdMoveTest();
         StdForwardTest();
