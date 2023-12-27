@@ -19,6 +19,14 @@ namespace UnitTests
 {
     namespace
     {
+        unsigned TestsPassing = 0;
+        unsigned TestsFailing = 0;
+        unsigned TestsSkipped = 0;
+
+        constexpr unsigned GreenColor = 32;
+        constexpr unsigned RedColor = 31;
+        constexpr unsigned YellowColor = 33;
+
         /**
          * Formats a colored string for terminal output
          * 
@@ -182,19 +190,22 @@ namespace UnitTests
         char passFailMessage[32];
         if (aResult)
         {
-            FormatColoredString(passFailMessage, "PASS", 32 /*green*/);
+            TestsPassing += 1;
+            FormatColoredString(passFailMessage, "PASS", GreenColor);
         }
         else
         {
-            FormatColoredString(passFailMessage, "FAIL", 31 /*red*/);
+            TestsFailing += 1;
+            FormatColoredString(passFailMessage, "FAIL", RedColor);
         }
         ::Print::FormatToMiniUART("[{}] {}\r\n", passFailMessage, apMessage);
     }
 
     void EmitTestSkipResult(char const* const apMessage)
     {
+        TestsSkipped += 1;
         char skipMessage[32];
-        FormatColoredString(skipMessage, "SKIP", 33 /*yellow*/);
+        FormatColoredString(skipMessage, "SKIP", YellowColor);
         ::Print::FormatToMiniUART("[{}] {}\r\n", skipMessage, apMessage);
     }
 
@@ -220,6 +231,22 @@ namespace UnitTests
         MemoryManager::Run();
         Print::Run();
         Utils::Run();
+
+        // Build a quick reference output at the end
+        char status[32];
+        if (TestsFailing != 0)
+        {
+            FormatColoredString(status, "FAIL", RedColor);
+        }
+        else if (TestsSkipped != 0)
+        {
+            FormatColoredString(status, "PASS", YellowColor);
+        }
+        else
+        {
+            FormatColoredString(status, "PASS", GreenColor);
+        }
+        ::Print::FormatToMiniUART("[{}] Passing: {} Failed: {} Skipped: {}\r\n", status, TestsPassing, TestsFailing, TestsSkipped);
     }
 
     void RunPostStaticDestructors()
