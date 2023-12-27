@@ -15,6 +15,7 @@
 #include "UnitTests/KernelStdlib/UtilityTests.h"
 #include "UnitTests/Framework.h"
 #include "UnitTests/MemoryManagerTests.h"
+#include "UnitTests/PrintTests.h"
 #include "MemoryManager.h"
 #include "Print.h"
 #include "Utils.h"
@@ -25,140 +26,6 @@
 namespace
 {
     using namespace ::UnitTests;
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Print.h tests
-    ///////////////////////////////////////////////////////////////////////////
-
-    // We can't really "test" output to MiniUART (since we can't read what we output) but we can test the buffer output
-
-    /**
-     * Ensure printing to a buffer with no arguments works
-     */
-    void PrintNoArgsTest()
-    {
-        const char expectedOutput[] = "Hello World";
-        char buffer[256];
-        Print::FormatToBuffer(buffer, expectedOutput);
-
-        EmitTestResult(strcmp(buffer, expectedOutput) == 0, "Print::FormatToBuffer with no args");
-    }
-
-    /**
-     * Ensure printing to a buffer with no arguments and a too-small buffer works
-     */
-    void PrintNoArgsTruncatedBufferTest()
-    {
-        const char expectedOutput[] = "Hello World";
-        char buffer[5];
-        Print::FormatToBuffer(buffer, expectedOutput);
-
-        EmitTestResult(strcmp(buffer, "Hell") == 0, "Print::FormatToBuffer with no args and a too-small buffer");
-    }
-
-    /**
-     * Ensure printing to a buffer with string arguments (both raw string and pointer) works
-     */
-    void PrintStringArgsTest()
-    {
-        const char* pstringPointer = "Again";
-        char buffer[256];
-        Print::FormatToBuffer(buffer, "Hello {} {}", "World", pstringPointer);
-        EmitTestResult(strcmp(buffer, "Hello World Again") == 0, "Print::FormatToBuffer with string arguments");
-    }
-
-    /**
-     * Ensure printing to a buffer with string arguments (both raw string and pointer) and a too-small buffer works
-     */
-    void PrintStringArgsTruncatedBufferTest()
-    {
-        const char* pstringPointer = "Again";
-        char buffer[8];
-        Print::FormatToBuffer(buffer, "Hello {} {}", "World", pstringPointer);
-        EmitTestResult(strcmp(buffer, "Hello W") == 0, "Print::FormatToBuffer with string arguments and a too-small buffer");
-    }
-
-    /**
-     * Ensure printing to a buffer with integer arguments works
-     */
-    void PrintIntegerArgsTest()
-    {
-        char buffer[256];
-        Print::FormatToBuffer(buffer, "Test {}, test {}, test {}", 1u, 102u, 0u);
-        EmitTestResult(strcmp(buffer, "Test 1, test 102, test 0") == 0, "Print::FormatToBuffer with integer arguments");
-
-        Print::FormatToBuffer(buffer, "Format Test {:}", 1u);
-        EmitTestResult(strcmp(buffer, "Format Test 1") == 0, "Print::FormatToBuffer with integer arguments and empty format string");
-
-        constexpr auto testBinaryNumber = 0b1100'1010u;
-        Print::FormatToBuffer(buffer, "Binary Test {:b} {:B}", testBinaryNumber, testBinaryNumber);
-        EmitTestResult(strcmp(buffer, "Binary Test 0b11001010 0B11001010") == 0, "Print::FormatToBuffer with integer arguments and binary format string");
-
-        constexpr auto testOctalNumber = 0123u;
-        Print::FormatToBuffer(buffer, "Octal Test {:o} {:o}", testOctalNumber, 0u);
-        EmitTestResult(strcmp(buffer, "Octal Test 0123 0") == 0, "Print::FormatToBuffer with integer arguments and octal format string");
-
-        constexpr auto testDecimalNumber = 123u;
-        Print::FormatToBuffer(buffer, "Decimal Test {:d}", testDecimalNumber, testDecimalNumber);
-        EmitTestResult(strcmp(buffer, "Decimal Test 123") == 0, "Print::FormatToBuffer with integer arguments and decimal format string");
-
-        constexpr auto testHexNumber = 0x11ff89abu;
-        Print::FormatToBuffer(buffer, "Hex Test {:x} {:X}", testHexNumber, testHexNumber);
-        EmitTestResult(strcmp(buffer, "Hex Test 0x11ff89ab 0X11FF89AB") == 0, "Print::FormatToBuffer with integer arguments and hex format string");
-    }
-
-    /**
-     * Ensure printing to a buffer with integer arguments and a too-small buffer works
-     */
-    void PrintIntegerArgsTruncatedBufferTest()
-    {
-        char buffer[15];
-        Print::FormatToBuffer(buffer, "Test {}, test {}", 1u, 102u);
-        EmitTestResult(strcmp(buffer, "Test 1, test 1") == 0, "Print::FormatToBuffer with integer arguments and a too-small buffer");
-    }
-
-    /**
-     * Ensure escaped braces are printed
-     */
-    void PrintEscapedBracesTest()
-    {
-        char buffer[256];
-        Print::FormatToBuffer(buffer, "Open {{ close }}");
-        EmitTestResult(strcmp(buffer, "Open { close }") == 0, "Print::FormatToBuffer escaped braces");
-    }
-
-    /**
-     * Ensure mismatched braces are handled
-     */
-    void PrintMismatchedBracesTest()
-    {
-        char buffer[256];
-        Print::FormatToBuffer(buffer, "Close } some other text");
-        EmitTestResult(strcmp(buffer, "Close ") == 0, "Print::FormatToBuffer mismatched close brace");
-
-        Print::FormatToBuffer(buffer, "Open { some other text");
-        EmitTestResult(strcmp(buffer, "Open ") == 0, "Print::FormatToBuffer mismatched open brace");
-    }
-
-    /**
-     * Ensure invalid brace contents are handled
-     */
-    void PrintInvalidBraceContentsTest()
-    {
-        char buffer[256];
-        Print::FormatToBuffer(buffer, "Hello {some bad text} world", "bad");
-        EmitTestResult(strcmp(buffer, "Hello bad world") == 0, "Print::FormatToBuffer invalid brace contents");
-    }
-
-    /**
-     * Ensure out of range braces are handled
-     */
-    void PrintOutOfRangeBracesTest()
-    {
-        char buffer[256];
-        Print::FormatToBuffer(buffer, "Hello {} world {} again", "new");
-        EmitTestResult(strcmp(buffer, "Hello new world {1} again") == 0, "Print::FormatToBuffer out of range braces");
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // Utils.h tests
@@ -367,17 +234,7 @@ namespace UnitTests
         KernelStdlib::Utility::Run();
 
         MemoryManager::Run();
-        
-        PrintNoArgsTest();
-        PrintNoArgsTruncatedBufferTest();
-        PrintStringArgsTest();
-        PrintStringArgsTruncatedBufferTest();
-        PrintIntegerArgsTest();
-        PrintIntegerArgsTruncatedBufferTest();
-        PrintEscapedBracesTest();
-        PrintMismatchedBracesTest();
-        PrintInvalidBraceContentsTest();
-        PrintOutOfRangeBracesTest();
+        Print::Run();
 
         ReadWriteMultiBitValueTest();
         ReadWriteMultiBitEnumTest();

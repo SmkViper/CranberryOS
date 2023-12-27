@@ -86,7 +86,7 @@ namespace Print
              * 
              * @param apBuffer Buffer to write to - assumed to be BufferSize in size and non-null
              */
-            explicit StaticBufferOutputFunctor(char* apBuffer): pBuffer{apBuffer} {}
+            explicit StaticBufferOutputFunctor(char (&apBuffer)[BufferSize]): pBuffer{apBuffer} {}
 
             /**
              * Obtains the number of characters written to the buffer
