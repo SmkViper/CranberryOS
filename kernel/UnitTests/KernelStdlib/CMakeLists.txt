@@ -7,4 +7,5 @@ target_sources(kernel8.elf
         CStringTests.h CStringTests.cpp
         ExceptionTests.h ExceptionTests.cpp
         NewTests.h NewTests.cpp
+        TypeTraitsTests.cpp
 )
