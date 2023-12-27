@@ -8,6 +8,7 @@
 
 #include "AArch64/CPU.h"
 #include "UnitTests/KernelStdlib/BitsetTests.h"
+#include "UnitTests/KernelStdlib/CStringTests.h"
 #include "UnitTests/Framework.h"
 #include "MemoryManager.h"
 #include "Print.h"
@@ -19,42 +20,6 @@
 namespace
 {
     using namespace ::UnitTests;
-
-    ///////////////////////////////////////////////////////////////////////////
-    // cstring tests
-    ///////////////////////////////////////////////////////////////////////////
-
-    void MemsetTest()
-    {
-        char charArray[4] = {'a', 'b', 'c', 'd'};
-        uint32_t intArray[4] = {10u, 15u, 20u, 25u};
-
-        EmitTestResult(memset(charArray, 0u, 2u) == charArray, "memset char array return value");
-        EmitTestResult((charArray[0] == 0u) && (charArray[1] == 0u) && (charArray[2] == 'c') && (charArray[3] == 'd'), "memset fills partial char array");
-
-        EmitTestResult(memset(intArray, 1u, sizeof(uint32_t) * 2) == intArray, "memset int array return value");
-        constexpr auto expectedInt = (1u << 24u) | (1u << 16u) | (1u << 8u) | 1u;
-        EmitTestResult((intArray[0] == expectedInt) && (intArray[1] == expectedInt) && (intArray[2] == 20u) && (intArray[3] == 25u), "memset fills partial int array");
-    }
-
-    void StrcmpEqualTest()
-    {
-        EmitTestResult(strcmp("Hello", "Hello") == 0, "strcmp equality");
-    }
-
-    void StrcmpLTTest()
-    {
-        EmitTestResult(strcmp("ABC", "BCD") < 0, "strcmp less than");
-        EmitTestResult(strcmp("ABC", "ACD") < 0, "strcmp less than - partial");
-        EmitTestResult(strcmp("ABC", "ABCD") < 0, "strcmp less than - differing lengths");
-    }
-
-    void StrcmpGTTest()
-    {
-        EmitTestResult(strcmp("BCD", "ABC") > 0, "strcmp greater than");
-        EmitTestResult(strcmp("ACD", "ABC") > 0, "strcmp greater than - partial");
-        EmitTestResult(strcmp("ABCD", "ABC") > 0, "strcmp greater than - differing lengths");
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // type_traits tests
@@ -553,13 +518,10 @@ namespace UnitTests
         // No runtime tests for climits
         // No runtime tests for cstddef
         // No runtime tests for cstdint
+        KernelStdlib::CString::Run();
         
         StdMoveTest();
         StdForwardTest();
-        MemsetTest();
-        StrcmpEqualTest();
-        StrcmpLTTest();
-        StrcmpGTTest();
         
         PrintNoArgsTest();
         PrintNoArgsTruncatedBufferTest();

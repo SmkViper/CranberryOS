@@ -4,4 +4,5 @@ target_sources(kernel8.elf
         CLimitsTests.cpp
         CStdDefTests.cpp
         CStdIntTests.cpp
+        CStringTests.cpp
 )
