@@ -50,6 +50,7 @@ namespace AArch64
             template<uint64_t AddressMask>
             class BlockT
             {
+                friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
                 static constexpr uint64_t Type = 0b01;
             public:
                 /**
@@ -77,20 +78,6 @@ namespace AArch64
                 {
                     // #TODO: Range-check index with pointers per table - or make an array view type
                     apTable[aIndex] = aValue.DescriptorBits.to_ullong();
-                }
-
-                /**
-                 * Reads the given entry from the table (assumes entry is a block entry)
-                 * 
-                 * @param apTable Table to read from
-                 * @param aIndex Index to read from in the table
-                 * @return The read block entry
-                 */
-                static BlockT Read(uint64_t const apTable[], size_t const aIndex)
-                {
-                    // #TODO: Range-check index with pointers per table - or make an array view type
-                    // #TODO: Check the entry type to make sure it's a block entry
-                    return BlockT{ apTable[aIndex] };
                 }
 
                 /**

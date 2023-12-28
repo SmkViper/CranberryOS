@@ -122,28 +122,42 @@ namespace UnitTests
         }
     }
 
-    void EmitTestResult(const bool aResult, const char* const apMessage)
+    namespace Details
     {
-        char passFailMessage[32];
-        if (aResult)
+        /**
+         * Emits pass or failure based on a result bool
+         * 
+         * @param aResult The result of the test
+         * @param apMessage The message to emit
+         */
+        void EmitTestResultImpl(const bool aResult, const char* const apMessage)
         {
-            TestsPassing += 1;
-            FormatColoredString(passFailMessage, "PASS", GreenColor);
+            char passFailMessage[32];
+            if (aResult)
+            {
+                TestsPassing += 1;
+                FormatColoredString(passFailMessage, "PASS", GreenColor);
+            }
+            else
+            {
+                TestsFailing += 1;
+                FormatColoredString(passFailMessage, "FAIL", RedColor);
+            }
+            ::Print::FormatToMiniUART("[{}] {}\r\n", passFailMessage, apMessage);
         }
-        else
-        {
-            TestsFailing += 1;
-            FormatColoredString(passFailMessage, "FAIL", RedColor);
-        }
-        ::Print::FormatToMiniUART("[{}] {}\r\n", passFailMessage, apMessage);
-    }
 
-    void EmitTestSkipResult(char const* const apMessage)
-    {
-        TestsSkipped += 1;
-        char skipMessage[32];
-        FormatColoredString(skipMessage, "SKIP", YellowColor);
-        ::Print::FormatToMiniUART("[{}] {}\r\n", skipMessage, apMessage);
+        /**
+         * Emits a skip message
+         * 
+         * @param apMessage The message to emit
+         */
+        void EmitTestSkipResultImpl(char const* const apMessage)
+        {
+            TestsSkipped += 1;
+            char skipMessage[32];
+            FormatColoredString(skipMessage, "SKIP", YellowColor);
+            ::Print::FormatToMiniUART("[{}] {}\r\n", skipMessage, apMessage);
+        }
     }
 
     void Run()
