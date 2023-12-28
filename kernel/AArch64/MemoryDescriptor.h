@@ -274,6 +274,7 @@ namespace AArch64
         */
         class Table
         {
+            friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
             static constexpr uint64_t Type = 0b11;
         public:
             /**
@@ -298,15 +299,6 @@ namespace AArch64
              * @param aIndex Index to write to in the table
             */
             static void Write(Table aValue, uint64_t apTable[], size_t aIndex);
-
-            /**
-             * Reads the given entry from the table (assumes entry is a table entry)
-             * 
-             * @param apTable Table to read from
-             * @param aIndex Index to read from in the table
-             * @return The read table entry
-            */
-            static Table Read(uint64_t apTable[], size_t aIndex);
 
             /**
              * Checks to see if the value represents a descriptor of this type
