@@ -127,7 +127,7 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 , "Block {} descriptor AP get/set", apBlockTypeName);
 
             prevDescriptorValue = Details::TestAccessor::GetDescriptorValue(testDescriptor);
-            
+
             // AF [10]
             auto const rawAF = true;
             testDescriptor.AF(rawAF);
@@ -143,6 +143,59 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 && buffer[2] == 0
                 , "Block {} descriptor Write", apBlockTypeName);
         }
+
+        /**
+         * Tests on page descriptors
+         */
+        void PageDescriptorTest()
+        {
+            ::AArch64::Descriptor::Page testDescriptor;
+
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0b11, "Page descriptor construction");
+            EmitTestResult(!::AArch64::Descriptor::Page::IsType(0b00)
+                && !::AArch64::Descriptor::Page::IsType(0b01)
+                && !::AArch64::Descriptor::Page::IsType(0b10)
+                && ::AArch64::Descriptor::Page::IsType(0b11)
+                , "Page descriptor descriptor IsType with just type bits");
+            EmitTestResult(::AArch64::Descriptor::Page::IsType(0b1111), "Page descriptor with non type bits");
+
+            testDescriptor.Address(0xFEFE'FEFE'FEFE'FEFE);
+            auto const readAddress = testDescriptor.Address();
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0x0000'FEFE'FEFE'F003
+                && readAddress == 0x0000'FEFE'FEFE'F000
+                , "Page descriptor Address get/set");
+
+            // AttrIndx [4:2]
+            auto const rawAttrIndex = 0b101;
+            testDescriptor.AttrIndx(rawAttrIndex);
+            auto const readRawIndex = testDescriptor.AttrIndx();
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0x0000'FEFE'FEFE'F017
+                && readRawIndex == rawAttrIndex
+                , "Page descriptor AttrIndx get/set");
+            
+            // AP [7:6]
+            auto const rawAP = ::AArch64::Descriptor::Page::AccessPermissions::KernelROUserRO; // 0b11
+            testDescriptor.AP(rawAP);
+            auto const readAP = testDescriptor.AP();
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0x0000'FEFE'FEFE'F0D7
+                && rawAP == readAP
+                , "Page descriptor AP get/set");
+            
+            // AF [10]
+            auto const rawAF = true;
+            testDescriptor.AF(rawAF);
+            auto const readAF = testDescriptor.AF();
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0x0000'FEFE'FEFE'F4D7
+                && rawAF == readAF
+                , "Page descriptor AF get/set");
+            
+            uint64_t buffer[3] = {};
+            ::AArch64::Descriptor::Page::Write(testDescriptor, buffer, 1);
+            EmitTestResult(buffer[0] == 0
+                && buffer[1] == Details::TestAccessor::GetDescriptorValue(testDescriptor)
+                && buffer[2] == 0
+                , "Page descriptor Write");
+        }
     }
 
     void Run()
@@ -151,5 +204,6 @@ namespace UnitTests::AArch64::MemoryDescriptor
         TableDescriptorTest();
         BlockDescriptorTest<::AArch64::Descriptor::Details::L1Address_Mask>("L1");
         BlockDescriptorTest<::AArch64::Descriptor::Details::L2Address_Mask>("L2");
+        PageDescriptorTest();
     }
 }

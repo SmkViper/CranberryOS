@@ -27,13 +27,6 @@ namespace AArch64
             apTable[aIndex] = aValue.DescriptorBits.to_ullong();
         }
 
-        Page Page::Read(uint64_t apTable[], size_t const aIndex)
-        {
-            // #TODO: Range-check index with pointers per table - or make an array view type
-            // #TODO: Check the entry type to make sure it's a table entry
-            return Page{ apTable[aIndex] };
-        }
-
         void Page::AttrIndx(uint8_t const aIndex)
         {
             // #TODO: Range check aIndex

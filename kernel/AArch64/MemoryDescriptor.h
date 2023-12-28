@@ -355,6 +355,7 @@ namespace AArch64
         */
         class Page
         {
+            friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
             static constexpr uint64_t Type = 0b11;
         public:
             /**
@@ -379,15 +380,6 @@ namespace AArch64
              * @param aIndex Index to write to in the table
             */
             static void Write(Page aValue, uint64_t apTable[], size_t aIndex);
-
-            /**
-             * Reads the given entry from the table (assumes entry is a page entry)
-             * 
-             * @param apTable Table to read from
-             * @param aIndex Index to read from in the table
-             * @return The read page entry
-            */
-            static Page Read(uint64_t apTable[], size_t aIndex);
 
             /**
              * Checks to see if the value represents a descriptor of this type
