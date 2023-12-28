@@ -6,9 +6,16 @@
 
 #include "../Utils.h"
 
-namespace UnitTests::AArch64::MemoryDescriptor::Details
+namespace UnitTests::AArch64
 {
-    struct TestAccessor;
+    namespace MemoryDescriptor::Details
+    {
+        struct TestAccessor;
+    }
+    namespace MemoryPageTables::Details
+    {
+        struct TestAccessor;
+    }
 }
 
 namespace AArch64
@@ -51,6 +58,7 @@ namespace AArch64
             class BlockT
             {
                 friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+                friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
                 static constexpr uint64_t Type = 0b01;
             public:
                 /**
@@ -224,6 +232,7 @@ namespace AArch64
         class Fault
         {
             friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+            friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
             static constexpr uint64_t Type = 0b00;
         public:
             /**
@@ -262,6 +271,7 @@ namespace AArch64
         class Table
         {
             friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+            friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
             static constexpr uint64_t Type = 0b11;
         public:
             /**
@@ -356,6 +366,7 @@ namespace AArch64
         class Page
         {
             friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+            friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
             static constexpr uint64_t Type = 0b11;
         public:
             /**
