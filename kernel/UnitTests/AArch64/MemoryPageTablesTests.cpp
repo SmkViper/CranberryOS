@@ -94,7 +94,7 @@ namespace UnitTests::AArch64::MemoryPageTables
          * @param apPageViewName The name of the page view for test output
          * @param aVirtualAddress The virtual address to test with
          * @param aExpectedTableIndex The expected table index to be written to/read from
-        */
+         */
         template<typename PageViewT, typename DescriptorT>
         void PageViewTest(char const* const apPageViewName, uintptr_t const aVirtualAddress, uint8_t const aExpectedTableIndex)
         {
