@@ -6,14 +6,23 @@
 
 #include "../Utils.h"
 
+namespace UnitTests::AArch64
+{
+    namespace MemoryDescriptor::Details
+    {
+        struct TestAccessor;
+    }
+    namespace MemoryPageTables::Details
+    {
+        struct TestAccessor;
+    }
+}
+
 namespace AArch64
 {
-    namespace PageTable
+    namespace PageTable::Details
     {
-        namespace Details
-        {
-            struct VisitHelpers;
-        }
+        struct VisitHelpers;
     }
 
     namespace Descriptor
@@ -27,7 +36,7 @@ namespace AArch64
 
             /**
              * Tag to lock out certain constructors unless it's from an approved location
-            */
+             */
             struct ValueConstructTag
             {
                 // Let the entry visitors make descriptors from raw values
@@ -48,6 +57,8 @@ namespace AArch64
             template<uint64_t AddressMask>
             class BlockT
             {
+                friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+                friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
                 static constexpr uint64_t Type = 0b01;
             public:
                 /**
@@ -75,20 +86,6 @@ namespace AArch64
                 {
                     // #TODO: Range-check index with pointers per table - or make an array view type
                     apTable[aIndex] = aValue.DescriptorBits.to_ullong();
-                }
-
-                /**
-                 * Reads the given entry from the table (assumes entry is a block entry)
-                 * 
-                 * @param apTable Table to read from
-                 * @param aIndex Index to read from in the table
-                 * @return The read block entry
-                 */
-                static BlockT Read(uint64_t const apTable[], size_t const aIndex)
-                {
-                    // #TODO: Range-check index with pointers per table - or make an array view type
-                    // #TODO: Check the entry type to make sure it's a block entry
-                    return BlockT{ apTable[aIndex] };
                 }
 
                 /**
@@ -234,6 +231,8 @@ namespace AArch64
         */
         class Fault
         {
+            friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+            friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
             static constexpr uint64_t Type = 0b00;
         public:
             /**
@@ -271,6 +270,8 @@ namespace AArch64
         */
         class Table
         {
+            friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+            friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
             static constexpr uint64_t Type = 0b11;
         public:
             /**
@@ -295,15 +296,6 @@ namespace AArch64
              * @param aIndex Index to write to in the table
             */
             static void Write(Table aValue, uint64_t apTable[], size_t aIndex);
-
-            /**
-             * Reads the given entry from the table (assumes entry is a table entry)
-             * 
-             * @param apTable Table to read from
-             * @param aIndex Index to read from in the table
-             * @return The read table entry
-            */
-            static Table Read(uint64_t apTable[], size_t aIndex);
 
             /**
              * Checks to see if the value represents a descriptor of this type
@@ -373,6 +365,8 @@ namespace AArch64
         */
         class Page
         {
+            friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
+            friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
             static constexpr uint64_t Type = 0b11;
         public:
             /**
@@ -397,15 +391,6 @@ namespace AArch64
              * @param aIndex Index to write to in the table
             */
             static void Write(Page aValue, uint64_t apTable[], size_t aIndex);
-
-            /**
-             * Reads the given entry from the table (assumes entry is a page entry)
-             * 
-             * @param apTable Table to read from
-             * @param aIndex Index to read from in the table
-             * @return The read page entry
-            */
-            static Page Read(uint64_t apTable[], size_t aIndex);
 
             /**
              * Checks to see if the value represents a descriptor of this type

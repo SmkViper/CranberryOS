@@ -10,13 +10,6 @@ namespace AArch64
             apTable[aIndex] = aValue.DescriptorBits.to_ullong();
         }
 
-        Table Table::Read(uint64_t apTable[], size_t const aIndex)
-        {
-            // #TODO: Range-check index with pointers per table - or make an array view type
-            // #TODO: Check the entry type to make sure it's a table entry
-            return Table{ apTable[aIndex] };
-        }
-
         void Table::Address(uintptr_t const aAddress)
         {
             // #TODO: Should probably range check address to make sure the mask doesn't pull off any bits
@@ -32,13 +25,6 @@ namespace AArch64
         {
             // #TODO: Range-check index with pointers per table - or make an array view type
             apTable[aIndex] = aValue.DescriptorBits.to_ullong();
-        }
-
-        Page Page::Read(uint64_t apTable[], size_t const aIndex)
-        {
-            // #TODO: Range-check index with pointers per table - or make an array view type
-            // #TODO: Check the entry type to make sure it's a table entry
-            return Page{ apTable[aIndex] };
         }
 
         void Page::AttrIndx(uint8_t const aIndex)

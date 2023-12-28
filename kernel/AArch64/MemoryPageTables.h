@@ -6,6 +6,11 @@
 
 #include "MemoryDescriptor.h"
 
+namespace UnitTests::AArch64::MemoryPageTables::Details
+{
+    struct TestAccessor;
+}
+
 namespace AArch64
 {
     namespace PageTable
@@ -70,32 +75,35 @@ namespace AArch64
                 }
             };
 
+            template<uint64_t AddressShift, class... DescriptorTypes>
+            class PageView;
+
+            /**
+             * Tag to lock out certain constructors unless it's from an approved location
+             */
+            struct EntryConstructTag
+            {
+                // Let the page view and test code construct entries
+                template<uint64_t AddressShift, class... DescriptorTypes>
+                friend class PageView;
+                friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
+            private:
+                EntryConstructTag() {};
+            };
+
             /**
              * An entry in a table
              */
             template<typename... DescriptorTypes>
             class Entry
             {
-                template<typename T>
-                static constexpr bool ValidType = ((std::is_same_v<T, DescriptorTypes>) || ...);
-
             public:
-                /**
-                 * Constructs an entry from a descriptor. Only valid if DescriptorT is one of the types the entry allows
-                 * 
-                 * @param aDescriptor The descriptor to construct from
-                 */
-                template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
-                explicit Entry(DescriptorT const aDescriptor)
-                    : Value{ aDescriptor.GetValue() }
-                {}
-
                 /**
                  * Constructs an entry from the given raw value
                  * 
                  * @param aValue The value to make the entry from
                  */
-                explicit Entry(uint64_t const aValue)
+                Entry(uint64_t const aValue, EntryConstructTag)
                     : Value{ aValue }
                 {}
 
@@ -152,7 +160,7 @@ namespace AArch64
                 {
                     auto const tableIndex = (aVirtualAddress >> AddressShift) & AddressMask;
                     // #TODO: Assert if tableIndex is out of range
-                    return Entry{ pTable[tableIndex] };
+                    return Entry{ pTable[tableIndex], EntryConstructTag{} };
                 }
 
                 /**

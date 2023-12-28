@@ -6,4 +6,5 @@ target_sources(kernel8.elf
         UtilsTests.h UtilsTests.cpp
 )
 
+add_subdirectory(AArch64)
 add_subdirectory(KernelStdlib)

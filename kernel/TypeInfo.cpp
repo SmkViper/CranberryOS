@@ -1,7 +1,6 @@
 #include <typeinfo>
 
-// TODO
-// Implementing what is needed for the linker to be happy with virtual functions
+// #TODO: Still missing some classes
 // See: http://itanium-cxx-abi.github.io/cxx-abi/abi.html#rtti-layout
 
 extern "C"
@@ -11,7 +10,7 @@ extern "C"
      */
     void __cxa_pure_virtual()
     {
-        // TODO
+        // #TODO
         // infinite loop for now
         while (true) {}
     }
@@ -19,18 +18,77 @@ extern "C"
 
 namespace __cxxabiv1
 {
-    class __class_type_info: public std::type_info
+    class __fundamental_type_info: public std::type_info
     {
     public:
         /**
-         * Constructor
+         * Destructor
          * 
-         * @param __apName Mangled class name
+         * NOTE: Intentionally NOT =default inside the definition because that
+         * confuses the compiler since it will be looking for the first
+         * virtual, non-inline function to designate as a "key function".
          */
-        explicit __class_type_info(const char* __apName)
-            : type_info{__apName}
-        {}
+        virtual ~__fundamental_type_info();
+    };
 
+    // Define OUTSIDE class so compiler can find the vtable
+    __fundamental_type_info::~__fundamental_type_info() = default;
+
+    /**
+     * Base for both pointer types and pointer-to-member types
+     */
+    class __pbase_type_info: public std::type_info
+    {
+    public:
+        unsigned int __flags;
+        std::type_info const* __pointee;
+
+        enum __masks
+        {
+            __const_mask = 0x1,
+            __volatile_mask = 0x2,
+            __restrict_mask = 0x4,
+            __incomplete_mask = 0x8,
+            __incomplete_class_mask = 0x10,
+            __transaction_safe_mask = 0x20,
+            __noexcept_mask = 0x40
+        };
+
+        /**
+         * Destructor
+         * 
+         * NOTE: Intentionally NOT =default inside the definition because that
+         * confuses the compiler since it will be looking for the first
+         * virtual, non-inline function to designate as a "key function".
+         */
+        virtual ~__pbase_type_info();
+    };
+
+    // Define OUTSIDE class so compiler can find the vtable
+    __pbase_type_info::~__pbase_type_info() = default;
+
+    class __pointer_type_info: public __pbase_type_info
+    {
+    public:
+        /**
+         * Destructor
+         * 
+         * NOTE: Intentionally NOT =default inside the definition because that
+         * confuses the compiler since it will be looking for the first
+         * virtual, non-inline function to designate as a "key function".
+         */
+        virtual ~__pointer_type_info();
+    };
+
+    // Define OUTSIDE class so compiler can find the vtable
+    __pointer_type_info::~__pointer_type_info() = default;
+
+    /**
+     * Classes having no bases, and as a base class for the other type_info types
+     */
+    class __class_type_info: public std::type_info
+    {
+    public:
         /**
          * Destructor
          * 
@@ -44,21 +102,13 @@ namespace __cxxabiv1
     // Define OUTSIDE class so compiler can find the vtable
     __class_type_info::~__class_type_info() = default;
 
+    /**
+     * For classes with a single public non-virtual base at offset zero
+     */
     class __si_class_type_info: public __class_type_info
     {
     public:
-        const __class_type_info* __base_type;
-
-        /**
-         * Constructor
-         * 
-         * @param __apName Mangled class name
-         * @param __apBase The base class this one inherits from
-         */
-        explicit __si_class_type_info(const char* __apName, const __class_type_info* __apBase)
-            : __class_type_info{__apName}
-            , __base_type{__apBase}
-        {}
+        __class_type_info const* __base_type;
 
         /**
          * Destructor
