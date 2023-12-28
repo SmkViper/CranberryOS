@@ -5,6 +5,7 @@
 #include "../AArch64/CPU.h"
 #include "../Print.h"
 #include "AArch64/CPUTests.h"
+#include "AArch64/MemoryDescriptorTests.h"
 #include "KernelStdlib/BitsetTests.h"
 #include "KernelStdlib/CStringTests.h"
 #include "KernelStdlib/ExceptionTests.h"
@@ -151,6 +152,7 @@ namespace UnitTests
         StaticCppConstructorTest();
 
         AArch64::CPU::Run();
+        AArch64::MemoryDescriptor::Run();
 
         KernelStdlib::Bitset::Run();
         // No runtime tests for climits

@@ -6,14 +6,16 @@
 
 #include "../Utils.h"
 
+namespace UnitTests::AArch64::MemoryDescriptor::Details
+{
+    struct TestAccessor;
+}
+
 namespace AArch64
 {
-    namespace PageTable
+    namespace PageTable::Details
     {
-        namespace Details
-        {
-            struct VisitHelpers;
-        }
+        struct VisitHelpers;
     }
 
     namespace Descriptor
@@ -234,6 +236,7 @@ namespace AArch64
         */
         class Fault
         {
+            friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
             static constexpr uint64_t Type = 0b00;
         public:
             /**
