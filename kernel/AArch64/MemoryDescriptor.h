@@ -29,7 +29,7 @@ namespace AArch64
 
             /**
              * Tag to lock out certain constructors unless it's from an approved location
-            */
+             */
             struct ValueConstructTag
             {
                 // Let the entry visitors make descriptors from raw values
