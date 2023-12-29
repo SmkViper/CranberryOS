@@ -65,3 +65,10 @@ For now, this is just a personal exploration project, so outside contributions a
 
 ## License
 This project is licensed under the MIT License.
+
+## Acknowledgements
+Thank you to the following projects and websites for the huge amount of assistance and reference material (in no particular order):
+* [OSDev Wiki](https://wiki.osdev.org/Expanded_Main_Page)
+* [bztsrc's Raspberry Pi 3 bare metal github](https://github.com/bztsrc/raspi3-tutorial)
+* [s-matyukevich's Raspberry Pi OS development github](https://github.com/s-matyukevich/raspberry-pi-os)
+* [SerenityOS's rapidly progressing ARM port](https://github.com/SerenityOS/serenity)
