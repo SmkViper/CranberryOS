@@ -2,11 +2,10 @@
 
 #include <cstdint>
 
-#include "../AArch64/CPU.h"
-#include "../Print.h"
 #include "AArch64/CPUTests.h"
 #include "AArch64/MemoryDescriptorTests.h"
 #include "AArch64/MemoryPageTablesTests.h"
+#include "AArch64/SystemRegistersTests.h"
 #include "KernelStdlib/BitsetTests.h"
 #include "KernelStdlib/CStringTests.h"
 #include "KernelStdlib/ExceptionTests.h"
@@ -169,6 +168,7 @@ namespace UnitTests
         AArch64::CPU::Run();
         AArch64::MemoryDescriptor::Run();
         AArch64::MemoryPageTables::Run();
+        AArch64::SystemRegisters::Run();
 
         KernelStdlib::Bitset::Run();
         // No runtime tests for climits
@@ -181,8 +181,17 @@ namespace UnitTests
         // No runtime tests for type_traits
         KernelStdlib::Utility::Run();
 
+        // #TODO: Exceptions.cpp untested (currently just unimplemented stubs)
+        // #TODO: ExceptionVectorHandlers.h/cpp/S untested (not sure if testable)
+        // #TODO: IRQ.h/S untested (likely untestable)
         MemoryManager::Run();
+        // #TODO: MiniUart.h/cpp untested (likely untestable - though basically tested due to all our UART output)
         Print::Run();
+        // #TODO: Scheduler.h/cpp/S untested (not sure if testable, other than our running user apps)
+        // #TODO: SystemCall.cpp untested (not sure if testable, other than our running user apps)
+        // #TODO: TaskStructs.h untested (currently just contains POD types)
+        // #TODO: Timer.h/cpp untested (not sure if testable, as testing might disrupt OS behavior)
+        // #TODO: TypeInfo.cpp untested (currently just contains types filled by the compiler)
         Utils::Run();
 
         // Build a quick reference output at the end
