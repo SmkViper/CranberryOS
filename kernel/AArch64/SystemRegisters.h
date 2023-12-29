@@ -903,6 +903,7 @@ namespace AArch64
     */
     class TTBRn_EL1
     {
+        friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
         static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
     public:
         /**
