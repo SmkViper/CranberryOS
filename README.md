@@ -72,3 +72,4 @@ Thank you to the following projects and websites for the huge amount of assistan
 * [bztsrc's Raspberry Pi 3 bare metal github](https://github.com/bztsrc/raspi3-tutorial)
 * [s-matyukevich's Raspberry Pi OS development github](https://github.com/s-matyukevich/raspberry-pi-os)
 * [SerenityOS's rapidly progressing ARM port](https://github.com/SerenityOS/serenity)
+* [lefticus' CMake template](https://github.com/cpp-best-practices/cmake_template)
