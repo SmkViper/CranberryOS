@@ -61,10 +61,29 @@ namespace UnitTests::AArch64::SystemRegisters
             );
             EmitTestResult(Details::TestAccessor::GetRegisterValue(::AArch64::CPACR_EL1::Read()) == readRawValue, "CPACR_EL1 read");
         }
+
+        /**
+         * Test the CPTR_EL2 register wrapper
+         */
+        void CPTR_EL2Test()
+        {
+            ::AArch64::CPTR_EL2 testRegister;
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x33FF, "CPTR_EL2 default value");
+
+            // TFP [10]
+            testRegister.TFP(true);
+            auto const readTFP = testRegister.TFP();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x37FF
+                && readTFP == true
+                , "CPTR_EL2 TFP get/set");
+            
+            // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
+        }
     }
 
     void Run()
     {
         CPACR_EL1Test();
+        CPTR_EL2Test();
     }
 }
