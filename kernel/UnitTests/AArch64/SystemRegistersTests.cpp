@@ -79,11 +79,30 @@ namespace UnitTests::AArch64::SystemRegisters
             
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
         }
+
+        /**
+         * Test the HCR_EL2 register wrapper
+         */
+        void HCR_EL2Test()
+        {
+            ::AArch64::HCR_EL2 testRegister;
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0, "HCR_EL2 default value");
+
+            // RW [31]
+            testRegister.RW(true);
+            auto const readRW = testRegister.RW();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x8000'0000
+                && readRW == true
+                , "HCR_EL2 RW get/set");
+            
+            // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
+        }
     }
 
     void Run()
     {
         CPACR_EL1Test();
         CPTR_EL2Test();
+        HCR_EL2Test();
     }
 }
