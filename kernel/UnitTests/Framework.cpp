@@ -181,8 +181,17 @@ namespace UnitTests
         // No runtime tests for type_traits
         KernelStdlib::Utility::Run();
 
+        // #TODO: Exceptions.cpp untested (currently just unimplemented stubs)
+        // #TODO: ExceptionVectorHandlers.h/cpp/S untested (not sure if testable)
+        // #TODO: IRQ.h/S untested (likely untestable)
         MemoryManager::Run();
+        // #TODO: MiniUart.h/cpp untested (likely untestable - though basically tested due to all our UART output)
         Print::Run();
+        // #TODO: Scheduler.h/cpp/S untested (not sure if testable, other than our running user apps)
+        // #TODO: SystemCall.cpp untested (not sure if testable, other than our running user apps)
+        // #TODO: TaskStructs.h untested (currently just contains POD types)
+        // #TODO: Timer.h/cpp untested (not sure if testable, as testing might disrupt OS behavior)
+        // #TODO: TypeInfo.cpp untested (currently just contains types filled by the compiler)
         Utils::Run();
 
         // Build a quick reference output at the end
