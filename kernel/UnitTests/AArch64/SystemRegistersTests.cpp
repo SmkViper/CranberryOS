@@ -97,6 +97,17 @@ namespace UnitTests::AArch64::SystemRegisters
             
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
         }
+
+        /**
+         * Test the HSTR_EL2 register wrapper
+         */
+        void HSTR_EL2Test()
+        {
+            ::AArch64::HSTR_EL2 testRegister;
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0, "HSTR_EL2 default value");
+
+            // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
+        }
     }
 
     void Run()
@@ -104,5 +115,6 @@ namespace UnitTests::AArch64::SystemRegisters
         CPACR_EL1Test();
         CPTR_EL2Test();
         HCR_EL2Test();
+        HSTR_EL2Test();
     }
 }
