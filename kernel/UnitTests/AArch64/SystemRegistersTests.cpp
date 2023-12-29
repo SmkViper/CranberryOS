@@ -52,6 +52,11 @@ namespace UnitTests::AArch64::SystemRegisters
 
     namespace
     {
+        // NOTE: Read functions are tested by hand-writing the reading of the register and comparing it to the result
+        // of the Read() function. This isn't great, but considering the values in these registers will be changing as
+        // development continues, I'm not sure of a better way to do it. At least by hand-writing the code in the tests
+        // the hope is that any typos will be caught (i.e. if Read is reading the wrong register).
+
         /**
          * Test the CPACR_EL1 register wrapper
          */
@@ -174,6 +179,33 @@ namespace UnitTests::AArch64::SystemRegisters
             );
             EmitTestResult(Details::TestAccessor::GetRegisterValue(::AArch64::MAIR_EL1::Read()) == readRawValue, "MAIR_EL1 read");
         }
+
+        /**
+         * Test the SCTLR_EL1 register wrapper
+         */
+        void SCTLR_EL1Test()
+        {
+            ::AArch64::SCTLR_EL1 testRegister;
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x30D0'0980, "SCTLR_EL1 default value");
+
+            // M [0]
+            testRegister.M(true);
+            auto const readM = testRegister.M();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x30D0'0981
+                && readM == true
+                , "SCTLR_EL1 M get/set");
+            
+            // Write not tested as it affects system operation
+
+            uint64_t readRawValue = 0;
+            asm volatile(
+                "mrs %[value], sctlr_el1"
+                :[value] "=r"(readRawValue) // outputs
+                : // no inputs
+                : // no bashed registers
+            );
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(::AArch64::SCTLR_EL1::Read()) == readRawValue, "SCTLR_EL1 read");
+        }
     }
 
     void Run()
@@ -184,5 +216,6 @@ namespace UnitTests::AArch64::SystemRegisters
         HSTR_EL2Test();
         MAIR_EL1AttributeTest();
         MAIR_EL1Test();
+        SCTLR_EL1Test();
     }
 }
