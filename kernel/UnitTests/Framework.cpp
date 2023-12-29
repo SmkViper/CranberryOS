@@ -2,11 +2,10 @@
 
 #include <cstdint>
 
-#include "../AArch64/CPU.h"
-#include "../Print.h"
 #include "AArch64/CPUTests.h"
 #include "AArch64/MemoryDescriptorTests.h"
 #include "AArch64/MemoryPageTablesTests.h"
+#include "AArch64/SystemRegistersTests.h"
 #include "KernelStdlib/BitsetTests.h"
 #include "KernelStdlib/CStringTests.h"
 #include "KernelStdlib/ExceptionTests.h"
@@ -169,6 +168,7 @@ namespace UnitTests
         AArch64::CPU::Run();
         AArch64::MemoryDescriptor::Run();
         AArch64::MemoryPageTables::Run();
+        AArch64::SystemRegisters::Run();
 
         KernelStdlib::Bitset::Run();
         // No runtime tests for climits

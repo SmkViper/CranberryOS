@@ -13,6 +13,11 @@
 // For FEAT_ names:
 // https://developer.arm.com/downloads/-/exploration-tools/feature-names-for-a-profile
 
+namespace UnitTests::AArch64::SystemRegisters::Details
+{
+    struct TestAccessor;
+}
+
 namespace AArch64
 {
     /**
@@ -21,6 +26,7 @@ namespace AArch64
     */
     class CPACR_EL1
     {
+        friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
         static_assert(sizeof(unsigned long) == sizeof(uint64_t), "Need to adjust which value is used to retrieve the bitset");
     public:
         /**
