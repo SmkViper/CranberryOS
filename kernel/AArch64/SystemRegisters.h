@@ -353,6 +353,7 @@ namespace AArch64
     */
     class MAIR_EL1
     {
+        friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
     public:
         /**
          * The number of attributes available
@@ -387,20 +388,62 @@ namespace AArch64
              * 
              * @return An attribute representing normal memory
             */
-            static Attribute NormalMemory();
+            static constexpr Attribute NormalMemory()
+            {
+                // #TODO: Figure out if this needs to change and what these words mean
+                // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Normal-memory
+                // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
+
+                // Normal memory, outer non-cacheable
+                // Normal memory, inner non-cacheable
+                return Attribute{ 0b0100'0100 };
+            }
 
             /**
              * Obtain an attribute representing device memory
              * 
              * @return An attribute representing device memory
             */
-            static Attribute DeviceMemory();
+            static constexpr Attribute DeviceMemory()
+            {
+                // #TODO: Figure out if this needs to change and what these words mean
+                // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Device-memory
+                // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
+
+                // Device nGnRnE memory
+                // Non-gathering (one access in code = one access on bus)
+                // Non-reordering (disallows reordering of access)
+                // Non-early write acknowledgement (responses come from end slave, not buffering in the interconnect)
+                return Attribute{ 0b0000'0000 };
+            }
+
+            /**
+             * Check to see if two attributes are equal
+             * 
+             * @param aOther Attribute to compare with
+             * @return True if equal
+             */
+            constexpr bool operator==(Attribute const& aOther) const
+            {
+                return Value == aOther.Value;
+            }
+
+            /**
+             * Check to see if two attributes are inequal
+             * 
+             * @param aOther Attribute to compare with
+             * @return True if inequal
+             */
+            constexpr bool operator!=(Attribute const& aOther) const
+            {
+                return !(*this == aOther);
+            }
 
         private:
             /**
              * Creates an attribute with the given value
             */
-            explicit Attribute(uint8_t const aValue)
+            explicit constexpr Attribute(uint8_t const aValue)
                 : Value{ aValue }
             {}
 

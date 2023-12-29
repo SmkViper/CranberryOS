@@ -107,30 +107,6 @@ namespace AArch64
         return HSTR_EL2{ readRawValue };
     }
 
-    MAIR_EL1::Attribute MAIR_EL1::Attribute::NormalMemory()
-    {
-        // #TODO: Figure out if this needs to change and what these words mean
-        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Normal-memory
-        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
-
-        // Normal memory, outer non-cacheable
-        // Normal memory, inner non-cacheable
-        return Attribute{ 0b0100'0100 };
-    }
-
-    MAIR_EL1::Attribute MAIR_EL1::Attribute::DeviceMemory()
-    {
-        // #TODO: Figure out if this needs to change and what these words mean
-        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-types/Device-memory
-        // https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes
-
-        // Device nGnRnE memory
-        // Non-gathering (one access in code = one access on bus)
-        // Non-reordering (disallows reordering of access)
-        // Non-early write acknowledgement (responses come from end slave, not buffering in the interconnect)
-        return Attribute{ 0b0000'0000 };
-    }
-
     /**
      * Construct the register data from a raw 64-bit value from the register
      * 

@@ -1,5 +1,6 @@
 #include "SystemRegistersTests.h"
 
+#include <cstring>
 #include "../../AArch64/SystemRegisters.h"
 #include "../Framework.h"
 
@@ -29,6 +30,22 @@ namespace UnitTests::AArch64::SystemRegisters
                 {
                     return aRegister.RegisterValue.to_ullong();
                 }
+            }
+
+            /**
+             * Get the bit value of a register wrapper
+             * 
+             * @param aRegister The register to extract the bits from
+             * @return The bits in the register
+             */
+            template<>
+            uint64_t GetRegisterValue(::AArch64::MAIR_EL1 const aRegister)
+            {
+                // We're specializing the template for MAIR_EL1 since it stores values in an array
+                uint64_t retVal = 0;
+                static_assert(sizeof(retVal) == sizeof(aRegister.Attributes), "Unexpected size difference");
+                memcpy(&retVal, aRegister.Attributes, sizeof(retVal));
+                return retVal;
             }
         };
     }
@@ -108,6 +125,55 @@ namespace UnitTests::AArch64::SystemRegisters
 
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
         }
+
+        /**
+         * Test the MAIR_EL1 Attribute wrapper
+         */
+        void MAIR_EL1AttributeTest()
+        {
+            auto const normal = ::AArch64::MAIR_EL1::Attribute::NormalMemory();
+            auto const device = ::AArch64::MAIR_EL1::Attribute::DeviceMemory();
+            EmitTestResult((normal == normal) && !(normal == device), "MAIR_EL1 Attribute ==");
+            EmitTestResult(!(normal != normal) && (normal != device), "MAIR_EL1 Attribute !=");
+        }
+
+        /**
+         * Test the MAIR_EL1 register wrapper
+         */
+        void MAIR_EL1Test()
+        {
+            ::AArch64::MAIR_EL1 testRegister;
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0, "MAIR_EL1 default value");
+
+            // Attributes are stored as 8 bit values, essentially as an array
+            auto const normalMemoryAttribute = ::AArch64::MAIR_EL1::Attribute::NormalMemory(); // 0x44
+            auto testAttribute = [&testRegister, normalMemoryAttribute](size_t const aIndex, uint64_t const aExpectedValue)
+            {
+                testRegister.SetAttribute(aIndex, normalMemoryAttribute);
+                auto const readAttribute = testRegister.GetAttribute(aIndex);
+                EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == aExpectedValue
+                    && readAttribute == normalMemoryAttribute
+                    , "MAIR_EL1 Attribute {} get/set", aIndex);
+            };
+            
+            auto expectedRegisterValue = 0ull;
+            for (auto curIndex = 0u; curIndex < ::AArch64::MAIR_EL1::AttributeCount; ++curIndex)
+            {
+                expectedRegisterValue |= (0x44ull << (curIndex * 8));
+                testAttribute(curIndex, expectedRegisterValue);
+            }
+            
+            // Write not tested as it affects system operation
+
+            uint64_t readRawValue = 0;
+            asm volatile(
+                "mrs %[value], mair_el1"
+                :[value] "=r"(readRawValue) // outputs
+                : // no inputs
+                : // no bashed registers
+            );
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(::AArch64::MAIR_EL1::Read()) == readRawValue, "MAIR_EL1 read");
+        }
     }
 
     void Run()
@@ -116,5 +182,7 @@ namespace UnitTests::AArch64::SystemRegisters
         CPTR_EL2Test();
         HCR_EL2Test();
         HSTR_EL2Test();
+        MAIR_EL1AttributeTest();
+        MAIR_EL1Test();
     }
 }
