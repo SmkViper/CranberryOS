@@ -206,6 +206,52 @@ namespace UnitTests::AArch64::SystemRegisters
             );
             EmitTestResult(Details::TestAccessor::GetRegisterValue(::AArch64::SCTLR_EL1::Read()) == readRawValue, "SCTLR_EL1 read");
         }
+
+        /**
+         * Test the SPSR_EL2 register wrapper
+         */
+        void SPSR_EL2Test()
+        {
+            ::AArch64::SPSR_EL2 testRegister;
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0, "SPSR_EL2 default value");
+
+            // M [3:0]
+            testRegister.M(::AArch64::SPSR_EL2::Mode::EL2h); // 0b1001
+            auto const readM = testRegister.M();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x0009
+                && readM == ::AArch64::SPSR_EL2::Mode::EL2h
+                , "SPSR_EL2 M get/set");
+            
+            // F [6]
+            testRegister.F(true);
+            auto const readF = testRegister.F();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x0049
+                && readF == true
+                , "SPSR_EL2 F get/set");
+            
+            // I [7]
+            testRegister.I(true);
+            auto const readI = testRegister.I();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x00C9
+                && readI == true
+                , "SPSR_EL2 I get/set");
+
+            // A [8]
+            testRegister.A(true);
+            auto const readA = testRegister.A();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x01C9
+                && readA == true
+                , "SPSR_EL2 A get/set");
+
+            // D [9]
+            testRegister.D(true);
+            auto const readD = testRegister.D();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x03C9
+                && readD == true
+                , "SPSR_EL2 D get/set");
+            
+            // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
+        }
     }
 
     void Run()
@@ -217,5 +263,6 @@ namespace UnitTests::AArch64::SystemRegisters
         MAIR_EL1AttributeTest();
         MAIR_EL1Test();
         SCTLR_EL1Test();
+        SPSR_EL2Test();
     }
 }
