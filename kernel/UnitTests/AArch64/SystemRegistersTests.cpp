@@ -252,6 +252,59 @@ namespace UnitTests::AArch64::SystemRegisters
             
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
         }
+
+        /**
+         * Test the TCR_EL1 register wrapper
+         */
+        void TCR_EL1Test()
+        {
+            ::AArch64::TCR_EL1 testRegister;
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0, "TCR_EL1 default value");
+
+            // NOTE: T0SZ and T1SZ take/return the bit count for address space, but store it internally as the number
+            // most significant bits that are used to pick between kernal and user space. So if, for example, we want
+            // 48 bits of address space, it will store 16 (the number of high bits in 64-bit addresses). So our tests
+            // need to account for this in the raw comparison
+
+            // T0SZ [5:0]
+            testRegister.T0SZ(0b1'0111); // stored as 64 - 0b1'0111 = 0b10'1001
+            auto const readT0SZ = testRegister.T0SZ();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x0029
+                && readT0SZ == 0b1'0111
+                , "TCR_EL1 T0SZ get/set");
+            
+            // TG0 [15:14]
+            testRegister.TG0(::AArch64::TCR_EL1::T0Granule::Size16kb); // 0b10
+            auto const readTG0 = testRegister.TG0();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x8029
+                && readTG0 == ::AArch64::TCR_EL1::T0Granule::Size16kb
+                , "TCR_EL1 TG0 get/set");
+
+            // T1SZ [21:16]
+            testRegister.T1SZ(0b0111); // stored as 64 - 0b0111 = 0b11'1001
+            auto const readT1SZ = testRegister.T1SZ();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x39'8029
+                && readT1SZ == 0b0111
+                , "TCR_EL1 T1SZ get/set");
+            
+            // TG1 [31:30]
+            testRegister.TG1(::AArch64::TCR_EL1::T1Granule::Size64kb); // 0b11
+            auto const readTG1 = testRegister.TG1();
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0xC039'8029
+                && readTG1 == ::AArch64::TCR_EL1::T1Granule::Size64kb
+                , "TCR_EL1 TG1 get/set");
+            
+            // Write not tested as it affects system operation
+
+            uint64_t readRawValue = 0;
+            asm volatile(
+                "mrs %[value], tcr_el1"
+                :[value] "=r"(readRawValue) // outputs
+                : // no inputs
+                : // no bashed registers
+            );
+            EmitTestResult(Details::TestAccessor::GetRegisterValue(::AArch64::TCR_EL1::Read()) == readRawValue, "TCR_EL1 read");
+        }
     }
 
     void Run()
@@ -264,5 +317,6 @@ namespace UnitTests::AArch64::SystemRegisters
         MAIR_EL1Test();
         SCTLR_EL1Test();
         SPSR_EL2Test();
+        TCR_EL1Test();
     }
 }
