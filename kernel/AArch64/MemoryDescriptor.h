@@ -167,25 +167,23 @@ namespace AArch64
 
                 /**
                  * Sets the block address this entry points at
-                 * #TODO: Pretty sure this is a physical address, so need a type for that
                  * 
                  * @param aAddress The block address
                  */
-                void Address(uintptr_t const aAddress)
+                void Address(PhysicalPtr const aAddress)
                 {
                     // #TODO: Should probably range check address to make sure the mask doesn't pull off any bits
-                    WriteMultiBitValue(DescriptorBits, aAddress, AddressMask, 0 /* no shift */);
+                    WriteMultiBitValue(DescriptorBits, aAddress.GetAddress(), AddressMask, 0 /* no shift */);
                 }
 
                 /**
                  * Obtains the block address this entry points at
-                 * #TODO: Pretty sure this is a physical address, so need a type for that
                  * 
                  * @return The block address
                  */
-                uintptr_t Address() const
+                PhysicalPtr Address() const
                 {
-                    return ReadMultiBitValue<uintptr_t>(DescriptorBits, AddressMask, 0 /* no shift */);
+                    return ReadMultiBitValue<PhysicalPtr>(DescriptorBits, AddressMask, 0 /* no shift */);
                 }
 
             private:

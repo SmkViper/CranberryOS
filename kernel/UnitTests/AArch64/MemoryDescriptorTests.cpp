@@ -99,11 +99,11 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 , "Block {} descriptor descriptor IsType with just type bits", apBlockTypeName);
             EmitTestResult(BlockT::IsType(0b1101), "Block {} descriptor with non type bits", apBlockTypeName);
 
-            auto const rawAddress = 0xFEFE'FEFE'FEFE'FEFEull;
+            auto const rawAddress = PhysicalPtr{ 0xFEFE'FEFE'FEFE'FEFEull };
             testDescriptor.Address(rawAddress);
             auto const readAddress = testDescriptor.Address();
-            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == ((rawAddress & AddressMask) | 0b01)
-                && readAddress == (rawAddress & AddressMask)
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == ((rawAddress.GetAddress() & AddressMask) | 0b01)
+                && readAddress == PhysicalPtr{ rawAddress.GetAddress() & AddressMask }
                 , "Block {} descriptor Address get/set", apBlockTypeName);
             
             auto prevDescriptorValue = Details::TestAccessor::GetDescriptorValue(testDescriptor);
