@@ -340,13 +340,13 @@ namespace AArch64
         return TTBRn_EL1{ readRawValue };
     }
 
-    void TTBRn_EL1::BADDR(uintptr_t const aBaseAddress)
+    void TTBRn_EL1::BADDR(PhysicalPtr const aBaseAddress)
     {
-        WriteMultiBitValue(RegisterValue, aBaseAddress, BADDRIndex_Mask, BADDRIndex_Shift);
+        WriteMultiBitValue(RegisterValue, aBaseAddress.GetAddress(), BADDRIndex_Mask, BADDRIndex_Shift);
     }
 
-    uintptr_t TTBRn_EL1::BADDR() const
+    PhysicalPtr TTBRn_EL1::BADDR() const
     {
-        return ReadMultiBitValue<uint64_t>(RegisterValue, BADDRIndex_Mask, BADDRIndex_Shift);
+        return ReadMultiBitValue<PhysicalPtr>(RegisterValue, BADDRIndex_Mask, BADDRIndex_Shift);
     }
 }

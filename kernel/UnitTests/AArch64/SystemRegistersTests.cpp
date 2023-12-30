@@ -315,10 +315,10 @@ namespace UnitTests::AArch64::SystemRegisters
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0, "TTBRn_EL1 default value");
 
             // BADDR [47:1]
-            testRegister.BADDR(0xAAAA'AAAA'AAAA'AAA5);
+            testRegister.BADDR(PhysicalPtr{ 0xAAAA'AAAA'AAAA'AAA5 });
             auto const readT0SZ = testRegister.BADDR();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x0000'AAAA'AAAA'AAA4
-                && readT0SZ == 0x0000'AAAA'AAAA'AAA4 // top bits and bottom bit get masked off
+                && readT0SZ == PhysicalPtr{ 0x0000'AAAA'AAAA'AAA4 } // top bits and bottom bit get masked off
                 , "TTBRn_EL1 BADDR get/set");
             
             // Write0/1 not tested as it affects system operation

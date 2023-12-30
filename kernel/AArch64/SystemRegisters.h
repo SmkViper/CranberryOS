@@ -4,6 +4,8 @@
 #include <bitset>
 #include <cstdint>
 
+#include "../PointerTypes.h"
+
 // Terminology:
 // https://developer.arm.com/documentation/105565/latest/
 // Res0: Write 0 to initialize, then preserve value (read-modify-write)
@@ -944,14 +946,14 @@ namespace AArch64
          * 
          * @param aBaseAddress The table base address
         */
-        void BADDR(uintptr_t aBaseAddress);
+        void BADDR(PhysicalPtr aBaseAddress);
 
         /**
          * BADDR bits - Translation table base address
          * 
          * @return The table base address
         */
-        uintptr_t BADDR() const;
+        PhysicalPtr BADDR() const;
 
     private:
         /**

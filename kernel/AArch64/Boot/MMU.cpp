@@ -206,7 +206,7 @@ namespace AArch64
                 // to do any adjustment to it to account for it being on a virtual kernel address
                 // #TODO: In theory, but the debugger shows it at the physical address for an unknown reason.
                 TTBRn_EL1 ttbrn_el1;
-                ttbrn_el1.BADDR(aTable.GetAddress());
+                ttbrn_el1.BADDR(aTable);
                 TTBRn_EL1::Write0(ttbrn_el1); // table for user space (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF)
                 TTBRn_EL1::Write1(ttbrn_el1); // table for kernel space (0xFFFF'0000'0000'0000 - 0xFFFF'FFFF'FFFF'FFFF)
             }
