@@ -235,7 +235,7 @@ namespace AArch64
             // Converts a physical pointer to a virtual pointer assuming offset mapping
             auto toVAOffsetMapping = [](PhysicalPtr const aPA)
             {
-                return VirtualPtr{ aPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressStart.GetAddress());
+                return VirtualPtr{ aPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressOffset);
             };
 
             auto const startOfKernelRangeVA = toVAOffsetMapping(kernelBasePA);
@@ -278,7 +278,7 @@ namespace AArch64
             // IMPORTANT: Do not change granule size or address bits, because we have a lot of constants that depend on
             // these being set to 4kb and 48 bits respectively.
             static constexpr uint64_t LowAddressBits = 48;
-            static_assert((~((1ULL << LowAddressBits) - 1)) == MemoryManager::KernelVirtualAddressStart.GetAddress(), "Bit count doesn't match VA start");
+            static_assert((~((1ULL << LowAddressBits) - 1)) == MemoryManager::KernelVirtualAddressOffset, "Bit count doesn't match VA start");
             // *4 because we have four tables in our MMU setup
             static_assert(LowAddressBits == PageTable::PageOffsetBits + (PageTable::TableIndexBits * 4), "Bit count doesn't match descriptor bit count");
             static_assert(MemoryManager::PageSize == 0x1000, "Expect page size to be 4kb");

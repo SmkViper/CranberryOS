@@ -35,7 +35,7 @@ namespace MemoryManager
         {
             // #TODO: Why is __kernel_image_end here a virtual address when in the boot process it's a physical
             // address?
-            auto const kernelImageEndPA = PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image_end) - KernelVirtualAddressStart.GetAddress() };
+            auto const kernelImageEndPA = PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image_end) - KernelVirtualAddressOffset };
             return CalculateBlockEnd(kernelImageEndPA, L2BlockSize).Offset(1);
         }
 
@@ -62,7 +62,7 @@ namespace MemoryManager
                     auto newPageStartPA = pageMemoryStartPA.Offset(curPage * PageSize);
                     // have to add the KernelVirtualAddressStart because that's where the physical address is mapped to
                     // in kernel space
-                    memset(reinterpret_cast<void*>(newPageStartPA.Offset(KernelVirtualAddressStart.GetAddress()).GetAddress()), 0, PageSize);
+                    memset(reinterpret_cast<void*>(newPageStartPA.Offset(KernelVirtualAddressOffset).GetAddress()), 0, PageSize);
                     return newPageStartPA;
                 }
             }
@@ -132,7 +132,7 @@ namespace MemoryManager
             });
 
             // virtual address for memory in the kernel is physical address plus offset
-            auto const ppageVA = reinterpret_cast<uint64_t*>(pagePA.GetAddress() + KernelVirtualAddressStart.GetAddress());
+            auto const ppageVA = reinterpret_cast<uint64_t*>(pagePA.Offset(KernelVirtualAddressOffset).GetAddress());
             return LowerTableViewT{ ppageVA };
         }
 
@@ -174,10 +174,10 @@ namespace MemoryManager
             auto tablePtrToPAIdentity = [](uint64_t const* const apTable)
             {
                 // #TODO: Should by PhysicalPtr
-                return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(apTable) - KernelVirtualAddressStart.GetAddress());
+                return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(apTable) - KernelVirtualAddressOffset);
             };
 
-            auto const pageGlobalDirectoryVA = reinterpret_cast<uintptr_t>(arTask.MemoryState.pPageGlobalDirectory) + KernelVirtualAddressStart.GetAddress();
+            auto const pageGlobalDirectoryVA = reinterpret_cast<uintptr_t>(arTask.MemoryState.pPageGlobalDirectory) + KernelVirtualAddressOffset;
             auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ reinterpret_cast<uint64_t*>(pageGlobalDirectoryVA) };
             auto newTable = false;
             auto const pageUpperDirectory = MapTable<AArch64::PageTable::Level1View>(pageGlobalDirectory, aVirtualAddress, newTable);
@@ -215,7 +215,7 @@ namespace MemoryManager
             return nullptr;
         }
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(physicalPage.GetAddress() + KernelVirtualAddressStart.GetAddress());
+        return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
 
     void* AllocateUserPage(Scheduler::TaskStruct& arTask, const uintptr_t aVirtualAddress)
@@ -228,7 +228,7 @@ namespace MemoryManager
 
         MapPage(arTask, aVirtualAddress, reinterpret_cast<void*>(physicalPage.GetAddress()));
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(physicalPage.GetAddress() + KernelVirtualAddressStart.GetAddress());
+        return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
 
     bool CopyVirtualMemory(Scheduler::TaskStruct& arDestinationTask, const Scheduler::TaskStruct& aCurrentTask)

@@ -12,7 +12,7 @@ namespace Scheduler
 
 namespace MemoryManager
 {
-    constexpr auto KernelVirtualAddressStart = VirtualPtr{ 0xFFFF'0000'0000'0000 };
+    constexpr auto KernelVirtualAddressOffset = 0xFFFF'0000'0000'0000ull;
     constexpr auto DeviceBaseAddress = PhysicalPtr{ 0x3F00'0000 };
 
     // sizes depend on how many bits the descriptor uses to index into pages or tables

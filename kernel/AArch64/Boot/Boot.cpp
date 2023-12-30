@@ -42,7 +42,7 @@ extern "C"
             "mov x0, %[base] \n"
             "add sp, sp, x0 \n"
             : // no outputs
-            : [base] "r"(MemoryManager::KernelVirtualAddressStart)
+            : [base] "r"(MemoryManager::KernelVirtualAddressOffset)
             : "x0" // bashed registers
         );
 
