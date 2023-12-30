@@ -159,10 +159,10 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 , "Page descriptor descriptor IsType with just type bits");
             EmitTestResult(::AArch64::Descriptor::Page::IsType(0b1111), "Page descriptor with non type bits");
 
-            testDescriptor.Address(0xFEFE'FEFE'FEFE'FEFE);
+            testDescriptor.Address(PhysicalPtr{ 0xFEFE'FEFE'FEFE'FEFE });
             auto const readAddress = testDescriptor.Address();
             EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0x0000'FEFE'FEFE'F003
-                && readAddress == 0x0000'FEFE'FEFE'F000
+                && readAddress == PhysicalPtr{ 0x0000'FEFE'FEFE'F000 }
                 , "Page descriptor Address get/set");
 
             // AttrIndx [4:2]

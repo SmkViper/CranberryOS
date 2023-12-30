@@ -171,7 +171,7 @@ namespace AArch64
              * @param aMAIRIndex The index into the MAIR register for the attributes for this memory
              */
             void InsertEntriesForMemoryRange(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage,
-                VirtualPtr const aVAStart, VirtualPtr const aVAEnd, uint64_t const aPhysicalAddress,
+                VirtualPtr const aVAStart, VirtualPtr const aVAEnd, PhysicalPtr const aPhysicalAddress,
                 uint8_t const aMAIRIndex)
             {
                 auto curPA = aPhysicalAddress;
@@ -189,7 +189,7 @@ namespace AArch64
                     level3Table.SetEntryForVA(curVA, pageEntry);
 
                     curVA = curVA.Offset(MemoryManager::PageSize);
-                    curPA += MemoryManager::PageSize;
+                    curPA = curPA.Offset(MemoryManager::PageSize);
                 }
             }
 
@@ -230,27 +230,27 @@ namespace AArch64
             auto const kernelBasePA = MemoryManager::CalculateBlockStart(PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image) }, MemoryManager::L2BlockSize);
             auto const kernelEndPA = MemoryManager::CalculateBlockEnd(PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image_end) }, MemoryManager::L2BlockSize);
 
-            // Converts a physical pointer to a virtual pointer assuming identity mapping
-            auto toVAIdentityMapping = [](PhysicalPtr const aPA)
+            // Converts a physical pointer to a virtual pointer assuming offset mapping
+            auto toVAOffsetMapping = [](PhysicalPtr const aPA)
             {
                 return VirtualPtr{ aPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressStart.GetAddress());
             };
 
-            auto const startOfKernelRangeVA = toVAIdentityMapping(kernelBasePA);
-            auto const endOfKernelRangeVA = toVAIdentityMapping(kernelEndPA);
-            auto const startOfDeviceRangeVA = toVAIdentityMapping(deviceBasePA);
-            auto const endOfDeviceRangeVA = toVAIdentityMapping(deviceEndPA);
+            auto const startOfKernelRangeVA = toVAOffsetMapping(kernelBasePA);
+            auto const endOfKernelRangeVA = toVAOffsetMapping(kernelEndPA);
+            auto const startOfDeviceRangeVA = toVAOffsetMapping(deviceBasePA);
+            auto const endOfDeviceRangeVA = toVAOffsetMapping(deviceEndPA);
 
             auto const rootPage = PageTable::Level0View{ reinterpret_cast<uint64_t*>(allocator.Allocate()) };
 
             // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
             // be pointing at the physical addresses)
-            InsertEntriesForMemoryRange(allocator, rootPage, VirtualPtr{ kernelBasePA.GetAddress() }, VirtualPtr{ kernelEndPA.GetAddress() }, kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
-            InsertEntriesForMemoryRange(allocator, rootPage, VirtualPtr{ deviceBasePA.GetAddress() }, VirtualPtr{ deviceEndPA.GetAddress() }, deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, VirtualPtr{ kernelBasePA.GetAddress() }, VirtualPtr{ kernelEndPA.GetAddress() }, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, VirtualPtr{ deviceBasePA.GetAddress() }, VirtualPtr{ deviceEndPA.GetAddress() }, deviceBasePA, MemoryManager::DeviceMAIRIndex);
 
             // Now map the kernel and devices into high memory
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
 
             // Map everything between the kernel range and device range for now
             // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
@@ -258,8 +258,9 @@ namespace AArch64
             // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
             // kernel space
             auto const startOfExtraVA = endOfKernelRangeVA.Offset(1);
+            auto const startOfExtraPA = kernelEndPA.Offset(1);
             auto const endOfExtraVA = VirtualPtr{ startOfDeviceRangeVA.GetAddress() - 1 };
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfExtraVA, endOfExtraVA, endOfKernelRangeVA.GetAddress() + 1, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfExtraVA, endOfExtraVA, startOfExtraPA, MemoryManager::NormalMAIRIndex);
         }
 
         void EnableMMU()

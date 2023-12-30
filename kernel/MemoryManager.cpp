@@ -145,7 +145,7 @@ namespace MemoryManager
         void MapTableEntry(AArch64::PageTable::Level3View const aTable, const VirtualPtr aUserVirtualAddress, void* const apPhysicalPage)
         {
             AArch64::Descriptor::Page pageDescriptor;
-            pageDescriptor.Address(reinterpret_cast<uintptr_t>(apPhysicalPage));
+            pageDescriptor.Address(PhysicalPtr{ reinterpret_cast<uintptr_t>(apPhysicalPage) });
             pageDescriptor.AttrIndx(NormalMAIRIndex); // normal memory
             pageDescriptor.AF(true); // don't trap on access
             pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it

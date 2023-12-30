@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <bitset>
 
+#include "../PointerTypes.h"
 #include "../Utils.h"
 
 namespace UnitTests::AArch64
@@ -456,20 +457,18 @@ namespace AArch64
             bool AF() const { return DescriptorBits[AFIndex]; }
 
             /**
-             * Sets the block address this entry points at
-             * #TODO: Pretty sure this is a physical address, so need a type for that
+             * Sets the page address this entry points at
              * 
-             * @param aAddress The block address
+             * @param aAddress The page address
             */
-            void Address(uintptr_t aAddress);
+            void Address(PhysicalPtr aAddress);
 
             /**
-             * Obtains the block address this entry points at
-             * #TODO: Pretty sure this is a physical address, so need a type for that
+             * Obtains the page address this entry points at
              * 
-             * @return The block address
-            */
-            uintptr_t Address() const;
+             * @return The page address
+             */
+            PhysicalPtr Address() const;
 
         private:
             /**
