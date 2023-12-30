@@ -8,31 +8,31 @@ namespace MemoryMappedIO
     namespace IRQ
     {
         // Shows which basic interrupts are pending
-        constexpr uintptr_t IRQBasicPending =       PeripheralBaseAddr + 0xB200;
+        constexpr VirtualPtr IRQBasicPending =      PeripheralBaseAddr.Offset(0xB200);
         // Shows which interrupts 0-31 are pending
-        constexpr uintptr_t IRQPending1 =           PeripheralBaseAddr + 0xB204;
+        constexpr VirtualPtr IRQPending1 =          PeripheralBaseAddr.Offset(0xB204);
         // Shows which interrupts 32-63 are pending
-        constexpr uintptr_t IRQPending2 =           PeripheralBaseAddr + 0xB208;
+        constexpr VirtualPtr IRQPending2 =          PeripheralBaseAddr.Offset(0xB208);
         // Selects which interrupt source can generate a FIQ
-        constexpr uintptr_t FIQSource =             PeripheralBaseAddr + 0xB20C;
+        constexpr VirtualPtr FIQSource =            PeripheralBaseAddr.Offset(0xB20C);
         // Enables IRQ sources 0-31
-        constexpr uintptr_t InterruptEnable1 =      PeripheralBaseAddr + 0xB210;
+        constexpr VirtualPtr InterruptEnable1 =     PeripheralBaseAddr.Offset(0xB210);
         // Enables IRQ sources 32-63
-        constexpr uintptr_t InterruptEnable2 =      PeripheralBaseAddr + 0xB214;
+        constexpr VirtualPtr InterruptEnable2 =     PeripheralBaseAddr.Offset(0xB214);
         // Enables basic interrupts
-        constexpr uintptr_t BasicInterruptEnable =  PeripheralBaseAddr + 0xB218;
+        constexpr VirtualPtr BasicInterruptEnable = PeripheralBaseAddr.Offset(0xB218);
         // Disables IRQ sources 0-31
-        constexpr uintptr_t InterruptDisable1 =     PeripheralBaseAddr + 0xB21C;
+        constexpr VirtualPtr InterruptDisable1 =    PeripheralBaseAddr.Offset(0xB21C);
         // Disables IRQ sources 32-63
-        constexpr uintptr_t InterruptDisable2 =     PeripheralBaseAddr + 0xB220;
+        constexpr VirtualPtr InterruptDisable2 =    PeripheralBaseAddr.Offset(0xB220);
         // Disables basic interrupts
-        constexpr uintptr_t BasicInterruptDisable = PeripheralBaseAddr + 0xB224;
+        constexpr VirtualPtr BasicInterruptDisable = PeripheralBaseAddr.Offset(0xB224);
 
         // Below sourced from:
         // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
 
         // Shows which interrupts are pending for Core0
-        constexpr uintptr_t Core0IRQSource =        LocalPeripheralBaseAddr + 0x0060;
+        constexpr VirtualPtr Core0IRQSource =       LocalPeripheralBaseAddr.Offset(0x0060);
     }
 }
 

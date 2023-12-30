@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "../MemoryManager.h"
+#include "../PointerTypes.h"
 
 namespace MemoryMappedIO
 {
@@ -18,11 +19,11 @@ namespace MemoryMappedIO
      * range (the "bus address"), so to figure out the value to use in the kernel (the "physical address") just trim
      * the top byte add the resulting value to this
      */
-    constexpr uintptr_t PeripheralBaseAddr = MemoryManager::KernelVirtualAddressOffset + MemoryManager::DeviceBaseAddress.GetAddress();
+    constexpr VirtualPtr PeripheralBaseAddr = VirtualPtr{ MemoryManager::DeviceBaseAddress.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressOffset);
 
     // Local peripheral information sourced from BCM2836 ARM-local peripheral documentation
     // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
-    constexpr uintptr_t LocalPeripheralBaseAddr = MemoryManager::KernelVirtualAddressOffset + 0x4000'0000;
+    constexpr VirtualPtr LocalPeripheralBaseAddr = VirtualPtr{ 0x4000'0000 }.Offset(MemoryManager::KernelVirtualAddressOffset);
 }
 
 #endif // KERNEL_PERIPHERALS_BASE_H
