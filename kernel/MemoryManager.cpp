@@ -99,7 +99,7 @@ namespace MemoryManager
 
             arNewTable = false; // assume we don't need a new table
 
-            auto const entry = aTable.GetEntryForVA(aUserVirtualAddress);
+            auto const entry = aTable.GetEntryForVA(VirtualPtr{ aUserVirtualAddress });
             uintptr_t pagePA = 0;
             entry.Visit(Overloaded{
                 [&arNewTable, &pagePA, aTable, aUserVirtualAddress](AArch64::Descriptor::Fault)
@@ -111,7 +111,7 @@ namespace MemoryManager
                     pagePA = reinterpret_cast<uintptr_t>(GetFreePage());
                     tableDescriptor.Address(pagePA);
 
-                    aTable.SetEntryForVA(aUserVirtualAddress, tableDescriptor);
+                    aTable.SetEntryForVA(VirtualPtr{ aUserVirtualAddress }, tableDescriptor);
                 },
                 [&pagePA](AArch64::Descriptor::Table aTableDescriptor)
                 {
@@ -142,7 +142,7 @@ namespace MemoryManager
          * @param aUserVirtualAddress User virtual address we want to map
          * @param apPhysicalPage The physical page to map
          */
-        void MapTableEntry(AArch64::PageTable::Level3View const aTable, const uintptr_t aUserVirtualAddress, void* const apPhysicalPage)
+        void MapTableEntry(AArch64::PageTable::Level3View const aTable, const VirtualPtr aUserVirtualAddress, void* const apPhysicalPage)
         {
             AArch64::Descriptor::Page pageDescriptor;
             pageDescriptor.Address(reinterpret_cast<uintptr_t>(apPhysicalPage));
@@ -150,7 +150,7 @@ namespace MemoryManager
             pageDescriptor.AF(true); // don't trap on access
             pageDescriptor.AP(AArch64::Descriptor::Page::AccessPermissions::KernelRWUserRW); // let user r/w it
             
-            aTable.SetEntryForVA(aUserVirtualAddress,pageDescriptor);
+            aTable.SetEntryForVA(aUserVirtualAddress, pageDescriptor);
         }
 
         /**
@@ -193,7 +193,7 @@ namespace MemoryManager
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            MapTableEntry(pageTableEntry, aVirtualAddress, apPhysicalPage);
+            MapTableEntry(pageTableEntry, VirtualPtr{ aVirtualAddress }, apPhysicalPage);
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{apPhysicalPage, aVirtualAddress};
             ++arTask.MemoryState.UserPagesCount;
         }

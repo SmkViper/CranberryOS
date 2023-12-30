@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "../PointerTypes.h"
 #include "MemoryDescriptor.h"
 
 namespace UnitTests::AArch64::MemoryPageTables::Details
@@ -156,9 +157,9 @@ namespace AArch64
                  * @param aVirtualAddress The address to get the entry for
                  * @return The entry in the table that contains that address
                 */
-                Entry GetEntryForVA(uintptr_t const aVirtualAddress) const
+                Entry GetEntryForVA(VirtualPtr const aVirtualAddress) const
                 {
-                    auto const tableIndex = (aVirtualAddress >> AddressShift) & AddressMask;
+                    auto const tableIndex = (aVirtualAddress.GetAddress() >> AddressShift) & AddressMask;
                     // #TODO: Assert if tableIndex is out of range
                     return Entry{ pTable[tableIndex], EntryConstructTag{} };
                 }
@@ -170,9 +171,9 @@ namespace AArch64
                  * @param aValue The value to set for that entry
                 */
                 template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
-                void SetEntryForVA(uintptr_t const aVirtualAddress, DescriptorT const aValue) const
+                void SetEntryForVA(VirtualPtr const aVirtualAddress, DescriptorT const aValue) const
                 {
-                    auto const tableIndex = (aVirtualAddress >> AddressShift) & AddressMask;
+                    auto const tableIndex = (aVirtualAddress.GetAddress() >> AddressShift) & AddressMask;
                     // #TODO: Assert if tableIndex is out of range
                     DescriptorT::Write(aValue, pTable, tableIndex);
                 }

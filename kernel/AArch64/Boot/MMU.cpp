@@ -106,7 +106,7 @@ namespace AArch64
              */
             template<class ChildTableT, class PageTableT>
             ChildTableT GetOrInsertPageDescriptor(PageBumpAllocator& arAllocator, PageTableT const aTableView,
-                uint64_t const aVirtualAddress)
+                VirtualPtr const aVirtualAddress)
             {
                 auto const entry = aTableView.GetEntryForVA(aVirtualAddress);
                 Descriptor::Table descriptor;
@@ -143,7 +143,7 @@ namespace AArch64
              * 
              * @return The level 3 table covering the given virtual address (making it if necessary)
              */
-            PageTable::Level3View InsertPageTable(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage, uint64_t const aVirtualAddress)
+            PageTable::Level3View InsertPageTable(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage, VirtualPtr const aVirtualAddress)
             {
                 // #TODO: We're assuming level 1 and 2 tables only contain pages and not blocks, which is going to be
                 // the case for how our code is currently written. Would be safer to have code that can handle the type
@@ -171,7 +171,7 @@ namespace AArch64
              * @param aMAIRIndex The index into the MAIR register for the attributes for this memory
              */
             void InsertEntriesForMemoryRange(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage,
-                uint64_t const aVAStart, uint64_t const aVAEnd, uint64_t const aPhysicalAddress,
+                VirtualPtr const aVAStart, VirtualPtr const aVAEnd, uint64_t const aPhysicalAddress,
                 uint8_t const aMAIRIndex)
             {
                 auto curPA = aPhysicalAddress;
@@ -188,7 +188,7 @@ namespace AArch64
 
                     level3Table.SetEntryForVA(curVA, pageEntry);
 
-                    curVA += MemoryManager::PageSize; 
+                    curVA = curVA.Offset(MemoryManager::PageSize);
                     curPA += MemoryManager::PageSize;
                 }
             }
@@ -245,19 +245,21 @@ namespace AArch64
 
             // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
             // be pointing at the physical addresses)
-            InsertEntriesForMemoryRange(allocator, rootPage, kernelBasePA.GetAddress(), kernelEndPA.GetAddress(), kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
-            InsertEntriesForMemoryRange(allocator, rootPage, deviceBasePA.GetAddress(), deviceEndPA.GetAddress(), deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, VirtualPtr{ kernelBasePA.GetAddress() }, VirtualPtr{ kernelEndPA.GetAddress() }, kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, VirtualPtr{ deviceBasePA.GetAddress() }, VirtualPtr{ deviceEndPA.GetAddress() }, deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
 
             // Now map the kernel and devices into high memory
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA.GetAddress(), endOfKernelRangeVA.GetAddress(), kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA.GetAddress(), endOfDeviceRangeVA.GetAddress(), deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
 
             // Map everything between the kernel range and device range for now
             // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
             // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
             // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
             // kernel space
-            InsertEntriesForMemoryRange(allocator, rootPage, endOfKernelRangeVA.GetAddress() + 1, startOfDeviceRangeVA.GetAddress() - 1, endOfKernelRangeVA.GetAddress() + 1, MemoryManager::NormalMAIRIndex);
+            auto const startOfExtraVA = endOfKernelRangeVA.Offset(1);
+            auto const endOfExtraVA = VirtualPtr{ startOfDeviceRangeVA.GetAddress() - 1 };
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfExtraVA, endOfExtraVA, endOfKernelRangeVA.GetAddress() + 1, MemoryManager::NormalMAIRIndex);
         }
 
         void EnableMMU()
