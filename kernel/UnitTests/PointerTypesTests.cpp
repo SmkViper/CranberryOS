@@ -7,6 +7,7 @@ namespace UnitTests::PointerTypes
 {
     namespace
     {
+        static_assert(PhysicalPtr{}.GetAddress() == 0, "Constructor didn't make null pointer");
         static_assert(PhysicalPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
         static_assert(PhysicalPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
         static_assert((PhysicalPtr{ 10 } == PhysicalPtr{ 10 }) && !(PhysicalPtr{ 10 } == PhysicalPtr{ 15 }), "Unexpected equality check result");
@@ -16,6 +17,7 @@ namespace UnitTests::PointerTypes
         static_assert((PhysicalPtr{ 10 } <= PhysicalPtr{ 10 }) && (PhysicalPtr{ 10 } <= PhysicalPtr{ 15 }) && !(PhysicalPtr{ 15 } <= PhysicalPtr{ 10 }), "Unexpected less or equal check result");
         static_assert((PhysicalPtr{ 10 } >= PhysicalPtr{ 10 }) && !(PhysicalPtr{ 10 } >= PhysicalPtr{ 15 }) && (PhysicalPtr{ 15 } >= PhysicalPtr{ 10 }), "Unexpected greater or equal check result");
 
+        static_assert(VirtualPtr{}.GetAddress() == 0, "Constructor didn't make null pointer");
         static_assert(VirtualPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
         static_assert(VirtualPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
         static_assert((VirtualPtr{ 10 } == VirtualPtr{ 10 }) && !(VirtualPtr{ 10 } == VirtualPtr{ 15 }), "Unexpected equality check result");

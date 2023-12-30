@@ -31,12 +31,12 @@ namespace MemoryManager
          * 
          * @return The physical address that starts our paging memory
         */
-        uintptr_t CalculatePagingMemoryPAStart()
+        PhysicalPtr CalculatePagingMemoryPAStart()
         {
-            // #TODO: Need new types for virtual/physical addresses
             // #TODO: Why is __kernel_image_end here a virtual address when in the boot process it's a physical
             // address?
-            return CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end) - KernelVirtualAddressStart.GetAddress(), L2BlockSize) + 1;
+            auto const kernelImageEndPA = PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image_end) - KernelVirtualAddressStart.GetAddress() };
+            return CalculateBlockEnd(kernelImageEndPA, L2BlockSize).Offset(1);
         }
 
         constexpr auto PageMask = ~(PageSize - 1);
@@ -50,7 +50,7 @@ namespace MemoryManager
          * 
          * @return Physical address of the new allocated page of memory, zeroed out
          */
-        void* GetFreePage()
+        PhysicalPtr GetFreePage()
         {
             // Very simple for now, just find the first unused page and return it
             auto const pageMemoryStartPA = CalculatePagingMemoryPAStart();
@@ -59,14 +59,14 @@ namespace MemoryManager
                 if (!PageInUse[curPage])
                 {
                     PageInUse[curPage] = true;
-                    auto newPageStartPA = pageMemoryStartPA + (curPage * PageSize); // physical address
+                    auto newPageStartPA = pageMemoryStartPA.Offset(curPage * PageSize);
                     // have to add the KernelVirtualAddressStart because that's where the physical address is mapped to
                     // in kernel space
-                    memset(reinterpret_cast<void*>(newPageStartPA + KernelVirtualAddressStart.GetAddress()), 0, PageSize);
-                    return reinterpret_cast<void*>(newPageStartPA);
+                    memset(reinterpret_cast<void*>(newPageStartPA.Offset(KernelVirtualAddressStart.GetAddress()).GetAddress()), 0, PageSize);
+                    return newPageStartPA;
                 }
             }
-            return nullptr;
+            return PhysicalPtr{};
         }
 
         /**
@@ -100,7 +100,7 @@ namespace MemoryManager
             arNewTable = false; // assume we don't need a new table
 
             auto const entry = aTable.GetEntryForVA(VirtualPtr{ aUserVirtualAddress });
-            uintptr_t pagePA = 0;
+            PhysicalPtr pagePA;
             entry.Visit(Overloaded{
                 [&arNewTable, &pagePA, aTable, aUserVirtualAddress](AArch64::Descriptor::Fault)
                 {
@@ -108,7 +108,7 @@ namespace MemoryManager
                     arNewTable = true;
 
                     AArch64::Descriptor::Table tableDescriptor;
-                    pagePA = reinterpret_cast<uintptr_t>(GetFreePage());
+                    pagePA = GetFreePage();
                     tableDescriptor.Address(pagePA);
 
                     aTable.SetEntryForVA(VirtualPtr{ aUserVirtualAddress }, tableDescriptor);
@@ -131,8 +131,9 @@ namespace MemoryManager
                 }
             });
 
-            auto const pageVA = pagePA + KernelVirtualAddressStart.GetAddress();
-            return LowerTableViewT{ reinterpret_cast<uint64_t*>(pageVA) };
+            // virtual address for memory in the kernel is physical address plus offset
+            auto const ppageVA = reinterpret_cast<uint64_t*>(pagePA.GetAddress() + KernelVirtualAddressStart.GetAddress());
+            return LowerTableViewT{ ppageVA };
         }
 
         /**
@@ -164,7 +165,7 @@ namespace MemoryManager
         {
             if (arTask.MemoryState.pPageGlobalDirectory == nullptr)
             {
-                arTask.MemoryState.pPageGlobalDirectory = GetFreePage();
+                arTask.MemoryState.pPageGlobalDirectory = reinterpret_cast<void*>(GetFreePage().GetAddress());
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = arTask.MemoryState.pPageGlobalDirectory;
                 ++arTask.MemoryState.KernelPagesCount;
             }
@@ -208,26 +209,26 @@ namespace MemoryManager
 
     void* AllocateKernelPage()
     {
-        const auto pphysicalPage = GetFreePage();
-        if (pphysicalPage == nullptr)
+        const auto physicalPage = GetFreePage();
+        if (physicalPage == PhysicalPtr{})
         {
             return nullptr;
         }
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernelVirtualAddressStart.GetAddress());
+        return reinterpret_cast<void*>(physicalPage.GetAddress() + KernelVirtualAddressStart.GetAddress());
     }
 
     void* AllocateUserPage(Scheduler::TaskStruct& arTask, const uintptr_t aVirtualAddress)
     {
-        const auto pphysicalPage = GetFreePage();
-        if (pphysicalPage == nullptr)
+        const auto physicalPage = GetFreePage();
+        if (physicalPage == PhysicalPtr{})
         {
             return nullptr;
         }
 
-        MapPage(arTask, aVirtualAddress, pphysicalPage);
+        MapPage(arTask, aVirtualAddress, reinterpret_cast<void*>(physicalPage.GetAddress()));
         // map the physical page to the kernel address space
-        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pphysicalPage) + KernelVirtualAddressStart.GetAddress());
+        return reinterpret_cast<void*>(physicalPage.GetAddress() + KernelVirtualAddressStart.GetAddress());
     }
 
     bool CopyVirtualMemory(Scheduler::TaskStruct& arDestinationTask, const Scheduler::TaskStruct& aCurrentTask)
@@ -259,13 +260,13 @@ extern "C"
         // Translation faults are: 100, 101, 110, and 111 depending on the level
         if ((dataFaultStatusCode & 0b11'1100) == 0b100)
         {
-            const auto pnewPage = MemoryManager::GetFreePage();
-            if (pnewPage == nullptr)
+            const auto newPage = MemoryManager::GetFreePage();
+            if (newPage == PhysicalPtr{})
             {
                 return -1;
             }
 
-            MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMask, pnewPage);
+            MemoryManager::MapPage(Scheduler::GetCurrentTask(), aAddress & MemoryManager::PageMask, reinterpret_cast<void*>(newPage.GetAddress()));
             return 0;
         }
         return -1;

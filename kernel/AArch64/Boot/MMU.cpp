@@ -114,7 +114,7 @@ namespace AArch64
                 entry.Visit(Overloaded{
                     [&descriptor, &arAllocator, &aTableView, aVirtualAddress](Descriptor::Fault)
                     {
-                        descriptor.Address(arAllocator.Allocate().GetAddress());
+                        descriptor.Address(arAllocator.Allocate());
                         aTableView.SetEntryForVA(aVirtualAddress, descriptor);
                     },
                     [&descriptor](Descriptor::Table aTable)
@@ -131,7 +131,8 @@ namespace AArch64
                     }
                 });
 
-                return ChildTableT{ reinterpret_cast<uint64_t*>( descriptor.Address() ) };
+                // no MMU, so physical address is the pointer
+                return ChildTableT{ reinterpret_cast<uint64_t*>( descriptor.Address().GetAddress() ) };
             }
 
             /**

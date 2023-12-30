@@ -268,7 +268,7 @@ namespace AArch64
 
         /**
          * An entry in table 0, 1, or 2 that points at another table
-        */
+         */
         class Table
         {
             friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
@@ -277,7 +277,7 @@ namespace AArch64
         public:
             /**
              * Constructor, sets type bits, but everything else is zeroed
-            */
+             */
             Table()
                 : Table{ Type }
             {}
@@ -295,7 +295,7 @@ namespace AArch64
              * @param aValue Value to write
              * @param apTable Table to write to
              * @param aIndex Index to write to in the table
-            */
+             */
             static void Write(Table aValue, uint64_t apTable[], size_t aIndex);
 
             /**
@@ -312,26 +312,24 @@ namespace AArch64
 
             /**
              * Sets the table address this entry points at
-             * #TODO: Pretty sure this is a physical address, so need a type for that
              * 
              * @param aAddress The table address
-            */
-            void Address(uintptr_t aAddress);
+             */
+            void Address(PhysicalPtr aAddress);
 
             /**
              * Obtains the table address this entry points at
-             * #TODO: Pretty sure this is a physical address, so need a type for that
              * 
              * @return The table address
-            */
-            uintptr_t Address() const;
+             */
+            PhysicalPtr Address() const;
 
         private:
             /**
              * Create a descriptor from the given bits
              * 
              * @param aInitialValue The bits to start with
-            */
+             */
             explicit Table(uint64_t const aInitialValue)
                 : DescriptorBits{ aInitialValue }
             {}
@@ -363,7 +361,7 @@ namespace AArch64
 
         /**
          * An entry in table 3 that points at a page
-        */
+         */
         class Page
         {
             friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
@@ -372,7 +370,7 @@ namespace AArch64
         public:
             /**
              * Constructor, sets type bits, but everything else is zeroed
-            */
+             */
             Page()
                 : Page{ Type }
             {}
@@ -390,7 +388,7 @@ namespace AArch64
              * @param aValue Value to write
              * @param apTable Table to write to
              * @param aIndex Index to write to in the table
-            */
+             */
             static void Write(Page aValue, uint64_t apTable[], size_t aIndex);
 
             /**
@@ -409,14 +407,14 @@ namespace AArch64
              * Sets index of the attributes for this page in the MIAR_ELx register
              * 
              * @param aIndex The attributes index
-            */
+             */
             void AttrIndx(uint8_t aIndex);
 
             /**
              * Gets the index of the attributes for this page in the MIAR_ELx register
              * 
              * @return The attributes index
-            */
+             */
             uint8_t AttrIndx() const;
 
             enum class AccessPermissions: uint8_t
@@ -431,14 +429,14 @@ namespace AArch64
              * Sets the access permission for this page
              * 
              * @param aPermission The page permission
-            */
+             */
             void AP(AccessPermissions aPermission);
 
             /**
              * Obtains the access permission for this page
              * 
              * @return The page permission
-            */
+             */
             AccessPermissions AP() const;
 
             /**
@@ -446,21 +444,21 @@ namespace AArch64
              * 
              * @param aAccess Sets the access flag - false flags won't be cached and generate an access flag fault if
              * hardware doesn't manage the flag (FEAT_HAFDBS)
-            */
+             */
             void AF(bool const aAccess) { DescriptorBits[AFIndex] = aAccess; }
 
             /**
              * AF Bit - Access flag
              * 
              * @return True if the memory has been accessed since it was last set to false
-            */
+             */
             bool AF() const { return DescriptorBits[AFIndex]; }
 
             /**
              * Sets the page address this entry points at
              * 
              * @param aAddress The page address
-            */
+             */
             void Address(PhysicalPtr aAddress);
 
             /**
@@ -475,7 +473,7 @@ namespace AArch64
              * Create a descriptor from the given bits
              * 
              * @param aInitialValue The bits to start with
-            */
+             */
             explicit Page(uint64_t const aInitialValue)
                 : DescriptorBits{ aInitialValue }
             {}
@@ -504,8 +502,6 @@ namespace AArch64
 
             std::bitset<64> DescriptorBits;
         };
-        
-        // #TODO: We're going to want a read function that can read a descriptor and return the right type
     }
 }
 

@@ -16,6 +16,11 @@ namespace PointerWrapper
         {
         public:
             /**
+             * Constructs a null pointer
+             */
+            constexpr WrapperT() = default;
+
+            /**
              * Construct a pointer from a raw address
              * 
              * @param aAddress The address to wrap
