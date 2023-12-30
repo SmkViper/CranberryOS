@@ -169,27 +169,34 @@ namespace MemoryManager
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
+            // helper to convert a table's pointer to the physical memory address, assuming identity mapping
+            auto tablePtrToPAIdentity = [](uint64_t const* const apTable)
+            {
+                // #TODO: Should by PhysicalPtr
+                return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(apTable) - KernelVirtualAddressStart.GetAddress());
+            };
+
             auto const pageGlobalDirectoryVA = reinterpret_cast<uintptr_t>(arTask.MemoryState.pPageGlobalDirectory) + KernelVirtualAddressStart.GetAddress();
             auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ reinterpret_cast<uint64_t*>(pageGlobalDirectoryVA) };
             auto newTable = false;
             auto const pageUpperDirectory = MapTable<AArch64::PageTable::Level1View>(pageGlobalDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
-                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = reinterpret_cast<void*>(pageUpperDirectory.GetTableVA() - KernelVirtualAddressStart.GetAddress());
+                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = tablePtrToPAIdentity(pageUpperDirectory.GetTablePtr());
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
             const auto pageMiddleDirectory = MapTable<AArch64::PageTable::Level2View>(pageUpperDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
-                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = reinterpret_cast<void*>(pageMiddleDirectory.GetTableVA() - KernelVirtualAddressStart.GetAddress());
+                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = tablePtrToPAIdentity(pageMiddleDirectory.GetTablePtr());
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
             const auto pageTableEntry = MapTable<AArch64::PageTable::Level3View>(pageMiddleDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
-                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = reinterpret_cast<void*>(pageTableEntry.GetTableVA() - KernelVirtualAddressStart.GetAddress());
+                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = tablePtrToPAIdentity(pageTableEntry.GetTablePtr());
                 ++arTask.MemoryState.KernelPagesCount;
             }
 

@@ -144,7 +144,7 @@ namespace AArch64
                  * Constructor, layering a view over the given memory assumed to be the table
                  * 
                  * @param apTable The table to make a view over - does not take ownership. Not expected to be null
-                */
+                 */
                 explicit PageView(uint64_t* const apTable)
                     : pTable{ apTable }
                 {
@@ -156,7 +156,7 @@ namespace AArch64
                  * 
                  * @param aVirtualAddress The address to get the entry for
                  * @return The entry in the table that contains that address
-                */
+                 */
                 Entry GetEntryForVA(VirtualPtr const aVirtualAddress) const
                 {
                     auto const tableIndex = (aVirtualAddress.GetAddress() >> AddressShift) & AddressMask;
@@ -169,7 +169,7 @@ namespace AArch64
                  * 
                  * @param aVirtualAddress The address to set the entry for
                  * @param aValue The value to set for that entry
-                */
+                 */
                 template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
                 void SetEntryForVA(VirtualPtr const aVirtualAddress, DescriptorT const aValue) const
                 {
@@ -179,13 +179,13 @@ namespace AArch64
                 }
 
                 /**
-                 * Gets the table's virtual address
+                 * Gets the table's pointer (what was given to the constructor)
                  * 
-                 * @return The table's virtual address
-                */
-                uintptr_t GetTableVA() const
+                 * @return The table's pointer
+                 */
+                uint64_t* GetTablePtr() const
                 {
-                    return reinterpret_cast<uintptr_t>(pTable);
+                    return pTable;
                 }
 
             private:

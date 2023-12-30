@@ -101,7 +101,7 @@ namespace UnitTests::AArch64::MemoryPageTables
             uint64_t buffer[10] = {}; // don't need a full table, but need enough of one to differentiate between types
             PageViewT testPageView{ buffer };
 
-            EmitTestResult(testPageView.GetTableVA() == reinterpret_cast<uintptr_t>(buffer), "Page view {} construction and VA access", apPageViewName);
+            EmitTestResult(testPageView.GetTablePtr() == buffer, "Page view {} construction and VA access", apPageViewName);
 
             DescriptorT descriptor;
             auto const descriptorValue = Details::TestAccessor::GetDescriptorValue(descriptor);
