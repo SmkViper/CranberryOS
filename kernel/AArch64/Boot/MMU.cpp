@@ -53,20 +53,20 @@ namespace AArch64
                  * @param apStart The start of the memory range to allocate from
                  * @param apEnd One past the end of the memory range to allocate from
                 */
-                PageBumpAllocator(void* const apStart, void* const apEnd)
-                    : pStart{apStart}
-                    , pEnd{apEnd}
-                    , pCurrent{apStart}
+                PageBumpAllocator(PhysicalPtr const aStart, PhysicalPtr const aEnd)
+                    : Start{ aStart }
+                    , End{ aEnd }
+                    , Current{ aStart }
                 {
-                    if (pStart > pEnd)
+                    if (Start > End)
                     {
                         Panic("Bump allocator start is past the end");
                     }
-                    if (reinterpret_cast<uintptr_t>(pStart) % MemoryManager::PageSize != 0)
+                    if (Start.GetAddress() % MemoryManager::PageSize != 0)
                     {
                         Panic("Bump allocator start address is not aligned to a page size");
                     }
-                    if (reinterpret_cast<uintptr_t>(pEnd) % MemoryManager::PageSize != 0)
+                    if (End.GetAddress() % MemoryManager::PageSize != 0)
                     {
                         Panic("Bump allocator start address is not aligned to a page size");
                     }
@@ -77,24 +77,25 @@ namespace AArch64
                  * 
                  * @return The allocated page, zeroed out
                 */
-                void* Allocate()
+                PhysicalPtr Allocate()
                 {
-                    if (pCurrent >= pEnd)
+                    if (Current >= End)
                     {
                         Panic("Bump allocator out of memory");
                     }
 
-                    auto const pret = pCurrent;
-                    pCurrent = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(pCurrent) + MemoryManager::PageSize);
+                    auto const retPage = Current;
+                    Current = Current.Offset(MemoryManager::PageSize);
 
-                    std::memset(pret, 0, MemoryManager::PageSize);
-                    return pret;
+                    // no MMU yet, so physical addresses are real pointers at this stage
+                    std::memset(reinterpret_cast<void*>(retPage.GetAddress()), 0, MemoryManager::PageSize);
+                    return retPage;
                 }
 
             private:
-                void* pStart = nullptr;
-                void* pEnd = nullptr;
-                void* pCurrent = nullptr;
+                PhysicalPtr Start;
+                PhysicalPtr End;
+                PhysicalPtr Current;
             };
 
             /**
@@ -113,7 +114,7 @@ namespace AArch64
                 entry.Visit(Overloaded{
                     [&descriptor, &arAllocator, &aTableView, aVirtualAddress](Descriptor::Fault)
                     {
-                        descriptor.Address(reinterpret_cast<uintptr_t>(arAllocator.Allocate()));
+                        descriptor.Address(arAllocator.Allocate().GetAddress());
                         aTableView.SetEntryForVA(aVirtualAddress, descriptor);
                     },
                     [&descriptor](Descriptor::Table aTable)
@@ -196,15 +197,15 @@ namespace AArch64
             /**
              * Sets the page table registers to the given table
              * 
-             * @param apTable The table to use
+             * @param aTable The table to use
             */
-            void SwitchToPageTable(uint8_t* const apTable)
+            void SwitchToPageTable(PhysicalPtr const aTable)
             {
                 // the apTable pointer gets the top 16 bits masked out (because it becomes the ASID), so we don't have
                 // to do any adjustment to it to account for it being on a virtual kernel address
                 // #TODO: In theory, but the debugger shows it at the physical address for an unknown reason.
                 TTBRn_EL1 ttbrn_el1;
-                ttbrn_el1.BADDR(reinterpret_cast<uintptr_t>(apTable));
+                ttbrn_el1.BADDR(aTable.GetAddress());
                 TTBRn_EL1::Write0(ttbrn_el1); // table for user space (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF)
                 TTBRn_EL1::Write1(ttbrn_el1); // table for kernel space (0xFFFF'0000'0000'0000 - 0xFFFF'FFFF'FFFF'FFFF)
             }
@@ -214,7 +215,7 @@ namespace AArch64
         {
             // #TODO: Currently unclear why the address stored in __pg_dir appears to be the physical address and not
             // the virtual address. But this seems to work for now.
-            PageBumpAllocator allocator{ __pg_dir, __pg_dir_end };
+            PageBumpAllocator allocator{ PhysicalPtr{ reinterpret_cast<uintptr_t>(__pg_dir) }, PhysicalPtr{ reinterpret_cast<uintptr_t>(__pg_dir_end) } };
 
             // #TODO: Should make physical and virtual address types to easily differentiate between the two
 
@@ -241,7 +242,8 @@ namespace AArch64
             auto const startOfDeviceRangeVA = toVAOffsetMapping(deviceBasePA);
             auto const endOfDeviceRangeVA = toVAOffsetMapping(deviceEndPA);
 
-            auto const rootPage = PageTable::Level0View{ reinterpret_cast<uint64_t*>(allocator.Allocate()) };
+            // physical addresses that the allocator returns are pointers since we have no MMU at this point
+            auto const rootPage = PageTable::Level0View{ reinterpret_cast<uint64_t*>(allocator.Allocate().GetAddress()) };
 
             // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
             // be pointing at the physical addresses)
@@ -265,7 +267,7 @@ namespace AArch64
 
         void EnableMMU()
         {
-            SwitchToPageTable(__pg_dir);
+            SwitchToPageTable(PhysicalPtr{ reinterpret_cast<uintptr_t>(__pg_dir) });
 
             MAIR_EL1 mair_el1;
             mair_el1.SetAttribute(MemoryManager::DeviceMAIRIndex, MAIR_EL1::Attribute::DeviceMemory());
