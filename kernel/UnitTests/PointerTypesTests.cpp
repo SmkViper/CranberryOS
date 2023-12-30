@@ -9,8 +9,13 @@ namespace UnitTests::PointerTypes
     {
         static_assert(PhysicalPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
         static_assert(PhysicalPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
+        static_assert((PhysicalPtr{ 10 } == PhysicalPtr{ 10 }) && !(PhysicalPtr{ 10 } == PhysicalPtr{ 15 }), "Unexpected equality check result");
+        static_assert(!(PhysicalPtr{ 10 } != PhysicalPtr{ 10 }) && (PhysicalPtr{ 10 } != PhysicalPtr{ 15 }), "Unexpected inequality check result");
+
         static_assert(VirtualPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
         static_assert(VirtualPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
+        static_assert((VirtualPtr{ 10 } == VirtualPtr{ 10 }) && !(VirtualPtr{ 10 } == VirtualPtr{ 15 }), "Unexpected equality check result");
+        static_assert(!(VirtualPtr{ 10 } != VirtualPtr{ 10 }) && (VirtualPtr{ 10 } != VirtualPtr{ 15 }), "Unexpected inequality check result");
 
         /**
          * Testing PhysicalPtr formatting

@@ -4,6 +4,9 @@
 #include <cstdint>
 #include "Print.h"
 
+// #TODO: For now types are completely seperate, under the assumption that we want to allow certain operations on one
+// but not the other. If this ends up not being the case, we can collapse them into a tagged common type
+
 /**
  * Wrapper class that represents a pointer to physical memory
  */
@@ -18,6 +21,28 @@ public:
     explicit constexpr PhysicalPtr(uintptr_t const aAddress)
         : Address{ aAddress }
     {}
+
+    /**
+     * Compare this pointer with another
+     * 
+     * @param aOther Other pointer to compare with
+     * @return True if equal
+     */
+    constexpr bool operator==(PhysicalPtr const& aOther) const
+    {
+        return Address == aOther.Address;
+    }
+
+    /**
+     * Compare this pointer with another
+     * 
+     * @param aOther Other pointer to compare with
+     * @return True if not equal
+     */
+    constexpr bool operator!=(PhysicalPtr const& aOther) const
+    {
+        return !(*this == aOther);
+    }
 
     /**
      * Obtains the address this pointer points at
@@ -60,6 +85,28 @@ public:
     explicit constexpr VirtualPtr(uintptr_t const aAddress)
         : Address{ aAddress }
     {}
+
+    /**
+     * Compare this pointer with another
+     * 
+     * @param aOther Other pointer to compare with
+     * @return True if equal
+     */
+    constexpr bool operator==(VirtualPtr const& aOther) const
+    {
+        return Address == aOther.Address;
+    }
+
+    /**
+     * Compare this pointer with another
+     * 
+     * @param aOther Other pointer to compare with
+     * @return True if not equal
+     */
+    constexpr bool operator!=(VirtualPtr const& aOther) const
+    {
+        return !(*this == aOther);
+    }
 
     /**
      * Obtains the address this pointer points at

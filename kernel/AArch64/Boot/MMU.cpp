@@ -227,23 +227,29 @@ namespace AArch64
             // #TODO: Originally this was done so we didn't have to set up 4k pages and could instead use 2MB blocks,
             // but it may not make sense anymore, especially since we later want to flag certain areas as read-only
             // #TODO: Why are these symbols from the linker script pointing at physical addresses?
-            auto const kernelBasePA = MemoryManager::CalculateBlockStart(reinterpret_cast<uintptr_t>(__kernel_image), MemoryManager::L2BlockSize);
-            auto const kernelEndPA = MemoryManager::CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end), MemoryManager::L2BlockSize);
+            auto const kernelBasePA = MemoryManager::CalculateBlockStart(PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image) }, MemoryManager::L2BlockSize);
+            auto const kernelEndPA = MemoryManager::CalculateBlockEnd(PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image_end) }, MemoryManager::L2BlockSize);
 
-            auto const startOfKernelRangeVA = kernelBasePA + MemoryManager::KernelVirtualAddressStart.GetAddress();
-            auto const endOfKernelRangeVA = kernelEndPA + MemoryManager::KernelVirtualAddressStart.GetAddress();
-            auto const startOfDeviceRangeVA = VirtualPtr{ deviceBasePA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressStart.GetAddress());
-            auto const endOfDeviceRangeVA = VirtualPtr{ deviceEndPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressStart.GetAddress());
+            // Converts a physical pointer to a virtual pointer assuming identity mapping
+            auto toVAIdentityMapping = [](PhysicalPtr const aPA)
+            {
+                return VirtualPtr{ aPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressStart.GetAddress());
+            };
+
+            auto const startOfKernelRangeVA = toVAIdentityMapping(kernelBasePA);
+            auto const endOfKernelRangeVA = toVAIdentityMapping(kernelEndPA);
+            auto const startOfDeviceRangeVA = toVAIdentityMapping(deviceBasePA);
+            auto const endOfDeviceRangeVA = toVAIdentityMapping(deviceEndPA);
 
             auto const rootPage = PageTable::Level0View{ reinterpret_cast<uint64_t*>(allocator.Allocate()) };
 
             // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
             // be pointing at the physical addresses)
-            InsertEntriesForMemoryRange(allocator, rootPage, kernelBasePA, kernelEndPA, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, kernelBasePA.GetAddress(), kernelEndPA.GetAddress(), kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
             InsertEntriesForMemoryRange(allocator, rootPage, deviceBasePA.GetAddress(), deviceEndPA.GetAddress(), deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
 
             // Now map the kernel and devices into high memory
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA.GetAddress(), endOfKernelRangeVA.GetAddress(), kernelBasePA.GetAddress(), MemoryManager::NormalMAIRIndex);
             InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA.GetAddress(), endOfDeviceRangeVA.GetAddress(), deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
 
             // Map everything between the kernel range and device range for now
@@ -251,7 +257,7 @@ namespace AArch64
             // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
             // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
             // kernel space
-            InsertEntriesForMemoryRange(allocator, rootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA.GetAddress() - 1, endOfKernelRangeVA + 1, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, endOfKernelRangeVA.GetAddress() + 1, startOfDeviceRangeVA.GetAddress() - 1, endOfKernelRangeVA.GetAddress() + 1, MemoryManager::NormalMAIRIndex);
         }
 
         void EnableMMU()

@@ -7,9 +7,20 @@ namespace UnitTests::MemoryManager
     namespace
     {
         static_assert(::MemoryManager::CalculateBlockStart(0x1, 0x1000) == 0x0, "Unexpected block start");
+        static_assert(::MemoryManager::CalculateBlockStart(PhysicalPtr{ 0x1 }, 0x1000) == PhysicalPtr{ 0x0 }, "Unexpected block start");
+        static_assert(::MemoryManager::CalculateBlockStart(VirtualPtr{ 0x1 }, 0x1000) == VirtualPtr{ 0x0 }, "Unexpected block start");
+
         static_assert(::MemoryManager::CalculateBlockEnd(0x1, 0x1000) == 0x0FFF, "Unexpected block end");
+        static_assert(::MemoryManager::CalculateBlockEnd(PhysicalPtr{ 0x1 }, 0x1000) == PhysicalPtr{ 0x0FFF }, "Unexpected block end");
+        static_assert(::MemoryManager::CalculateBlockEnd(VirtualPtr{ 0x1 }, 0x1000) == VirtualPtr{ 0x0FFF }, "Unexpected block end");
+
         static_assert(::MemoryManager::CalculateBlockStart(0x1024, 0x1000) == 0x1000, "Unexpected block start");
+        static_assert(::MemoryManager::CalculateBlockStart(PhysicalPtr{ 0x1024 }, 0x1000) == PhysicalPtr{ 0x1000 }, "Unexpected block start");
+        static_assert(::MemoryManager::CalculateBlockStart(VirtualPtr{ 0x1024 }, 0x1000) == VirtualPtr{ 0x1000 }, "Unexpected block start");
+
         static_assert(::MemoryManager::CalculateBlockEnd(0x1024, 0x1000) == 0x1FFF, "Unexpected block end");
+        static_assert(::MemoryManager::CalculateBlockEnd(PhysicalPtr{ 0x1024 }, 0x1000) == PhysicalPtr{ 0x1FFF }, "Unexpected block end");
+        static_assert(::MemoryManager::CalculateBlockEnd(VirtualPtr{ 0x1024 }, 0x1000) == VirtualPtr{ 0x1FFF }, "Unexpected block end");
 
         // #TODO: AllocateKernelPage tests
         // #TODO: AllocateUserPage tests
