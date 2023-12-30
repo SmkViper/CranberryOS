@@ -27,7 +27,7 @@ namespace UnitTests::MemoryManager
         // #TODO: CopyVirtualMemory tests
 
         // SetPageGlobalDirectory modifies system state in a way that would likely screw things up, so not really
-        // able to bet tested
+        // able to be tested
     }
 
     void Run()

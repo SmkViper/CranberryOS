@@ -176,6 +176,7 @@ namespace MemoryManager
                 return PhysicalPtr{ reinterpret_cast<uintptr_t>(apTable) - KernelVirtualAddressOffset};
             };
 
+            // PGD addresses are offset-mapped to virtual addresses
             auto const pageGlobalDirectoryVA = VirtualPtr{ arTask.MemoryState.PageGlobalDirectory.GetAddress() }.Offset(KernelVirtualAddressOffset);
             auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ reinterpret_cast<uint64_t*>(pageGlobalDirectoryVA.GetAddress()) };
             auto newTable = false;
@@ -200,7 +201,7 @@ namespace MemoryManager
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            MapTableEntry(pageTableEntry, VirtualPtr{ aVirtualAddress }, aPhysicalPage);
+            MapTableEntry(pageTableEntry, aVirtualAddress, aPhysicalPage);
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{ aPhysicalPage, aVirtualAddress };
             ++arTask.MemoryState.UserPagesCount;
         }
@@ -213,7 +214,7 @@ namespace MemoryManager
         {
             return nullptr;
         }
-        // map the physical page to the kernel address space
+        // map the physical page to the kernel address space (offset-mapped)
         return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
 
@@ -226,7 +227,7 @@ namespace MemoryManager
         }
 
         MapPage(arTask, aVirtualAddress, physicalPage);
-        // map the physical page to the kernel address space
+        // map the physical page to the kernel address space (offset-mapped)
         return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
 

@@ -115,7 +115,7 @@ namespace UnitTests
          */
         void StaticCppDestructorTest()
         {
-            // TODO
+            // #TODO
             // Clang seems to assume the destructor has no observable side effects, and so does not add
             // it to the .fini_array, causing this test to fail. Need to find a way to subvert clang's
             // analysis (printing to MiniUART and volatile access seem to not be good enough)
@@ -170,6 +170,9 @@ namespace UnitTests
         AArch64::MemoryDescriptor::Run();
         AArch64::MemoryPageTables::Run();
         AArch64::SystemRegisters::Run();
+
+        // Devices/* not tested as right now they're just constexpr values
+        // #TODO: Devices/DeviceTree.h/cpp untested
 
         KernelStdlib::Bitset::Run();
         // No runtime tests for climits

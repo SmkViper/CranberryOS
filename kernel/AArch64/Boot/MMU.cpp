@@ -218,8 +218,6 @@ namespace AArch64
             // the virtual address. But this seems to work for now.
             PageBumpAllocator allocator{ PhysicalPtr{ reinterpret_cast<uintptr_t>(__pg_dir) }, PhysicalPtr{ reinterpret_cast<uintptr_t>(__pg_dir_end) } };
 
-            // #TODO: Should make physical and virtual address types to easily differentiate between the two
-
             // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
             // they need based on device tree information
             auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
