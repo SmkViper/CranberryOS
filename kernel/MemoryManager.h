@@ -58,7 +58,7 @@ namespace MemoryManager
      * 
      * @param apNewPGD Pointer to the new page global directory
      */
-    void SetPageGlobalDirectory(const void* apNewPGD);
+    void SetPageGlobalDirectory(PhysicalPtr aNewPGD);
 
     /**
      * Calculate the start of the block of the given size containing the given pointer

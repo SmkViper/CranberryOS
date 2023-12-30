@@ -283,7 +283,7 @@ namespace
         }
         const auto pprevTask = pCurrentTask;
         pCurrentTask = apNextTask;
-        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.pPageGlobalDirectory);
+        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.PageGlobalDirectory);
         cpu_switch_to(pprevTask, apNextTask);
     }
 
@@ -462,7 +462,7 @@ namespace Scheduler
             return false;
         }
         memcpy(pcodePage, apStart, aSize);
-        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.pPageGlobalDirectory);
+        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.PageGlobalDirectory);
         return true;
     }
 

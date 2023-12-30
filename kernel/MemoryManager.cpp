@@ -163,22 +163,21 @@ namespace MemoryManager
          */
         void MapPage(Scheduler::TaskStruct& arTask, VirtualPtr const aVirtualAddress, PhysicalPtr const aPhysicalPage)
         {
-            if (arTask.MemoryState.pPageGlobalDirectory == nullptr)
+            if (arTask.MemoryState.PageGlobalDirectory == PhysicalPtr{})
             {
-                arTask.MemoryState.pPageGlobalDirectory = reinterpret_cast<void*>(GetFreePage().GetAddress());
-                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = arTask.MemoryState.pPageGlobalDirectory;
+                arTask.MemoryState.PageGlobalDirectory = GetFreePage();
+                arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = arTask.MemoryState.PageGlobalDirectory;
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            // helper to convert a table's pointer to the physical memory address, assuming identity mapping
+            // helper to convert a table's pointer to the physical memory address, assuming offset mapping
             auto tablePtrToPAOffset = [](uint64_t const* const apTable)
             {
-                // #TODO: Should be PhysicalPtr
-                return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(apTable) - KernelVirtualAddressOffset);
+                return PhysicalPtr{ reinterpret_cast<uintptr_t>(apTable) - KernelVirtualAddressOffset};
             };
 
-            auto const pageGlobalDirectoryVA = reinterpret_cast<uintptr_t>(arTask.MemoryState.pPageGlobalDirectory) + KernelVirtualAddressOffset;
-            auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ reinterpret_cast<uint64_t*>(pageGlobalDirectoryVA) };
+            auto const pageGlobalDirectoryVA = VirtualPtr{ arTask.MemoryState.PageGlobalDirectory.GetAddress() }.Offset(KernelVirtualAddressOffset);
+            auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ reinterpret_cast<uint64_t*>(pageGlobalDirectoryVA.GetAddress()) };
             auto newTable = false;
             auto const pageUpperDirectory = MapTable<AArch64::PageTable::Level1View>(pageGlobalDirectory, aVirtualAddress, newTable);
             if (newTable)
@@ -202,7 +201,7 @@ namespace MemoryManager
             }
 
             MapTableEntry(pageTableEntry, VirtualPtr{ aVirtualAddress }, aPhysicalPage);
-            arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{ reinterpret_cast<void*>(aPhysicalPage.GetAddress()), aVirtualAddress.GetAddress() };
+            arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{ aPhysicalPage, aVirtualAddress };
             ++arTask.MemoryState.UserPagesCount;
         }
     }
@@ -235,19 +234,19 @@ namespace MemoryManager
     {
         for (auto curPage = 0u; curPage < aCurrentTask.MemoryState.UserPagesCount; ++curPage)
         {
-            const auto pkernelVA = AllocateUserPage(arDestinationTask, VirtualPtr{ aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress });
+            const auto pkernelVA = AllocateUserPage(arDestinationTask, aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress);
             if (pkernelVA == nullptr)
             {
                 return false;
             }
-            memcpy(pkernelVA, reinterpret_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress), PageSize);
+            memcpy(pkernelVA, reinterpret_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress.GetAddress()), PageSize);
         }
         return true;
     }
 
-    void SetPageGlobalDirectory(const void* const apNewPGD)
+    void SetPageGlobalDirectory(PhysicalPtr const aNewPGD)
     {
-        set_pgd(apNewPGD);
+        set_pgd(reinterpret_cast<void const*>(aNewPGD.GetAddress()));
     }
 }
 

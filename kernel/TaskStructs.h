@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "PointerTypes.h"
 
 namespace Scheduler
 {
@@ -35,22 +36,19 @@ namespace Scheduler
 
     constexpr std::size_t MaxProcessPagesCS = 16u;
 
-    // #TODO: We really should have the idea of "physical address" vs "kernel virtual address" vs "user virtual
-    // address" as types to avoid mixing them up on accident
-
     struct UserPage
     {
-        void* PhysicalAddress = nullptr;
-        uintptr_t VirtualAddress = 0u;
+        PhysicalPtr PhysicalAddress;
+        VirtualPtr VirtualAddress;
     };
 
     struct MemoryManagerState
     {
-        void* pPageGlobalDirectory = nullptr; // physical address
+        PhysicalPtr PageGlobalDirectory;
         uint32_t UserPagesCount = 0;
         UserPage UserPages[MaxProcessPagesCS] = {};
         uint32_t KernelPagesCount = 0;
-        void* KernelPages[MaxProcessPagesCS] = {}; // physical addresses
+        PhysicalPtr KernelPages[MaxProcessPagesCS] = {};
     };
 
     struct TaskStruct
