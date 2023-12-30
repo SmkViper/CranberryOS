@@ -43,7 +43,7 @@ namespace MemoryManager
      * @param aVirtualAddress The address that the page should start on
      * @return The newly allocated page in kernal virtual address space
      */
-    void* AllocateUserPage(Scheduler::TaskStruct& arTask, uintptr_t aVirtualAddress);
+    void* AllocateUserPage(Scheduler::TaskStruct& arTask, VirtualPtr aVirtualAddress);
 
     /**
      * Copies the virtual memory from the source task into the destination task

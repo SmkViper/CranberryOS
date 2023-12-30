@@ -51,7 +51,7 @@ extern "C"
      */
     void show_invalid_entry_message(int64_t aType, uint64_t aESR, uint64_t aReturnAddress)
     {
-        Print::FormatToMiniUART("{}:\r\n\tESR: {:x}\r\n\tAddress: {:x}\r\n", ExceptionTypeNames[aType], aESR, aReturnAddress);
+        Print::FormatToMiniUART("{}:\r\n\tESR: {:x}\r\n\tAddress: {:x}\r\n", ExceptionTypeNames[aType], aESR, VirtualPtr{ aReturnAddress });
     }
 
     /**

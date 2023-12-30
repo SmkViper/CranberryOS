@@ -218,7 +218,7 @@ namespace MemoryManager
         return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
 
-    void* AllocateUserPage(Scheduler::TaskStruct& arTask, const uintptr_t aVirtualAddress)
+    void* AllocateUserPage(Scheduler::TaskStruct& arTask, VirtualPtr const aVirtualAddress)
     {
         const auto physicalPage = GetFreePage();
         if (physicalPage == PhysicalPtr{})
@@ -226,7 +226,7 @@ namespace MemoryManager
             return nullptr;
         }
 
-        MapPage(arTask, aVirtualAddress, reinterpret_cast<void*>(physicalPage.GetAddress()));
+        MapPage(arTask, aVirtualAddress.GetAddress(), reinterpret_cast<void*>(physicalPage.GetAddress()));
         // map the physical page to the kernel address space
         return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
@@ -235,7 +235,7 @@ namespace MemoryManager
     {
         for (auto curPage = 0u; curPage < aCurrentTask.MemoryState.UserPagesCount; ++curPage)
         {
-            const auto pkernelVA = AllocateUserPage(arDestinationTask, aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress);
+            const auto pkernelVA = AllocateUserPage(arDestinationTask, VirtualPtr{ aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress });
             if (pkernelVA == nullptr)
             {
                 return false;

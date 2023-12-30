@@ -455,7 +455,7 @@ namespace Scheduler
         // page for us, hence why we can just blindly set StackPointer here.
         pstate->StackPointer = 2 * MemoryManager::PageSize;
 
-        const auto pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, 0);
+        const auto pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, VirtualPtr{});
         if (pcodePage == nullptr)
         {
             pstate->~ProcessState();
