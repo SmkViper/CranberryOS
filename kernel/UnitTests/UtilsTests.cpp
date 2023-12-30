@@ -8,7 +8,7 @@ namespace UnitTests::Utils
     namespace
     {
         // #TODO: No obvious way to test MemoryMappedIO stuff yet
-        // #TODO: NO obvious way to test Timing stuff yet
+        // #TODO: No obvious way to test Timing stuff yet
 
         /**
          * Test the Overloaded struct

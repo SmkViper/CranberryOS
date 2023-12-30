@@ -9,6 +9,7 @@ add_executable(kernel8.elf
     Main.h Main.cpp
     MemoryManager.h MemoryManager.cpp MemoryManager.S
     MiniUart.h MiniUart.cpp
+    PointerTypes.h PointerTypes.cpp
     Print.h Print.cpp
     Scheduler.h Scheduler.cpp Scheduler.S
     SystemCall.cpp

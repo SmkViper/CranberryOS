@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "PointerTypes.h"
+
 namespace MemoryMappedIO
 {
     /**
@@ -13,7 +15,7 @@ namespace MemoryMappedIO
      * @param aAddress Address to store data into
      * @param aData Data to store
      */
-    void Put32(uintptr_t aAddress, uint32_t aData);
+    void Put32(VirtualPtr aAddress, uint32_t aData);
 
     /**
      * Obtain a 32 bit data value from the given address
@@ -21,7 +23,7 @@ namespace MemoryMappedIO
      * @param aAddress Address to read data from
      * @return The value store there
      */
-    uint32_t Get32(uintptr_t aAddress);
+    uint32_t Get32(VirtualPtr aAddress);
 }
 
 namespace Timing

@@ -96,12 +96,12 @@ namespace UnitTests::AArch64::MemoryPageTables
          * @param aExpectedTableIndex The expected table index to be written to/read from
          */
         template<typename PageViewT, typename DescriptorT>
-        void PageViewTest(char const* const apPageViewName, uintptr_t const aVirtualAddress, uint8_t const aExpectedTableIndex)
+        void PageViewTest(char const* const apPageViewName, VirtualPtr const aVirtualAddress, uint8_t const aExpectedTableIndex)
         {
             uint64_t buffer[10] = {}; // don't need a full table, but need enough of one to differentiate between types
             PageViewT testPageView{ buffer };
 
-            EmitTestResult(testPageView.GetTableVA() == reinterpret_cast<uintptr_t>(buffer), "Page view {} construction and VA access", apPageViewName);
+            EmitTestResult(testPageView.GetTablePtr() == buffer, "Page view {} construction and VA access", apPageViewName);
 
             DescriptorT descriptor;
             auto const descriptorValue = Details::TestAccessor::GetDescriptorValue(descriptor);
@@ -135,11 +135,12 @@ namespace UnitTests::AArch64::MemoryPageTables
         auto const l1Index = 3;
         auto const l0Index = 4;
         // This address is specifically crafted to pick a different index based on the page table level
-        uintptr_t const virtualAddress =
+        auto const virtualAddress = VirtualPtr{
             static_cast<uintptr_t>(l0Index) << 39 |
             static_cast<uintptr_t>(l1Index) << 30 |
             static_cast<uintptr_t>(l2Index) << 21 |
-            static_cast<uintptr_t>(l3Index) << 12;
+            static_cast<uintptr_t>(l3Index) << 12
+        };
         
         // We already tested the entry visit above, so we just need to test a single descriptor per view. We'll pick
         // the ones with non-zero type to ensure something is written to the table and it's not just zeroed out

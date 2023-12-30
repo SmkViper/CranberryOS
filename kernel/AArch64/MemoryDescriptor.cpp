@@ -10,15 +10,15 @@ namespace AArch64
             apTable[aIndex] = aValue.DescriptorBits.to_ullong();
         }
 
-        void Table::Address(uintptr_t const aAddress)
+        void Table::Address(PhysicalPtr const aAddress)
         {
             // #TODO: Should probably range check address to make sure the mask doesn't pull off any bits
-            WriteMultiBitValue(DescriptorBits, aAddress, Address_Mask, 0 /* no shift */);
+            WriteMultiBitValue(DescriptorBits, aAddress.GetAddress(), Address_Mask, 0 /* no shift */);
         }
 
-        uintptr_t Table::Address() const
+        PhysicalPtr Table::Address() const
         {
-            return ReadMultiBitValue<uintptr_t>(DescriptorBits, Address_Mask, 0 /* no shift */);
+            return ReadMultiBitValue<PhysicalPtr>(DescriptorBits, Address_Mask, 0 /* no shift */);
         }
 
         void Page::Write(Page const aValue, uint64_t apTable[], size_t const aIndex)
@@ -48,15 +48,15 @@ namespace AArch64
             return ReadMultiBitValue<AccessPermissions>(DescriptorBits, APIndex_Mask, APIndex_Shift);
         }
 
-        void Page::Address(uintptr_t const aAddress)
+        void Page::Address(PhysicalPtr const aAddress)
         {
             // #TODO: Should probably range check address to make sure the mask doesn't pull off any bits
-            WriteMultiBitValue(DescriptorBits, aAddress, Address_Mask, 0 /* no shift */);
+            WriteMultiBitValue(DescriptorBits, aAddress.GetAddress(), Address_Mask, 0 /* no shift */);
         }
 
-        uintptr_t Page::Address() const
+        PhysicalPtr Page::Address() const
         {
-            return ReadMultiBitValue<uintptr_t>(DescriptorBits, Address_Mask, 0 /* no shift */);
+            return ReadMultiBitValue<PhysicalPtr>(DescriptorBits, Address_Mask, 0 /* no shift */);
         }
     }
 }

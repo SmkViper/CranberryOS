@@ -2,15 +2,15 @@
 
 namespace MemoryMappedIO
 {
-    void Put32(uint64_t aAddress, uint32_t aData)
+    void Put32(VirtualPtr const aAddress, uint32_t const aData)
     {
-        volatile auto pregister = reinterpret_cast<uint32_t*>(aAddress);
+        volatile auto pregister = reinterpret_cast<uint32_t*>(aAddress.GetAddress());
         *pregister = aData;
     }
 
-    uint32_t Get32(uint64_t aAddress)
+    uint32_t Get32(VirtualPtr const aAddress)
     {
-        volatile auto pregister = reinterpret_cast<uint32_t*>(aAddress);
+        volatile auto pregister = reinterpret_cast<uint32_t*>(aAddress.GetAddress());
         return *pregister;
     }
 }

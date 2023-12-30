@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "AArch64/MemoryPageTables.h"
+#include "PointerTypes.h"
 
 namespace Scheduler
 {
@@ -11,9 +12,8 @@ namespace Scheduler
 
 namespace MemoryManager
 {
-    // #TODO These should be special types indicating the type of pointer
-    constexpr uintptr_t KernelVirtualAddressStart = 0xFFFF'0000'0000'0000;
-    constexpr uintptr_t DeviceBaseAddress = 0x3F00'0000;
+    constexpr auto KernelVirtualAddressOffset = 0xFFFF'0000'0000'0000ull;
+    constexpr auto DeviceBaseAddress = PhysicalPtr{ 0x3F00'0000 };
 
     // sizes depend on how many bits the descriptor uses to index into pages or tables
     constexpr size_t PageSize = 1ULL << AArch64::PageTable::PageOffsetBits;
@@ -43,7 +43,7 @@ namespace MemoryManager
      * @param aVirtualAddress The address that the page should start on
      * @return The newly allocated page in kernal virtual address space
      */
-    void* AllocateUserPage(Scheduler::TaskStruct& arTask, uintptr_t aVirtualAddress);
+    void* AllocateUserPage(Scheduler::TaskStruct& arTask, VirtualPtr aVirtualAddress);
 
     /**
      * Copies the virtual memory from the source task into the destination task
@@ -58,7 +58,7 @@ namespace MemoryManager
      * 
      * @param apNewPGD Pointer to the new page global directory
      */
-    void SetPageGlobalDirectory(const void* apNewPGD);
+    void SetPageGlobalDirectory(PhysicalPtr aNewPGD);
 
     /**
      * Calculate the start of the block of the given size containing the given pointer
@@ -67,11 +67,37 @@ namespace MemoryManager
      * @param aBlockSize The size of the block (must be power of 2)
      * 
      * @return The address of the start of the block containing the pointer
-    */
+     */
     constexpr uintptr_t CalculateBlockStart(uintptr_t const aPtr, size_t const aBlockSize)
     {
         // #TODO Confirm block size is a power of 2
         return aPtr & (~(aBlockSize - 1));
+    }
+
+    /**
+     * Calculate the start of the block of the given size containing the given pointer
+     * 
+     * @param aPtr The pointer inside the block
+     * @param aBlockSize The size of the block (must be power of 2)
+     * 
+     * @return The address of the start of the block containing the pointer
+     */
+    constexpr PhysicalPtr CalculateBlockStart(PhysicalPtr const aPtr, size_t const aBlockSize)
+    {
+        return PhysicalPtr{ CalculateBlockStart(aPtr.GetAddress(), aBlockSize) };
+    }
+
+    /**
+     * Calculate the start of the block of the given size containing the given pointer
+     * 
+     * @param aPtr The pointer inside the block
+     * @param aBlockSize The size of the block (must be power of 2)
+     * 
+     * @return The address of the start of the block containing the pointer
+     */
+    constexpr VirtualPtr CalculateBlockStart(VirtualPtr const aPtr, size_t const aBlockSize)
+    {
+        return VirtualPtr{ CalculateBlockStart(aPtr.GetAddress(), aBlockSize) };
     }
 
     /**
@@ -82,11 +108,39 @@ namespace MemoryManager
      * 
      * @return The last address in the block containing the pointer (adding 1 would be the byte starting the next
      * block)
-    */
+     */
     constexpr uintptr_t CalculateBlockEnd(uintptr_t const aPtr, size_t const aBlockSize)
     {
         // #TODO Confirm block size is a power of 2
         return CalculateBlockStart(aPtr, aBlockSize) + aBlockSize - 1;
+    }
+
+    /**
+     * Calculate the end of the block of the given size containing the given pointer
+     * 
+     * @param aPtr The pointer inside the block
+     * @param aBlockSize The size of the block (must be power of 2)
+     * 
+     * @return The last address in the block containing the pointer (adding 1 would be the byte starting the next
+     * block)
+     */
+    constexpr PhysicalPtr CalculateBlockEnd(PhysicalPtr const aPtr, size_t const aBlockSize)
+    {
+        return PhysicalPtr{ CalculateBlockEnd(aPtr.GetAddress(), aBlockSize) };
+    }
+
+    /**
+     * Calculate the end of the block of the given size containing the given pointer
+     * 
+     * @param aPtr The pointer inside the block
+     * @param aBlockSize The size of the block (must be power of 2)
+     * 
+     * @return The last address in the block containing the pointer (adding 1 would be the byte starting the next
+     * block)
+     */
+    constexpr VirtualPtr CalculateBlockEnd(VirtualPtr const aPtr, size_t const aBlockSize)
+    {
+        return VirtualPtr{ CalculateBlockEnd(aPtr.GetAddress(), aBlockSize) };
     }
 }
 

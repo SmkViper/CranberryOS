@@ -14,6 +14,7 @@
 #include "KernelStdlib/UtilityTests.h"
 #include "Framework.h"
 #include "MemoryManagerTests.h"
+#include "PointerTypesTests.h"
 #include "PrintTests.h"
 #include "UtilsTests.h"
 
@@ -114,7 +115,7 @@ namespace UnitTests
          */
         void StaticCppDestructorTest()
         {
-            // TODO
+            // #TODO
             // Clang seems to assume the destructor has no observable side effects, and so does not add
             // it to the .fini_array, causing this test to fail. Need to find a way to subvert clang's
             // analysis (printing to MiniUART and volatile access seem to not be good enough)
@@ -170,6 +171,9 @@ namespace UnitTests
         AArch64::MemoryPageTables::Run();
         AArch64::SystemRegisters::Run();
 
+        // Devices/* not tested as right now they're just constexpr values
+        // #TODO: Devices/DeviceTree.h/cpp untested
+
         KernelStdlib::Bitset::Run();
         // No runtime tests for climits
         // No runtime tests for cstddef
@@ -185,6 +189,7 @@ namespace UnitTests
         // #TODO: ExceptionVectorHandlers.h/cpp/S untested (not sure if testable)
         // #TODO: IRQ.h/S untested (likely untestable)
         MemoryManager::Run();
+        PointerTypes::Run();
         // #TODO: MiniUart.h/cpp untested (likely untestable - though basically tested due to all our UART output)
         Print::Run();
         // #TODO: Scheduler.h/cpp/S untested (not sure if testable, other than our running user apps)

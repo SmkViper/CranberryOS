@@ -283,7 +283,7 @@ namespace
         }
         const auto pprevTask = pCurrentTask;
         pCurrentTask = apNextTask;
-        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.pPageGlobalDirectory);
+        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.PageGlobalDirectory);
         cpu_switch_to(pprevTask, apNextTask);
     }
 
@@ -455,14 +455,14 @@ namespace Scheduler
         // page for us, hence why we can just blindly set StackPointer here.
         pstate->StackPointer = 2 * MemoryManager::PageSize;
 
-        const auto pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, 0);
+        const auto pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, VirtualPtr{});
         if (pcodePage == nullptr)
         {
             pstate->~ProcessState();
             return false;
         }
         memcpy(pcodePage, apStart, aSize);
-        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.pPageGlobalDirectory);
+        MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.PageGlobalDirectory);
         return true;
     }
 

@@ -66,10 +66,10 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 , "Table descriptor descriptor IsType with just type bits");
             EmitTestResult(::AArch64::Descriptor::Table::IsType(0b1111), "Table descriptor with non type bits");
 
-            testDescriptor.Address(0xFEFE'FEFE'FEFE'FEFE);
+            testDescriptor.Address(PhysicalPtr{ 0xFEFE'FEFE'FEFE'FEFE });
             auto const readAddress = testDescriptor.Address();
             EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0x0000'FEFE'FEFE'F003
-                && readAddress == 0x0000'FEFE'FEFE'F000
+                && readAddress == PhysicalPtr{ 0x0000'FEFE'FEFE'F000 }
                 , "Table descriptor Address get/set");
             
             uint64_t buffer[3] = {};
@@ -99,11 +99,11 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 , "Block {} descriptor descriptor IsType with just type bits", apBlockTypeName);
             EmitTestResult(BlockT::IsType(0b1101), "Block {} descriptor with non type bits", apBlockTypeName);
 
-            auto const rawAddress = 0xFEFE'FEFE'FEFE'FEFEull;
+            auto const rawAddress = PhysicalPtr{ 0xFEFE'FEFE'FEFE'FEFEull };
             testDescriptor.Address(rawAddress);
             auto const readAddress = testDescriptor.Address();
-            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == ((rawAddress & AddressMask) | 0b01)
-                && readAddress == (rawAddress & AddressMask)
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == ((rawAddress.GetAddress() & AddressMask) | 0b01)
+                && readAddress == PhysicalPtr{ rawAddress.GetAddress() & AddressMask }
                 , "Block {} descriptor Address get/set", apBlockTypeName);
             
             auto prevDescriptorValue = Details::TestAccessor::GetDescriptorValue(testDescriptor);
@@ -159,10 +159,10 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 , "Page descriptor descriptor IsType with just type bits");
             EmitTestResult(::AArch64::Descriptor::Page::IsType(0b1111), "Page descriptor with non type bits");
 
-            testDescriptor.Address(0xFEFE'FEFE'FEFE'FEFE);
+            testDescriptor.Address(PhysicalPtr{ 0xFEFE'FEFE'FEFE'FEFE });
             auto const readAddress = testDescriptor.Address();
             EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0x0000'FEFE'FEFE'F003
-                && readAddress == 0x0000'FEFE'FEFE'F000
+                && readAddress == PhysicalPtr{ 0x0000'FEFE'FEFE'F000 }
                 , "Page descriptor Address get/set");
 
             // AttrIndx [4:2]
