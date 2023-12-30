@@ -87,8 +87,8 @@ extern "C"
 
 namespace Kernel
 {
-    void kmain(uint32_t const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
-        uint64_t const aX3Reserved, uint32_t const aStartPointer)
+    void kmain(PhysicalPtr const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
+        uint64_t const aX3Reserved, PhysicalPtr const aStartPointer)
     {
         CallStaticConstructors();
 
@@ -98,11 +98,11 @@ namespace Kernel
         ExceptionVectors::EnableInterruptController();
         enable_irq();
 
-        Print::FormatToMiniUART("DTB Address: {:x}\r\n", aDTBPointer);
+        Print::FormatToMiniUART("DTB Address: {}\r\n", aDTBPointer);
         Print::FormatToMiniUART("x1: {:x}\r\n", aX1Reserved);
         Print::FormatToMiniUART("x2: {:x}\r\n", aX2Reserved);
         Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
-        Print::FormatToMiniUART("_start: {:x}\r\n", aStartPointer);
+        Print::FormatToMiniUART("_start: {}\r\n", aStartPointer);
         // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
         //DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(static_cast<uintptr_t>(aDTBPointer) + MemoryManager::KernalVirtualAddressStart));
 

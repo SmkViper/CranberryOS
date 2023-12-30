@@ -14,6 +14,7 @@
 #include "KernelStdlib/UtilityTests.h"
 #include "Framework.h"
 #include "MemoryManagerTests.h"
+#include "PointerTypesTests.h"
 #include "PrintTests.h"
 #include "UtilsTests.h"
 
@@ -185,6 +186,7 @@ namespace UnitTests
         // #TODO: ExceptionVectorHandlers.h/cpp/S untested (not sure if testable)
         // #TODO: IRQ.h/S untested (likely untestable)
         MemoryManager::Run();
+        PointerTypes::Run();
         // #TODO: MiniUart.h/cpp untested (likely untestable - though basically tested due to all our UART output)
         Print::Run();
         // #TODO: Scheduler.h/cpp/S untested (not sure if testable, other than our running user apps)

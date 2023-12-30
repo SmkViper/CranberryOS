@@ -1,6 +1,7 @@
 #include <cstdint>
 #include "../../Main.h"
 #include "../../MemoryManager.h"
+#include "../../PointerTypes.h"
 #include "ExceptionLevel.h"
 #include "MMU.h"
 
@@ -47,6 +48,6 @@ extern "C"
 
         // #TODO: Unmap identity mapping
 
-        Kernel::kmain(aDTBPointer, aX1Reserved, aX2Reserved, aX3Reserved, aStartPointer);
+        Kernel::kmain(PhysicalPtr{ aDTBPointer }, aX1Reserved, aX2Reserved, aX3Reserved, PhysicalPtr{ aStartPointer });
     }
 }
