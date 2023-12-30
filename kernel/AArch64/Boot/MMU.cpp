@@ -221,7 +221,7 @@ namespace AArch64
             // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
             // they need based on device tree information
             auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
-            auto const deviceEndPA = static_cast<uintptr_t>(deviceBasePA + 0x00FF'FFFF);
+            auto const deviceEndPA = deviceBasePA.Offset(0x00FF'FFFF);
 
             // Calculate the range of the kernel image in L2 block size
             // #TODO: Originally this was done so we didn't have to set up 4k pages and could instead use 2MB blocks,
@@ -230,28 +230,28 @@ namespace AArch64
             auto const kernelBasePA = MemoryManager::CalculateBlockStart(reinterpret_cast<uintptr_t>(__kernel_image), MemoryManager::L2BlockSize);
             auto const kernelEndPA = MemoryManager::CalculateBlockEnd(reinterpret_cast<uintptr_t>(__kernel_image_end), MemoryManager::L2BlockSize);
 
-            auto const startOfKernelRangeVA = kernelBasePA + MemoryManager::KernelVirtualAddressStart;
-            auto const endOfKernelRangeVA = kernelEndPA + MemoryManager::KernelVirtualAddressStart;
-            auto const startOfDeviceRangeVA = deviceBasePA + MemoryManager::KernelVirtualAddressStart;
-            auto const endOfDeviceRangeVA = deviceEndPA + MemoryManager::KernelVirtualAddressStart;
+            auto const startOfKernelRangeVA = kernelBasePA + MemoryManager::KernelVirtualAddressStart.GetAddress();
+            auto const endOfKernelRangeVA = kernelEndPA + MemoryManager::KernelVirtualAddressStart.GetAddress();
+            auto const startOfDeviceRangeVA = VirtualPtr{ deviceBasePA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressStart.GetAddress());
+            auto const endOfDeviceRangeVA = VirtualPtr{ deviceEndPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressStart.GetAddress());
 
             auto const rootPage = PageTable::Level0View{ reinterpret_cast<uint64_t*>(allocator.Allocate()) };
 
             // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
             // be pointing at the physical addresses)
             InsertEntriesForMemoryRange(allocator, rootPage, kernelBasePA, kernelEndPA, kernelBasePA, MemoryManager::NormalMAIRIndex);
-            InsertEntriesForMemoryRange(allocator, rootPage, deviceBasePA, deviceEndPA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, deviceBasePA.GetAddress(), deviceEndPA.GetAddress(), deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
 
             // Now map the kernel and devices into high memory
             InsertEntriesForMemoryRange(allocator, rootPage, startOfKernelRangeVA, endOfKernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
-            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA, endOfDeviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, startOfDeviceRangeVA.GetAddress(), endOfDeviceRangeVA.GetAddress(), deviceBasePA.GetAddress(), MemoryManager::DeviceMAIRIndex);
 
             // Map everything between the kernel range and device range for now
             // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
             // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
             // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
             // kernel space
-            InsertEntriesForMemoryRange(allocator, rootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA - 1, endOfKernelRangeVA + 1, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, endOfKernelRangeVA + 1, startOfDeviceRangeVA.GetAddress() - 1, endOfKernelRangeVA + 1, MemoryManager::NormalMAIRIndex);
         }
 
         void EnableMMU()
@@ -266,7 +266,7 @@ namespace AArch64
             // IMPORTANT: Do not change granule size or address bits, because we have a lot of constants that depend on
             // these being set to 4kb and 48 bits respectively.
             static constexpr uint64_t LowAddressBits = 48;
-            static_assert((~((1ULL << LowAddressBits) - 1)) == MemoryManager::KernelVirtualAddressStart, "Bit count doesn't match VA start");
+            static_assert((~((1ULL << LowAddressBits) - 1)) == MemoryManager::KernelVirtualAddressStart.GetAddress(), "Bit count doesn't match VA start");
             // *4 because we have four tables in our MMU setup
             static_assert(LowAddressBits == PageTable::PageOffsetBits + (PageTable::TableIndexBits * 4), "Bit count doesn't match descriptor bit count");
             static_assert(MemoryManager::PageSize == 0x1000, "Expect page size to be 4kb");

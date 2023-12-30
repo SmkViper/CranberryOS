@@ -29,6 +29,18 @@ public:
         return Address;
     }
 
+    /**
+     * Obtains a pointer that is offset from this pointer
+     * 
+     * @param aOffset How much to offset this pointer by
+     * @return The pointer at the given offset
+     */
+    constexpr PhysicalPtr Offset(uintptr_t aOffset) const
+    {
+        // #TODO: Should probably panic if it would wrap the address
+        return PhysicalPtr{ Address + aOffset };
+    }
+
 private:
     uintptr_t Address = 0;
 };
@@ -57,6 +69,18 @@ public:
     constexpr uintptr_t GetAddress() const 
     {
         return Address;
+    }
+
+    /**
+     * Obtains a pointer that is offset from this pointer
+     * 
+     * @param aOffset How much to offset this pointer by
+     * @return The pointer at the given offset
+     */
+    constexpr VirtualPtr Offset(uintptr_t aOffset) const
+    {
+        // #TODO: Should probably panic if it would wrap the address
+        return VirtualPtr{ Address + aOffset };
     }
 
 private:

@@ -8,7 +8,9 @@ namespace UnitTests::PointerTypes
     namespace
     {
         static_assert(PhysicalPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
+        static_assert(PhysicalPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
         static_assert(VirtualPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
+        static_assert(VirtualPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
 
         /**
          * Testing PhysicalPtr formatting
