@@ -10,6 +10,9 @@ Nothing terribly special here - just a toy OS (and really, not even that yet). M
 
 There isn't currently any support for GCC or different Raspberry Pi boards.
 
+## Optional Requirements
+* Clang-tidy
+
 ## Building
 The repository is set up for editing with VSCode and the CMake Tools extension from MS (which is what the cmake-kits.json file is for). Just select the "Clang RPi3 Baremetal" kit using the extension so it builds properly.
 

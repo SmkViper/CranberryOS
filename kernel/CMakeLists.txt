@@ -2,7 +2,6 @@ set(LINKER_SCRIPT "link.ld")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${CMAKE_CURRENT_SOURCE_DIR}/${LINKER_SCRIPT}")
 
 add_executable(kernel8.elf
-    Exceptions.cpp
     ExceptionVectorHandlers.h ExceptionVectorHandlers.cpp
     ExceptionVectors.S
     IRQ.h IRQ.S
@@ -16,7 +15,6 @@ add_executable(kernel8.elf
     SystemCallDefines.h
     TaskStructs.h
     Timer.h Timer.cpp
-    TypeInfo.cpp
     user_Program.h user_Program.cpp
     user_SystemCall.h user_SystemCall.cpp user_SystemCall.S
     Utils.h Utils.cpp
