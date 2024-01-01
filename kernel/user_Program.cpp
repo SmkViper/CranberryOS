@@ -4,11 +4,25 @@
 
 namespace
 {
+    // We need to force all our strings into the .rodata.user segment so the kernel code that sets up the user process
+    // successfully grabs them. Otherwise we'll trigger a memory exception when trying to access data in kernel code
+    // #TODO: Not sure why this is needed for when LTO is on, but not when it is off. Maybe it's consolidating strings
+    // that match across all compilation units, and therefore losing the section that these files have?
+    __attribute__((section(".rodata.user")))
+    static const char UserProcessStr[] = "User process\r\n";
+    __attribute__((section(".rodata.user")))
+    static const char ForkErrStr[] = "Error during fork\r\n";
+    __attribute__((section(".rodata.user")))
+    static const char LoopParentStr[] = "abcde";
+    __attribute__((section(".rodata.user")))
+    static const char LoopChildStr[] = "12345";
+
     /**
      * Delay for a certain number of cycles
      * 
      * @param aCount Number of cycles
      */
+    __attribute__((section(".text.user")))
     void Delay(uint64_t aCount)
     {
         while (aCount--)
@@ -24,6 +38,7 @@ namespace
      * 
      * @param apStr The string to output
      */
+    __attribute__((section(".text.user")))
     void Loop(const char* const apStr)
     {
         char buffer[] = {'\0', '\0'};
@@ -41,23 +56,24 @@ namespace
 
 namespace User
 {
+    __attribute__((section(".text.user")))
     void Process()
     {
-        SystemCall::Write("User process\n\r");
+        SystemCall::Write(UserProcessStr);
         auto pid = SystemCall::Fork();
         if (pid < 0)
         {
-            SystemCall::Write("Error during fork\n\r");
+            SystemCall::Write(ForkErrStr);
             SystemCall::Exit();
             return;
         }
         if (pid == 0) // child process
         {
-            Loop("abcde");
+            Loop(LoopParentStr);
         }
         else // parent process
         {
-            Loop("12345");
+            Loop(LoopChildStr);
         }
     }
 } // User namespace

@@ -21,10 +21,10 @@ namespace
 extern "C"
 {
     // Defined by the linker to point at the start/end of the init/fini arrays
-    extern StaticInitFunction __init_start;
-    extern StaticInitFunction __init_end;
-    extern StaticFiniFunction __fini_start;
-    extern StaticFiniFunction __fini_end;
+    extern uintptr_t __init_start[];
+    extern uintptr_t __init_end[];
+    extern uintptr_t __fini_start[];
+    extern uintptr_t __fini_end[];
 
     // Defined by the linker to point at the start and end of the user "program" embedded in our image
     extern void* __user_start;
@@ -38,9 +38,10 @@ namespace
      */
     void CallStaticConstructors()
     {
-        for (auto pcurFunc = &__init_start; pcurFunc != &__init_end; ++pcurFunc)
+        auto const init_arraySize = __init_end - __init_start;
+        for (auto curFunc = 0; curFunc < init_arraySize; ++curFunc)
         {
-            (*pcurFunc)();
+            reinterpret_cast<StaticInitFunction>(__init_start[curFunc])();
         }
     }
 
@@ -49,9 +50,10 @@ namespace
      */
     void CallStaticDestructors()
     {
-        for (auto pcurFunc = &__fini_start; pcurFunc != &__fini_end; ++pcurFunc)
+        auto const fini_arraySize = __fini_end - __fini_start;
+        for (auto curFunc = 0; curFunc < fini_arraySize; ++curFunc)
         {
-            (*pcurFunc)();
+            reinterpret_cast<StaticFiniFunction>(__fini_start[curFunc])();
         }
     }
 

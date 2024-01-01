@@ -28,18 +28,21 @@ SECTIONS
     . = ALIGN(4K);
     __user_start = .;
     .text.user : AT (ADDR(.text.user) - KERNEL_MAPPING_BASE) {
-        CMakeFiles/kernel8.elf.dir/user_* (.text)
         *(.text.user)
     }
     .rodata.user : AT (ADDR(.rodata.user) - KERNEL_MAPPING_BASE) {
-        CMakeFiles/kernel8.elf.dir/user_* (.rodata.*)
+        *(.rodata.user)
+        CMakeFiles/kernel8.elf.dir/user_* (.rodata .rodata.*)
     }
     .data.user : AT (ADDR(.data.user) - KERNEL_MAPPING_BASE) {
-        CMakeFiles/kernel8.elf.dir/user_* (.data)
+        *(.data.user)
+        CMakeFiles/kernel8.elf.dir/user_* (.data .data.*)
     }
     .bss.user : AT (ADDR(.bss.user) - KERNEL_MAPPING_BASE) {
-        CMakeFiles/kernel8.elf.dir/user_* (.bss)
+        *(.bss.user)
+        CMakeFiles/kernel8.elf.dir/user_* (.bss .bss.*)
     }
+    . = ALIGN(4K);
     __user_end = .;
 
     .text : AT (ADDR(.text) - KERNEL_MAPPING_BASE) {

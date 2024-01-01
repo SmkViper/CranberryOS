@@ -10,16 +10,19 @@ extern "C"
 
 namespace SystemCall
 {
+    __attribute__((section(".text.user")))
     void Write(const char* const apString)
     {
         call_sys_write(apString);
     }
 
+    __attribute__((section(".text.user")))
     int32_t Fork()
     {
         return call_sys_fork();
     }
 
+    __attribute__((section(".text.user")))
     void Exit()
     {
         call_sys_exit();

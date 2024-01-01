@@ -3,7 +3,7 @@
 Nothing terribly special here - just a toy OS (and really, not even that yet). Mostly using it to explore OS development and bare metal programming on the Raspberry Pi.
 
 ## Requirements
-* Clang (with C++17 support)
+* Clang (with C++20 support)
 * CMake (3.18 or newer)
 * Raspberry Pi 3B (if you want to run on hardware)
 * QEMU (for emulating/debugging)
