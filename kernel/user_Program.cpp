@@ -9,14 +9,17 @@ namespace
     // successfully grabs them. Otherwise we'll trigger a memory exception when trying to access data in kernel code
     // #TODO: Not sure why this is needed for when LTO is on, but not when it is off. Maybe it's consolidating strings
     // that match across all compilation units, and therefore losing the section that these files have?
+    // #TODO: Can't switch to pointers because that seems to lose the section definitions for the data itself
+    // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     __attribute__((section(".rodata.user")))
-    static const char UserProcessStr[] = "User process\r\n";
+    const char UserProcessStr[] = "User process\r\n";
     __attribute__((section(".rodata.user")))
-    static const char ForkErrStr[] = "Error during fork\r\n";
+    const char ForkErrStr[] = "Error during fork\r\n";
     __attribute__((section(".rodata.user")))
-    static const char LoopParentStr[] = "abcde";
+    const char LoopParentStr[] = "abcde";
     __attribute__((section(".rodata.user")))
-    static const char LoopChildStr[] = "12345";
+    const char LoopChildStr[] = "12345";
+    // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
     /**
      * Delay for a certain number of cycles
@@ -54,8 +57,7 @@ namespace
             {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 buffer[0] = apStr[curIndex];
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-                SystemCall::Write(buffer);
+                SystemCall::Write(static_cast<char const*>(buffer));
                 constexpr auto delayDuration = 100'000U;
                 Delay(delayDuration);
             }
@@ -68,21 +70,21 @@ namespace User
     __attribute__((section(".text.user")))
     void Process()
     {
-        SystemCall::Write(UserProcessStr);
+        SystemCall::Write(static_cast<char const*>(UserProcessStr));
         auto pid = SystemCall::Fork();
         if (pid < 0)
         {
-            SystemCall::Write(ForkErrStr);
+            SystemCall::Write(static_cast<char const*>(ForkErrStr));
             SystemCall::Exit();
             return;
         }
         if (pid == 0) // child process
         {
-            Loop(LoopParentStr);
+            Loop(static_cast<char const*>(LoopParentStr));
         }
         else // parent process
         {
-            Loop(LoopChildStr);
+            Loop(static_cast<char const*>(LoopChildStr));
         }
     }
 } // User namespace

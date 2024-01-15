@@ -7,7 +7,9 @@
 namespace
 {
     // Order should match #define values in AArch64/ExceptionVectorDefines.h
-    constexpr const char* ExceptionTypeNames[] = {
+    // #TODO: Can remove lint disable when std::array available
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+    constexpr char const* const ExceptionTypeNames[] = {
         "SYNC_INVALID_EL1t",
         "IRQ_INVALID_EL1t",
         "FIQ_INVALID_EL1t",

@@ -23,10 +23,7 @@ namespace Print::Detail
 
         // #TODO: We'll want to have the output padded with zeroes when we add support for that
         Print::FormatToBuffer(buffer, "P{:x}", WrappedData.GetAddress());
-
-        // #TODO: std::array can handle this lint when we have it
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-        Print::Detail::FormatVararg(buffer, arOutput);
+        Print::Detail::FormatVararg(static_cast<char const*>(buffer), arOutput);
         return true;
     }
 
@@ -49,10 +46,7 @@ namespace Print::Detail
 
         // #TODO: We'll want to have the output padded with zeroes when we add support for that
         Print::FormatToBuffer(buffer, "V{:x}", WrappedData.GetAddress());
-
-        // #TODO: std::array can handle this lint when we have it
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-        Print::Detail::FormatVararg(buffer, arOutput);
+        Print::Detail::FormatVararg(static_cast<char const*>(buffer), arOutput);
         return true;
     }
 }
