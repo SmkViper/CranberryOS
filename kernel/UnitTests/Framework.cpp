@@ -174,6 +174,7 @@ namespace UnitTests
         // Devices/* not tested as right now they're just constexpr values
         // #TODO: Devices/DeviceTree.h/cpp untested
 
+        // No runtime tests for bit
         KernelStdlib::Bitset::Run();
         // No runtime tests for climits
         // No runtime tests for cstddef

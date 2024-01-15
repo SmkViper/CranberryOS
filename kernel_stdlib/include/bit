@@ -1,0 +1,25 @@
+#ifndef __KERNEL_STDLIB_BIT__
+#define __KERNEL_STDLIB_BIT__
+
+#include <type_traits>
+
+namespace std
+{
+    /**
+     * Copies the raw bits in the given value into an object of the destination type.
+     * This is basically a standards-compliant reinterpret_cast for types that would otherwise trigger undefined 
+     * behavior.
+     * 
+     * @param __aFrom The object to copy the bits out of
+     * @return An object of the target type with the bits of the from value
+    */
+    template<class __ToT, class __FromT>
+    requires((sizeof(__ToT) == sizeof(__FromT)) && is_trivially_copyable_v<__ToT> && is_trivially_copyable_v<__FromT>)
+    constexpr __ToT bit_cast(__FromT const& __aFrom) noexcept
+    {
+        // Relies on compiler built-in to do the work, because otherwise it can't be constexpr
+        return __builtin_bit_cast(__ToT, __aFrom);
+    }
+}
+
+#endif // __KERNEL_STDLIB_BIT__

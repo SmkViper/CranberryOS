@@ -95,6 +95,38 @@ namespace UnitTests::KernelStdlib::TypeTraits
         static_assert(!std::is_function_v<int(*)(int)>, "Unexpected result for is_function with pointer to function");
 
         ///////////////////////////////////////////////////////////////////////
+        // std::is_trivially_copyable
+        ///////////////////////////////////////////////////////////////////////
+
+        struct TrivialStruct
+        {
+            int x = 0;
+            float y = 0.0f;
+        };
+        struct TrivialChild: public TrivialStruct
+        {
+            char z = 'a';
+        };
+        struct NonTrivialStruct
+        {
+            ~NonTrivialStruct() {}
+            int x = 0;
+            float y = 0.0f;
+        };
+        struct VirtualStruct
+        {
+            virtual ~VirtualStruct() = default;
+            virtual int f() { return x; }
+            int x = 0;
+        };
+
+        static_assert(std::is_trivially_copyable_v<int>, "Unexpected result from is_trivially_copyable with scalar type");
+        static_assert(std::is_trivially_copyable_v<int*>, "Unexpected result from is_trivially_copyable with pointer type");
+        static_assert(std::is_trivially_copyable_v<TrivialChild>, "Unexpected result from is_trivially_copyable with trivial struct");
+        static_assert(!std::is_trivially_copyable_v<NonTrivialStruct>, "Unexpected result from is_trivially_copyable with non-trivial struct");
+        static_assert(!std::is_trivially_copyable_v<VirtualStruct>, "Unexpected result from is_trivially_copyable with struct with virtual");
+
+        ///////////////////////////////////////////////////////////////////////
         // std::remove_reference
         ///////////////////////////////////////////////////////////////////////
 

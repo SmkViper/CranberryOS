@@ -7,6 +7,9 @@ namespace UnitTests::PointerTypes
 {
     namespace
     {
+        // Disable some lints for this file since they don't make sense here
+        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+
         static_assert(PhysicalPtr{}.GetAddress() == 0, "Constructor didn't make null pointer");
         static_assert(PhysicalPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
         static_assert(PhysicalPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
@@ -46,6 +49,8 @@ namespace UnitTests::PointerTypes
             Print::FormatToBuffer(buffer, "{}", VirtualPtr{ 0xFF });
             EmitTestResult(strcmp(buffer, "V0xff") == 0, "VirtualPtr print format");
         }
+
+        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
     }
 
     void Run()

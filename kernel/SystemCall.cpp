@@ -1,3 +1,4 @@
+#include <bit>
 #include "MiniUart.h"
 #include "Scheduler.h"
 
@@ -36,11 +37,8 @@ extern "C"
 {
     // ExceptionVector.S uses this along with the index passed in x8 to call the right system call
     extern const void* const p_sys_call_table_s[] = {
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        reinterpret_cast<const void*>(&SystemCallWrite),
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        reinterpret_cast<const void*>(&SystemCallFork),
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        reinterpret_cast<const void*>(&SystemCallExit)
+        std::bit_cast<const void*>(&SystemCallWrite),
+        std::bit_cast<const void*>(&SystemCallFork),
+        std::bit_cast<const void*>(&SystemCallExit)
     };
 }

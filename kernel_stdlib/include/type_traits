@@ -129,6 +129,20 @@ namespace std
 
     template<class __T>
     inline constexpr bool is_function_v = std::is_function<__T>::value;
+
+    /**
+     * Checks to see if the given type is "trivally copyable". These are scalar types (integers, floats, pointers,
+     * etc), trivially copyable classes (only trivial copy/move constructors and destructors, no virtuals), or arrays
+     * of such.
+     * 
+     * Note: This relies on a compiler built-in
+     */
+    template<class __T>
+    struct is_trivially_copyable: public bool_constant<__is_trivially_copyable(__T)> {};
+
+    template<class __T>
+    inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<__T>::value;
+
     /**
      * Removes any reference qualifier from the type
      */

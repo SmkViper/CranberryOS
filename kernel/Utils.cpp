@@ -1,5 +1,8 @@
 #include "Utils.h"
 
+#include <cstdint>
+#include "PointerTypes.h"
+
 namespace MemoryMappedIO
 {
     void Put32(VirtualPtr const aAddress, uint32_t const aData)

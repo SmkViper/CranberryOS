@@ -1,5 +1,6 @@
 #include "user_Program.h"
 
+#include <cstdint>
 #include "user_SystemCall.h"
 
 namespace
@@ -23,12 +24,13 @@ namespace
      * @param aCount Number of cycles
      */
     __attribute__((section(".text.user")))
-    void Delay(uint64_t aCount)
+    void Delay(uint64_t const aCount)
     {
-        while (aCount--)
+        for (auto i = 0U; i < aCount; ++i)
         {
             // make sure the compiler doesn't optimize out the decrementing so that this is
             // an actual cycle count delay
+            // NOLINTNEXTLINE(hicpp-no-assembler)
             asm volatile("nop");
         }
     }
@@ -41,14 +43,21 @@ namespace
     __attribute__((section(".text.user")))
     void Loop(const char* const apStr)
     {
+        // #TODO: We don't have std::array yet, so suppress lint warning
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
         char buffer[] = {'\0', '\0'};
         while (true)
         {
-            for (auto curIndex = 0u; apStr[curIndex] != '\0'; ++curIndex)
+            // #TODO: Could be made safer with something like string_view perhaps when we have that
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            for (auto curIndex = 0U; apStr[curIndex] != '\0'; ++curIndex)
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 buffer[0] = apStr[curIndex];
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
                 SystemCall::Write(buffer);
-                Delay(100000);
+                constexpr auto delayDuration = 100'000U;
+                Delay(delayDuration);
             }
         }
     }
