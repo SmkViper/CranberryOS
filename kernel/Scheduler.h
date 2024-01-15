@@ -18,7 +18,7 @@ namespace Scheduler
      */
     void Schedule();
 
-    using ProcessFunctionPtr = void(*)(const void* apParam);
+    using ProcessFunctionPtr = void(*)(void const* apParam);
 
     namespace CreationFlags
     {
@@ -33,7 +33,7 @@ namespace Scheduler
      * @param apParam The parameter to pass to the function (unused for user processes)
      * @return The created process ID, or a negative value on failure
      */
-    int32_t CopyProcess(uint32_t aCloneFlags, ProcessFunctionPtr apProcessFn, const void* apParam);
+    int32_t CopyProcess(uint32_t aCloneFlags, ProcessFunctionPtr apProcessFn, void const* apParam);
 
     /**
      * Sets this task up as a user process with the specified memory block and starting point
@@ -43,7 +43,7 @@ namespace Scheduler
      * @param aPC Where to start executing (offset from aStart)
      * @return True on success
      */
-    bool MoveToUserMode(const void* apStart, std::size_t aSize, uintptr_t aPC);
+    bool MoveToUserMode(void const* apStart, std::size_t aSize, uintptr_t aPC);
 
     /**
      * Exit the current process, cleaning up anything that needs to be (does not return)
