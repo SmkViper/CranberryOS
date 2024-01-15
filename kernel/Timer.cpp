@@ -7,6 +7,9 @@
 
 namespace
 {
+    // #TODO: Likely a better way we can do this, and once we figure that out, the lint tag can be removed
+    // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+
     Timer::CallbackFunctionPtr pGlobalTimerCallback = nullptr;
     const void* pGlobalTimerParam = nullptr;
     LocalTimer::CallbackFunctionPtr pLocalTimerCallback = nullptr;
@@ -15,15 +18,17 @@ namespace
     // Local timer documentation: https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
     
     // Control register flags
-    constexpr uint32_t LocalTimerControlEnableInterrupt = 1u << 29;
-    constexpr uint32_t LocalTimerControlEnableTimer = 1u << 28;
+    constexpr uint32_t LocalTimerControlEnableInterrupt = 1U << 29U;
+    constexpr uint32_t LocalTimerControlEnableTimer = 1U << 28U;
 
     // Clear & reload flags
-    constexpr uint32_t LocalTimerClearInterruptAck = 1u << 31;
-    // constexpr uint32_t LocalTimerReload = 1u << 30; // currently unused
+    constexpr uint32_t LocalTimerClearInterruptAck = 1U << 31U;
+    // constexpr uint32_t LocalTimerReload = 1U << 30U; // currently unused
 
     // Have to save this off so we can access it and set up the global timer to re-fire
-    uint32_t GlobalTimerInterval = 0u;
+    uint32_t GlobalTimerInterval = 0U;
+
+    // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
     /**
      * "Sanitizes" the frequency reported by the system counter clock so it can be used to set up the local timer
@@ -31,7 +36,7 @@ namespace
      * @param aFrequency The frequency to sanitize
      * @return The sanitized frequency
      */
-    uint64_t SanitizeLocalTimerFrequency(const uint64_t aFrequency)
+    uint64_t SanitizeLocalTimerFrequency(uint64_t const aFrequency)
     {
         auto retVal = aFrequency;
         // QEMU seems to not report the correct clock frequency, at least in respect to trying to use this frequency to
@@ -40,11 +45,12 @@ namespace
         // fake the clock frequency with a hardcoded value that matches QEMU's local timer speed
         //
         // #TODO: Figure out if there's a better way to handle this
-        if (aFrequency > 50'000'000)
+        constexpr uint64_t MaxFrequency = 50'000'000U;
+        constexpr uint64_t FakeFrequency = 19'200'000U; // fake 19.2MHz crystal clock
+        if (aFrequency > MaxFrequency)
         {
             Print::FormatToMiniUART("[\x1b[33mWARN\x1b[m] Excessive clock frequency {}Hz, faking hard-coded clock\n", aFrequency);
-            // fake 19.2MHz crystal clock
-            retVal = 19'200'000;
+            retVal = FakeFrequency;
         }
         return retVal;
     }
@@ -56,7 +62,7 @@ namespace Timer
     // it matches one, then it triggers an interrupt. So basic operation of this timer is to set the compare register
     // to the value we want to trigger on, then update the comparison register when we get the interrupt.
 
-    void RegisterCallback(const uint32_t aIntervalMS, const CallbackFunctionPtr apCallback, const void* const apParam)
+    void RegisterCallback(uint32_t const aIntervalMS, CallbackFunctionPtr const apCallback, void const* const apParam)
     {
         pGlobalTimerCallback = apCallback;
         pGlobalTimerParam = apParam;
@@ -67,19 +73,20 @@ namespace Timer
         //
         // #TODO: Figure out where this is specified, or if it can be (or needs to be) read at runtime from a device
         // tree or similar structure
+        constexpr uint32_t MSToTimerInterval = 1'000;
+        GlobalTimerInterval = aIntervalMS * MSToTimerInterval;
 
-        GlobalTimerInterval = aIntervalMS * 1000;
-
-        const auto curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
+        auto const curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
         MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + GlobalTimerInterval);
     }
 
     void HandleIRQ()
     {
-        MemoryMappedIO::Put32(MemoryMappedIO::Timer::ControlStatus, 1 << 1); // clearing the compare 1 signal
+        constexpr uint32_t TimerMatch1Bit = 0x1U << 1U;
+        MemoryMappedIO::Put32(MemoryMappedIO::Timer::ControlStatus, TimerMatch1Bit); // clearing the compare 1 signal
 
         // set up the timer to trigger again
-        const auto curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
+        auto const curTimerValue = MemoryMappedIO::Get32(MemoryMappedIO::Timer::CounterLow);
         MemoryMappedIO::Put32(MemoryMappedIO::Timer::Compare1, curTimerValue + GlobalTimerInterval);
         
         pGlobalTimerCallback(pGlobalTimerParam);
@@ -92,7 +99,7 @@ namespace LocalTimer
     // counter value and counting down again. So once we set the trigger value, it will trigger periodically until
     // disabled.
 
-    void RegisterCallback(const uint32_t aIntervalMS, const CallbackFunctionPtr apCallback, const void* const apParam)
+    void RegisterCallback(uint32_t const aIntervalMS, CallbackFunctionPtr const apCallback, void const* const apParam)
     {
         pLocalTimerCallback = apCallback;
         pLocalTimerParam = apParam;
@@ -104,9 +111,10 @@ namespace LocalTimer
 
         // This timer ticks on every crystal clock edge - which is why we double the clock frequency to find the number
         // of ticks per second. (See QA7 documentation, section 4.11)
+        constexpr uint32_t frequencyToTicksPerSecond = 2U;
 
-        const auto ticksPerSecond = (SanitizeLocalTimerFrequency(Timing::GetSystemCounterClockFrequencyHz()) * 2u);
-        const auto ticksPerMS = ticksPerSecond / 1000u;
+        const auto ticksPerSecond = (SanitizeLocalTimerFrequency(Timing::GetSystemCounterClockFrequencyHz()) * frequencyToTicksPerSecond);
+        const auto ticksPerMS = ticksPerSecond / 1000U;
         const auto intervalTicks = static_cast<uint32_t>(aIntervalMS * ticksPerMS);
 
         MemoryMappedIO::Put32(MemoryMappedIO::LocalTimer::ControlStatus, 

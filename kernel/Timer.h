@@ -6,7 +6,7 @@
 namespace Timer
 {
     // Triggered every timer tick
-    using CallbackFunctionPtr = void(*)(const void* apParam);
+    using CallbackFunctionPtr = void(*)(void const* apParam);
 
     /**
      * Set up the timer to fire repeatedly with a certain interval and trigger the specified callback. Any existing
@@ -16,7 +16,7 @@ namespace Timer
      * @param apCallback Function to triggers when the interrupt fires
      * @param apParam Parameter to send to the function
      */
-    void RegisterCallback(uint32_t aIntervalMS, CallbackFunctionPtr apCallback, const void* apParam);
+    void RegisterCallback(uint32_t aIntervalMS, CallbackFunctionPtr apCallback, void const* apParam);
 
     /**
      * Handle an interrupt from the timer
@@ -27,7 +27,7 @@ namespace Timer
 namespace LocalTimer
 {
     // Triggered every timer tick
-    using CallbackFunctionPtr = void(*)(const void* apParam);
+    using CallbackFunctionPtr = void(*)(void const* apParam);
 
     /**
      * Set up the timer to fire repeatedly with a certain interval and trigger the specified callback. Any existing
@@ -37,7 +37,7 @@ namespace LocalTimer
      * @param apCallback Function to triggers when the interrupt fires
      * @param apParam Parameter to send to the function
      */
-    void RegisterCallback(uint32_t aIntervalMS, CallbackFunctionPtr apCallback, const void* apParam);
+    void RegisterCallback(uint32_t aIntervalMS, CallbackFunctionPtr apCallback, void const* apParam);
 
     /**
      * Handle an interrupt from the timer

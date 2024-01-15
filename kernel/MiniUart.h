@@ -28,7 +28,7 @@ namespace MiniUART
      * 
      * @param apString String to send - expected to be non-null and zero-terminated
      */
-    void SendString(const char* apString);
+    void SendString(char const* apString);
 }
 
 #endif // KERNEL_MINIUART_H
