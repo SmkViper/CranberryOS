@@ -13,7 +13,7 @@ SECTIONS
     /* 0x00080000 is the physical address the Raspberry Pi GPU will load the kernel at */
     . = KERNEL_MAPPING_BASE + 0x00080000;
 
-    __kernel_image = .;
+    _kernel_image = .;
 
     .text.boot ALIGN(4K) : AT (ADDR(.text.boot) - KERNEL_MAPPING_BASE) {
         *(.text.boot) /* boot code section - must be first */
@@ -97,11 +97,11 @@ SECTIONS
     }
 
     . = ALIGN(4K);
-    __pg_dir = .;
+    _pg_dir = .;
     . += 8M; /* #TODO: we're reserving 8mb for now, but should come up with a real value at some point */
-    __pg_dir_end = .;
+    _pg_dir_end = .;
 
-    __kernel_image_end = .;
+    _kernel_image_end = .;
 
     /* strip out some general unimportant stuff we don't need */
     /DISCARD/ : { *(.comment) *(.note*) }

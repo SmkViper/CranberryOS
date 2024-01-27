@@ -11,7 +11,7 @@
 extern "C"
 {
     // from link.ld
-    extern uint8_t __kernel_image_end[];
+    extern uint8_t _kernel_image_end[];
 
     // Functions defined in MemoryManager.S
     /**
@@ -33,9 +33,9 @@ namespace MemoryManager
         */
         PhysicalPtr CalculatePagingMemoryPAStart()
         {
-            // #TODO: Why is __kernel_image_end here a virtual address when in the boot process it's a physical
+            // #TODO: Why is _kernel_image_end here a virtual address when in the boot process it's a physical
             // address?
-            auto const kernelImageEndPA = PhysicalPtr{ reinterpret_cast<uintptr_t>(__kernel_image_end) - KernelVirtualAddressOffset };
+            auto const kernelImageEndPA = PhysicalPtr{ reinterpret_cast<uintptr_t>(_kernel_image_end) - KernelVirtualAddressOffset };
             return CalculateBlockEnd(kernelImageEndPA, L2BlockSize).Offset(1);
         }
 
