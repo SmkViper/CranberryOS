@@ -849,6 +849,9 @@ namespace AArch64
             : RegisterValue{ aInitialValue }
         {}
 
+        // #TODO: There's probably a numeric_limits thing for this once we get it
+        static constexpr unsigned TotalAddrBits = 64; // number of bits in an address
+
         static constexpr unsigned T0SZIndex_Shift = 0; // bits [5:0]
         static constexpr uint64_t T0SZIndex_Mask = 0b11'1111;
         // Reserved     [6]     (Res0)

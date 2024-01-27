@@ -1,6 +1,8 @@
 #include "SystemRegisters.h"
 
+#include <cstdint>
 #include <cstring>
+#include "../PointerTypes.h"
 #include "../Utils.h"
 
 namespace AArch64
@@ -8,6 +10,7 @@ namespace AArch64
     void CPACR_EL1::Write(CPACR_EL1 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr cpacr_el1, %[value]"
             : // no outputs
@@ -18,7 +21,10 @@ namespace AArch64
 
     CPACR_EL1 CPACR_EL1::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], cpacr_el1"
             :[value] "=r"(readRawValue) // outputs
@@ -41,6 +47,7 @@ namespace AArch64
     void CPTR_EL2::Write(CPTR_EL2 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr cptr_el2, %[value]"
             : // no outputs
@@ -51,7 +58,10 @@ namespace AArch64
 
     CPTR_EL2 CPTR_EL2::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], cptr_el2"
             :[value] "=r"(readRawValue) // outputs
@@ -64,6 +74,7 @@ namespace AArch64
     void HCR_EL2::Write(HCR_EL2 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr hcr_el2, %[value]"
             : // no outputs
@@ -74,7 +85,10 @@ namespace AArch64
 
     HCR_EL2 HCR_EL2::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], hcr_el2"
             :[value] "=r"(readRawValue) // outputs
@@ -87,6 +101,7 @@ namespace AArch64
     void HSTR_EL2::Write(HSTR_EL2 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr hstr_el2, %[value]"
             : // no outputs
@@ -97,7 +112,10 @@ namespace AArch64
 
     HSTR_EL2 HSTR_EL2::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], hstr_el2"
             :[value] "=r"(readRawValue) // outputs
@@ -115,15 +133,16 @@ namespace AArch64
     MAIR_EL1::MAIR_EL1(uint64_t const aRawValue)
     {
         static_assert(sizeof(uint64_t) == sizeof(MAIR_EL1::Attributes), "Unexpected size mismatch");
-        std::memcpy(Attributes, &aRawValue, sizeof(Attributes));
+        std::memcpy(static_cast<void*>(Attributes), &aRawValue, sizeof(Attributes));
     }
 
     void MAIR_EL1::Write(MAIR_EL1 const aValue)
     {
         static_assert(sizeof(uint64_t) == sizeof(MAIR_EL1::Attributes), "Unexpected size mismatch");
         uint64_t rawValue = 0;
-        std::memcpy(&rawValue, aValue.Attributes, sizeof(rawValue));
+        std::memcpy(&rawValue, static_cast<void const*>(aValue.Attributes), sizeof(rawValue));
         
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr mair_el1, %[value]"
             : // no outputs
@@ -134,7 +153,10 @@ namespace AArch64
 
     MAIR_EL1 MAIR_EL1::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], mair_el1"
             :[value] "=r"(readRawValue) // outputs
@@ -147,18 +169,21 @@ namespace AArch64
     void MAIR_EL1::SetAttribute(size_t const aIndex, Attribute const aValue)
     {
         // #TODO: Panic if index is out of range
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         Attributes[aIndex] = aValue.Value;
     }
 
     MAIR_EL1::Attribute MAIR_EL1::GetAttribute(size_t const aIndex) const
     {
         // #TODO: Panic if index is out of range
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         return Attribute{ Attributes[aIndex] };
     }
 
     void SCTLR_EL1::Write(SCTLR_EL1 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr sctlr_el1, %[value]"
             : // no outputs
@@ -169,7 +194,10 @@ namespace AArch64
 
     SCTLR_EL1 SCTLR_EL1::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], sctlr_el1"
             :[value] "=r"(readRawValue) // outputs
@@ -182,6 +210,7 @@ namespace AArch64
     void SPSR_EL2::Write(SPSR_EL2 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr spsr_el2, %[value]"
             : // no outputs
@@ -192,7 +221,10 @@ namespace AArch64
 
     SPSR_EL2 SPSR_EL2::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], spsr_el2"
             :[value] "=r"(readRawValue) // outputs
@@ -215,6 +247,7 @@ namespace AArch64
     void TCR_EL1::Write(TCR_EL1 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr tcr_el1, %[value]"
             : // no outputs
@@ -225,7 +258,10 @@ namespace AArch64
 
     TCR_EL1 TCR_EL1::Read()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], tcr_el1"
             :[value] "=r"(readRawValue) // outputs
@@ -244,7 +280,7 @@ namespace AArch64
         // So in other words, TnSZ is the number of bits in the address space that is reserved to be either all 0 or
         // all 1 to designate whether it's user or kernel space. Since we let our users give us the number of non-
         // reserved bits, we subtract that from 64 to get the reserved bit count.
-        auto const encodedValue = (64 - aBits);
+        auto const encodedValue = (TotalAddrBits - aBits);
         WriteMultiBitValue(RegisterValue, encodedValue, T0SZIndex_Mask, T0SZIndex_Shift);
     }
 
@@ -255,7 +291,7 @@ namespace AArch64
         // So in order to convert the TnSZ value from the number of reserved bits to the number of bits in the address
         // range, we just use (64 - encodedValue)
         auto const encodedValue = ReadMultiBitValue<uint8_t>(RegisterValue, T0SZIndex_Mask, T0SZIndex_Shift);
-        return 64 - encodedValue;
+        return TotalAddrBits - encodedValue;
     }
 
     void TCR_EL1::TG0(T0Granule const aSize)
@@ -273,7 +309,7 @@ namespace AArch64
         // #TODO: Panic if bits are out of range - might depend on the hardware, but anything over 52 is too much
 
         // See T0SZ for explanation of encoding
-        auto const encodedValue = (64 - aBits);
+        auto const encodedValue = (TotalAddrBits - aBits);
         WriteMultiBitValue(RegisterValue, encodedValue, T1SZIndex_Mask, T1SZIndex_Shift);
     }
 
@@ -281,7 +317,7 @@ namespace AArch64
     {
         // See T0SZ for explanation of encoding
         auto const encodedValue = ReadMultiBitValue<uint8_t>(RegisterValue, T1SZIndex_Mask, T1SZIndex_Shift);
-        return 64 - encodedValue;
+        return TotalAddrBits - encodedValue;
     }
 
     void TCR_EL1::TG1(T1Granule const aSize)
@@ -297,6 +333,7 @@ namespace AArch64
     void TTBRn_EL1::Write0(TTBRn_EL1 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr ttbr0_el1, %[value]"
             : // no outputs
@@ -308,6 +345,7 @@ namespace AArch64
     void TTBRn_EL1::Write1(TTBRn_EL1 const aValue)
     {
         uint64_t const rawValue = aValue.RegisterValue.to_ulong();
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "msr ttbr1_el1, %[value]"
             : // no outputs
@@ -318,7 +356,10 @@ namespace AArch64
 
     TTBRn_EL1 TTBRn_EL1::Read0()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], ttbr0_el1"
             :[value] "=r"(readRawValue) // outputs
@@ -330,7 +371,10 @@ namespace AArch64
 
     TTBRn_EL1 TTBRn_EL1::Read1()
     {
+        // Clang-tidy doesn't pick up on it being modified by the assembly
+        // NOLINTNEXTLINE(misc-const-correctness)
         uint64_t readRawValue = 0;
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mrs %[value], ttbr1_el1"
             :[value] "=r"(readRawValue) // outputs
