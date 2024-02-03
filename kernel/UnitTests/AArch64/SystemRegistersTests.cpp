@@ -1,8 +1,13 @@
 #include "SystemRegistersTests.h"
 
+#include <cstdint>
 #include <cstring>
 #include "../../AArch64/SystemRegisters.h"
+#include "../../PointerTypes.h"
 #include "../Framework.h"
+
+// Using a lot of "magic numbers" in tests, so just silence the lint for the file
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
 namespace UnitTests::AArch64::SystemRegisters
 {
@@ -44,7 +49,7 @@ namespace UnitTests::AArch64::SystemRegisters
                 // We're specializing the template for MAIR_EL1 since it stores values in an array
                 uint64_t retVal = 0;
                 static_assert(sizeof(retVal) == sizeof(aRegister.Attributes), "Unexpected size difference");
-                memcpy(&retVal, aRegister.Attributes, sizeof(retVal));
+                memcpy(&retVal, static_cast<uint8_t const*>(aRegister.Attributes), sizeof(retVal));
                 return retVal;
             }
         };
@@ -74,7 +79,10 @@ namespace UnitTests::AArch64::SystemRegisters
             
             // Write not tested as it affects system operation
 
+            // clang-tidy doesn't pick up on this being an output variable
+            // NOLINTNEXTLINE(misc-const-correctness)
             uint64_t readRawValue = 0;
+            // NOLINTNEXTLINE(hicpp-no-assembler)
             asm volatile(
                 "mrs %[value], cpacr_el1"
                 :[value] "=r"(readRawValue) // outputs
@@ -96,7 +104,7 @@ namespace UnitTests::AArch64::SystemRegisters
             testRegister.TFP(true);
             auto const readTFP = testRegister.TFP();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x37FF
-                && readTFP == true
+                && readTFP
                 , "CPTR_EL2 TFP get/set");
             
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
@@ -114,7 +122,7 @@ namespace UnitTests::AArch64::SystemRegisters
             testRegister.RW(true);
             auto const readRW = testRegister.RW();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x8000'0000
-                && readRW == true
+                && readRW
                 , "HCR_EL2 RW get/set");
             
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
@@ -125,7 +133,7 @@ namespace UnitTests::AArch64::SystemRegisters
          */
         void HSTR_EL2Test()
         {
-            ::AArch64::HSTR_EL2 testRegister;
+            ::AArch64::HSTR_EL2 const testRegister;
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0, "HSTR_EL2 default value");
 
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
@@ -138,7 +146,10 @@ namespace UnitTests::AArch64::SystemRegisters
         {
             auto const normal = ::AArch64::MAIR_EL1::Attribute::NormalMemory();
             auto const device = ::AArch64::MAIR_EL1::Attribute::DeviceMemory();
+            // we're testing the == and != operators, so they're technically not redundant
+            // NOLINTNEXTLINE(misc-redundant-expression)
             EmitTestResult((normal == normal) && !(normal == device), "MAIR_EL1 Attribute ==");
+            // NOLINTNEXTLINE(misc-redundant-expression)
             EmitTestResult(!(normal != normal) && (normal != device), "MAIR_EL1 Attribute !=");
         }
 
@@ -161,16 +172,19 @@ namespace UnitTests::AArch64::SystemRegisters
                     , "MAIR_EL1 Attribute {} get/set", aIndex);
             };
             
-            auto expectedRegisterValue = 0ull;
-            for (auto curIndex = 0u; curIndex < ::AArch64::MAIR_EL1::AttributeCount; ++curIndex)
+            auto expectedRegisterValue = 0ULL;
+            for (auto curIndex = 0U; curIndex < ::AArch64::MAIR_EL1::AttributeCount; ++curIndex)
             {
-                expectedRegisterValue |= (0x44ull << (curIndex * 8));
+                expectedRegisterValue |= (0x44ULL << (curIndex * 8));
                 testAttribute(curIndex, expectedRegisterValue);
             }
             
             // Write not tested as it affects system operation
 
+            // clang-tidy doesn't pick up on this being an output variable
+            // NOLINTNEXTLINE(misc-const-correctness)
             uint64_t readRawValue = 0;
+            // NOLINTNEXTLINE(hicpp-no-assembler)
             asm volatile(
                 "mrs %[value], mair_el1"
                 :[value] "=r"(readRawValue) // outputs
@@ -192,12 +206,15 @@ namespace UnitTests::AArch64::SystemRegisters
             testRegister.M(true);
             auto const readM = testRegister.M();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x30D0'0981
-                && readM == true
+                && readM
                 , "SCTLR_EL1 M get/set");
             
             // Write not tested as it affects system operation
 
+            // clang-tidy doesn't pick up on this being an output variable
+            // NOLINTNEXTLINE(misc-const-correctness)
             uint64_t readRawValue = 0;
+            // NOLINTNEXTLINE(hicpp-no-assembler)
             asm volatile(
                 "mrs %[value], sctlr_el1"
                 :[value] "=r"(readRawValue) // outputs
@@ -226,28 +243,28 @@ namespace UnitTests::AArch64::SystemRegisters
             testRegister.F(true);
             auto const readF = testRegister.F();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x0049
-                && readF == true
+                && readF
                 , "SPSR_EL2 F get/set");
             
             // I [7]
             testRegister.I(true);
             auto const readI = testRegister.I();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x00C9
-                && readI == true
+                && readI
                 , "SPSR_EL2 I get/set");
 
             // A [8]
             testRegister.A(true);
             auto const readA = testRegister.A();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x01C9
-                && readA == true
+                && readA
                 , "SPSR_EL2 A get/set");
 
             // D [9]
             testRegister.D(true);
             auto const readD = testRegister.D();
             EmitTestResult(Details::TestAccessor::GetRegisterValue(testRegister) == 0x03C9
-                && readD == true
+                && readD
                 , "SPSR_EL2 D get/set");
             
             // Read/Write not tested as we're running in EL1, and it can only be read/written in EL2
@@ -296,7 +313,10 @@ namespace UnitTests::AArch64::SystemRegisters
             
             // Write not tested as it affects system operation
 
+            // clang-tidy doesn't pick up on this being an output variable
+            // NOLINTNEXTLINE(misc-const-correctness)
             uint64_t readRawValue = 0;
+            // NOLINTNEXTLINE(hicpp-no-assembler)
             asm volatile(
                 "mrs %[value], tcr_el1"
                 :[value] "=r"(readRawValue) // outputs
@@ -323,7 +343,10 @@ namespace UnitTests::AArch64::SystemRegisters
             
             // Write0/1 not tested as it affects system operation
 
+            // clang-tidy doesn't pick up on this being an output variable
+            // NOLINTNEXTLINE(misc-const-correctness)
             uint64_t readRawValue = 0;
+            // NOLINTNEXTLINE(hicpp-no-assembler)
             asm volatile(
                 "mrs %[value], ttbr0_el1"
                 :[value] "=r"(readRawValue) // outputs
@@ -332,6 +355,7 @@ namespace UnitTests::AArch64::SystemRegisters
             );
             EmitTestResult(Details::TestAccessor::GetRegisterValue(::AArch64::TTBRn_EL1::Read0()) == readRawValue, "TTBRn_EL1 read 0");
 
+            // NOLINTNEXTLINE(hicpp-no-assembler)
             asm volatile(
                 "mrs %[value], ttbr1_el1"
                 :[value] "=r"(readRawValue) // outputs
@@ -356,3 +380,5 @@ namespace UnitTests::AArch64::SystemRegisters
         TTBRn_EL1Test();
     }
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
