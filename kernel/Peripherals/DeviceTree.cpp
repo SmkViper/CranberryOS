@@ -1,6 +1,8 @@
-#include <cstring>
-
 #include "DeviceTree.h"
+
+#include <bit>
+#include <cstdint>
+#include <cstring>
 #include "../Print.h"
 #include "../MiniUart.h"
 
@@ -10,6 +12,9 @@ namespace DeviceTree
     {
         constexpr uint32_t ExpectedMagic = 0xd00dfeed;
         constexpr uint32_t ExpectedVersion = 17;
+
+        // #TODO: There are a lot of NOLINT comments due to all the casting and pointer math being done to read the raw
+        // memory. Would be nice if we could figure out a way to handle it better
 
         // #TODO: We can probably be a bit smarter about this and encode the endianness in the type in some manner
 
@@ -64,7 +69,14 @@ namespace DeviceTree
          */
         constexpr uint16_t BEToNative(uint16_t const aBigEndianNumber)
         {
-            return static_cast<uint16_t>((aBigEndianNumber & 0x00FF) << 8) | static_cast<uint16_t>((aBigEndianNumber & 0xFF00) >> 8);
+            constexpr uint16_t LowByteMask = 0x00FFU;
+            constexpr uint16_t HighByteMask = 0xFF00U;
+            constexpr uint16_t ByteShift = 8U;
+
+            // Excessive casting because of all the automatic promotions to int losing the signedness
+            auto const lowByte = static_cast<uint16_t>(aBigEndianNumber & LowByteMask);
+            auto const highByte = static_cast<uint16_t>(aBigEndianNumber & HighByteMask);
+            return static_cast<uint16_t>(static_cast<uint16_t>(lowByte << ByteShift) | static_cast<uint16_t>(highByte >> ByteShift));
         }
 
         /**
@@ -75,8 +87,12 @@ namespace DeviceTree
          */
         constexpr uint32_t BEToNative(uint32_t const aBigEndianNumber)
         {
-            return BEToNative(static_cast<uint16_t>((aBigEndianNumber & 0xFFFF0000) >> 16)) |
-                (static_cast<uint32_t>(BEToNative(static_cast<uint16_t>(aBigEndianNumber & 0x0000FFFF))) << 16);
+            constexpr uint32_t HighHalfMask = 0xFFFF'0000U;
+            constexpr uint32_t LowHalfMask = 0x0000'FFFFU;
+            constexpr uint32_t ShiftHalf = 16U;
+
+            return BEToNative(static_cast<uint16_t>((aBigEndianNumber & HighHalfMask) >> ShiftHalf)) |
+                (static_cast<uint32_t>(BEToNative(static_cast<uint16_t>(aBigEndianNumber & LowHalfMask))) << ShiftHalf);
         }
 
         /**
@@ -87,8 +103,12 @@ namespace DeviceTree
          */
         constexpr uint64_t BEToNative(uint64_t const aBigEndianNumber)
         {
-            return BEToNative(static_cast<uint32_t>((aBigEndianNumber & 0xFFFF'FFFF'0000'0000) >> 32)) |
-                (static_cast<uint64_t>(BEToNative(static_cast<uint32_t>(aBigEndianNumber & 0x0000'0000'FFFF'FFFF))) << 32);
+            constexpr uint64_t HighHalfMask = 0xFFFF'FFFF'0000'0000U;
+            constexpr uint64_t LowHalfMask = 0x0000'0000'FFFF'FFFFU;
+            constexpr uint64_t ShiftHalf = 32U;
+
+            return BEToNative(static_cast<uint32_t>((aBigEndianNumber & HighHalfMask) >> ShiftHalf)) |
+                (static_cast<uint64_t>(BEToNative(static_cast<uint32_t>(aBigEndianNumber & LowHalfMask))) << ShiftHalf);
         }
 
         /**
@@ -150,7 +170,8 @@ namespace DeviceTree
          */
         uint8_t const* AlignPointer(uint8_t const* apPtr, std::size_t aAlignment)
         {
-            auto const padding = (aAlignment - (reinterpret_cast<uintptr_t>(apPtr) % aAlignment)) % aAlignment;
+            auto const padding = (aAlignment - (std::bit_cast<uintptr_t>(apPtr) % aAlignment)) % aAlignment;
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             return apPtr + padding;
         }
 
@@ -180,6 +201,7 @@ namespace DeviceTree
         void OutputMemoryReservationMap(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
         {
             MiniUART::SendString("Memory reservation map:\r\n");
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             uint8_t const* pcurEntry = aBaseAddr + aHeader.off_mem_rsvmap;
             auto done = false;
             while (!done)
@@ -193,6 +215,7 @@ namespace DeviceTree
                 if (!done)
                 {
                     Print::FormatToMiniUART("\tAddress (size): {:x} ({} bytes)\r\n", entry.address, entry.size);
+                    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                     pcurEntry += sizeof(entry);
                 }
             }
@@ -205,7 +228,7 @@ namespace DeviceTree
          */
         void IndentOutput(uint32_t const aIndentLevel)
         {
-            for (auto curIndent = 0u; curIndent < aIndentLevel; ++curIndent)
+            for (auto curIndent = 0U; curIndent < aIndentLevel; ++curIndent)
             {
                 MiniUART::SendString("  ");
             }
@@ -221,9 +244,11 @@ namespace DeviceTree
         uint8_t const* OutputBeginNode(uint8_t const* const apExtraData, uint32_t const aIndentLevel)
         {
             IndentOutput(aIndentLevel);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             char const* pnodeName = reinterpret_cast<char const*>(apExtraData);
             Print::FormatToMiniUART("{} {{\r\n", pnodeName);
             auto const nameByteLen = std::strlen(pnodeName) + 1; // including terminator
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             return AlignPointer(apExtraData + nameByteLen, alignof(uint32_t));
         }
 
@@ -253,8 +278,9 @@ namespace DeviceTree
             // Make it pretty clear we don't know what format this is in with <? ?> so it isn't confused with data that
             // might normally be presented as bytes
             MiniUART::SendString("<?");
-            auto pcurValueByte = apValue;
-            for (auto curByte = 0u; curByte != aLen; ++curByte, ++pcurValueByte)
+            auto const* pcurValueByte = apValue;
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            for (auto curByte = 0U; curByte != aLen; ++curByte, ++pcurValueByte)
             {
                 Print::FormatToMiniUART(" {:x}", *pcurValueByte);
             }
@@ -313,12 +339,14 @@ namespace DeviceTree
          */
         void PrettyPrintString(uint8_t const* const apValue, size_t aLen)
         {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             if (aLen != (std::strlen(reinterpret_cast<char const*>(apValue)) + 1))
             {
                 PrettyPrintUnknownValue(apValue, aLen);
             }
             else
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
                 Print::FormatToMiniUART("\"{}\"", reinterpret_cast<char const*>(apValue));
             }
         }
@@ -343,6 +371,7 @@ namespace DeviceTree
          */
         void PrettyPrintStringList(uint8_t const* const apValue, size_t aLen)
         {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             char const* pcurString = reinterpret_cast<char const*>(apValue);
             size_t curOffset = 0;
             while (curOffset < aLen)
@@ -350,6 +379,7 @@ namespace DeviceTree
                 Print::FormatToMiniUART("{}\"{}\"", (curOffset == 0) ? "" : ", ", pcurString);
                 auto const lengthPlusTerminator = std::strlen(pcurString) + 1;
                 curOffset += lengthPlusTerminator;
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 pcurString += lengthPlusTerminator;
             }
             if (curOffset != aLen)
@@ -372,7 +402,7 @@ namespace DeviceTree
             {
                 PrettyPrintStringList(apValue, aLen);
             }
-            else if (strcmp(apName, "model") == 0)
+            else if ((strcmp(apName, "model") == 0) || (strcmp(apName, "status") == 0) || (strcmp(apName, "name") == 0) || (strcmp(apName, "device-type") == 0))
             {
                 PrettyPrintString(apValue, aLen);
             }
@@ -380,34 +410,14 @@ namespace DeviceTree
             {
                 PrettyPrintPHandle(apValue, aLen);
             }
-            else if (strcmp(apName, "status") == 0)
-            {
-                PrettyPrintString(apValue, aLen);
-            }
-            else if (strcmp(apName, "#address-cells") == 0)
-            {
-                PrettyPrintUInt32(apValue, aLen);
-            }
-            else if (strcmp(apName, "#size-cells") == 0)
+            else if ((strcmp(apName, "#address-cells") == 0) || (strcmp(apName, "#size-cells") == 0) || (strcmp(apName, "virtual-reg") == 0))
             {
                 PrettyPrintUInt32(apValue, aLen);
             }
             // #TODO: reg - see section 2.3.6
-            else if (strcmp(apName, "virtual-reg") == 0)
-            {
-                PrettyPrintUInt32(apValue, aLen);
-            }
             // #TODO: ranges - see section 2.3.8
             // #TODO: dma-ranges - see section 2.3.9
             // dma-coherent is always empty, so we won't see it
-            else if (strcmp(apName, "name") == 0)
-            {
-                PrettyPrintString(apValue, aLen);
-            }
-            else if (strcmp(apName, "device-type") == 0)
-            {
-                PrettyPrintString(apValue, aLen);
-            }
             else
             {
                 PrettyPrintUnknownValue(apValue, aLen);
@@ -423,16 +433,18 @@ namespace DeviceTree
          * @param aIndentLevel Level of indentation to use
          * @return The new position of the pointer after the extra data and alignment
          */
-        uint8_t const* OutputProp(fdt_header const& aHeader, uint8_t const* const aBaseAddr,
+        uint8_t const* OutputProp(fdt_header const& aHeader, uint8_t const* const aBaseAddr, // NOLINT(bugprone-easily-swappable-parameters)
             uint8_t const* const apExtraData, uint32_t const aIndentLevel)
         {
             fdt_prop_extra_data dataHeader;
             std::memcpy(&dataHeader, apExtraData, sizeof(dataHeader));
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             uint8_t const* pendPtr = apExtraData + sizeof(dataHeader);
 
             dataHeader = BEToNative(dataHeader);
 
             IndentOutput(aIndentLevel);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic)
             char const* pname = reinterpret_cast<char const*>(aBaseAddr + aHeader.off_dt_strings + dataHeader.nameoff);
             MiniUART::SendString(pname);
             
@@ -444,6 +456,7 @@ namespace DeviceTree
             {
                 MiniUART::SendString(" = ");
                 PrettyPrintValue(pname, pendPtr, dataHeader.len);
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 pendPtr += dataHeader.len;
                 MiniUART::SendString(";\r\n");
             }
@@ -485,13 +498,15 @@ namespace DeviceTree
         void OutputDeviceTree(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
         {
             MiniUART::SendString("Structure block:\r\n");
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             uint8_t const* pcurToken = aBaseAddr + aHeader.off_dt_struct;
-            auto indentLevel = 0u;
+            auto indentLevel = 0U;
             auto done = false;
             while (!done)
             {
                 uint32_t token = 0;
                 std::memcpy(&token, pcurToken, sizeof(token));
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 pcurToken += sizeof(token);
 
                 token = BEToNative(token);
@@ -527,6 +542,7 @@ namespace DeviceTree
                     break;
                 }
 
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 if ((pcurToken >= (aBaseAddr + aHeader.off_dt_struct + aHeader.size_dt_struct)) && !done)
                 {
                     MiniUART::SendString("Ran off the end of the table, aborting\r\n");
@@ -543,7 +559,7 @@ namespace DeviceTree
      */
     void ParseDeviceTree(uint8_t const* const apDTB)
     {
-        Print::FormatToMiniUART("Loading DTB from: {:x}...\r\n", reinterpret_cast<uintptr_t>(apDTB));
+        Print::FormatToMiniUART("Loading DTB from: {:x}...\r\n", std::bit_cast<uintptr_t>(apDTB));
 
         fdt_header header;
         std::memcpy(&header, apDTB, sizeof(header));

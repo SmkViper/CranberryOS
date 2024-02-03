@@ -106,7 +106,7 @@ namespace Kernel
         Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
         Print::FormatToMiniUART("_start: {}\r\n", aStartPointer);
         // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
-        //DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(static_cast<uintptr_t>(aDTBPointer) + MemoryManager::KernalVirtualAddressStart));
+        //DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(aDTBPointer.GetAddress() + MemoryManager::KernelVirtualAddressOffset));
 
         UnitTests::Run();
 
