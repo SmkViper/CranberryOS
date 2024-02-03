@@ -1,7 +1,15 @@
 #include "MemoryPageTablesTests.h"
 
+#include <cstdint>
+#include <type_traits>
+#include "../../AArch64/MemoryDescriptor.h"
 #include "../../AArch64/MemoryPageTables.h"
+#include "../../PointerTypes.h"
+#include "../../Utils.h"
 #include "../Framework.h"
+
+// Using a lot of "magic numbers" in tests, so just silence the lint for the file
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
 namespace UnitTests::AArch64::MemoryPageTables
 {
@@ -70,7 +78,7 @@ namespace UnitTests::AArch64::MemoryPageTables
 
             auto tableVisitFault = false;
             auto tableVisitTable = false;
-            auto tableBits = 0ull;
+            auto tableBits = 0ULL;
             testTableEntry.Visit(Overloaded{
                 [&tableVisitFault](::AArch64::Descriptor::Fault) { tableVisitFault = true; },
                 [&tableVisitTable, &tableBits](::AArch64::Descriptor::Table const aDescriptor)
@@ -98,15 +106,17 @@ namespace UnitTests::AArch64::MemoryPageTables
         template<typename PageViewT, typename DescriptorT>
         void PageViewTest(char const* const apPageViewName, VirtualPtr const aVirtualAddress, uint8_t const aExpectedTableIndex)
         {
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             uint64_t buffer[10] = {}; // don't need a full table, but need enough of one to differentiate between types
-            PageViewT testPageView{ buffer };
+            PageViewT testPageView{ static_cast<uint64_t*>(buffer) };
 
-            EmitTestResult(testPageView.GetTablePtr() == buffer, "Page view {} construction and VA access", apPageViewName);
+            EmitTestResult(testPageView.GetTablePtr() == static_cast<uint64_t*>(buffer), "Page view {} construction and VA access", apPageViewName);
 
             DescriptorT descriptor;
             auto const descriptorValue = Details::TestAccessor::GetDescriptorValue(descriptor);
             testPageView.SetEntryForVA(aVirtualAddress, descriptor);
             
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
             EmitTestResult(buffer[aExpectedTableIndex] == descriptorValue, "Page view {} SetEntryForVA", apPageViewName);
 
             auto const entry = testPageView.GetEntryForVA(aVirtualAddress);
@@ -136,10 +146,10 @@ namespace UnitTests::AArch64::MemoryPageTables
         auto const l0Index = 4;
         // This address is specifically crafted to pick a different index based on the page table level
         auto const virtualAddress = VirtualPtr{
-            static_cast<uintptr_t>(l0Index) << 39 |
-            static_cast<uintptr_t>(l1Index) << 30 |
-            static_cast<uintptr_t>(l2Index) << 21 |
-            static_cast<uintptr_t>(l3Index) << 12
+            static_cast<uintptr_t>(l0Index) << 39U |
+            static_cast<uintptr_t>(l1Index) << 30U |
+            static_cast<uintptr_t>(l2Index) << 21U |
+            static_cast<uintptr_t>(l3Index) << 12U
         };
         
         // We already tested the entry visit above, so we just need to test a single descriptor per view. We'll pick
@@ -150,3 +160,5 @@ namespace UnitTests::AArch64::MemoryPageTables
         PageViewTest<::AArch64::PageTable::Level3View, ::AArch64::Descriptor::Page>("L3", virtualAddress, l3Index);
     }
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
