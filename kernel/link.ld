@@ -26,7 +26,7 @@ SECTIONS
         to "load" our process
     */
     . = ALIGN(4K);
-    __user_start = .;
+    _user_start = .;
     .text.user : AT (ADDR(.text.user) - KERNEL_MAPPING_BASE) {
         *(.text.user)
     }
@@ -43,7 +43,7 @@ SECTIONS
         CMakeFiles/kernel8.elf.dir/user_* (.bss .bss.*)
     }
     . = ALIGN(4K);
-    __user_end = .;
+    _user_end = .;
 
     .text : AT (ADDR(.text) - KERNEL_MAPPING_BASE) {
         *(.text .text.*) /* remaining code sections */
@@ -51,16 +51,16 @@ SECTIONS
 
     .rodata ALIGN(4K) : AT (ADDR(.rodata) - KERNEL_MAPPING_BASE) {
         /* .init_array is a list of pointers to constructors for static variables (requires pointer alignment) */
-        __init_start = .;
+        _init_start = .;
         KEEP(*(SORT(.init_array.*))) /* make sure constructor priorities are respected by sorting */
         KEEP(*(.init_array*))
-        __init_end = .;
+        _init_end = .;
 
         /* .fini_array is a list of pointers to destructors for static variables (requires pointer alignment) */
-        __fini_start = .;
+        _fini_start = .;
         KEEP(*(SORT(.fini_array.*))) /* make sure destructor priorities are respected by sorting */
         KEEP(*(.fini_array*))
-        __fini_end = .;
+        _fini_end = .;
 
         *(.rodata .rodata.*) /* read-only data sections */
     }
