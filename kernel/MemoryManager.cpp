@@ -1,9 +1,12 @@
 #include "MemoryManager.h"
 
+#include <bit>
+#include <bitset>
 #include <cstdint>
 #include <cstring>
 #include "AArch64/MemoryDescriptor.h"
-#include "Peripherals/Base.h"
+#include "AArch64/MemoryPageTables.h"
+#include "PointerTypes.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"
 #include "Utils.h"
@@ -11,7 +14,7 @@
 extern "C"
 {
     // from link.ld
-    extern uint8_t _kernel_image_end[];
+    extern uint8_t const _kernel_image_end[];
 
     // Functions defined in MemoryManager.S
     /**
@@ -19,7 +22,7 @@ extern "C"
      * 
      * @param apNewPGD Pointer to the new page global directory
      */
-    void set_pgd(const void* apNewPGD);
+    void set_pgd(void const* apNewPGD);
 }
 
 namespace MemoryManager
@@ -35,7 +38,8 @@ namespace MemoryManager
         {
             // #TODO: Why is _kernel_image_end here a virtual address when in the boot process it's a physical
             // address?
-            auto const kernelImageEndPA = PhysicalPtr{ reinterpret_cast<uintptr_t>(_kernel_image_end) - KernelVirtualAddressOffset };
+            auto const kernalImageEndVA = std::bit_cast<uintptr_t>(&_kernel_image_end);
+            auto const kernelImageEndPA = PhysicalPtr{ kernalImageEndVA - KernelVirtualAddressOffset };
             return CalculateBlockEnd(kernelImageEndPA, L2BlockSize).Offset(1);
         }
 
@@ -43,7 +47,9 @@ namespace MemoryManager
 
         // #TODO: Hardcoding only 64 pages for now, we need something better for this (probably once we calculate what
         // is available from the device tree)
-        std::bitset<64> PageInUse;
+        constexpr auto MaxPageCount = 64U;
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+        std::bitset<MaxPageCount> PageInUse;
 
         /**
          * Allocate a page of memory
@@ -54,7 +60,7 @@ namespace MemoryManager
         {
             // Very simple for now, just find the first unused page and return it
             auto const pageMemoryStartPA = CalculatePagingMemoryPAStart();
-            for (auto curPage = 0ull; curPage < PageInUse.size(); ++curPage)
+            for (auto curPage = 0ULL; curPage < PageInUse.size(); ++curPage)
             {
                 if (!PageInUse[curPage])
                 {
@@ -62,7 +68,7 @@ namespace MemoryManager
                     auto newPageStartPA = pageMemoryStartPA.Offset(curPage * PageSize);
                     // have to add the KernelVirtualAddressStart because that's where the physical address is mapped to
                     // in kernel space
-                    memset(reinterpret_cast<void*>(newPageStartPA.Offset(KernelVirtualAddressOffset).GetAddress()), 0, PageSize);
+                    memset(std::bit_cast<void*>(newPageStartPA.Offset(KernelVirtualAddressOffset).GetAddress()), 0, PageSize);
                     return newPageStartPA;
                 }
             }
@@ -132,7 +138,7 @@ namespace MemoryManager
             });
 
             // virtual address for memory in the kernel is physical address plus offset
-            auto const ppageVA = reinterpret_cast<uint64_t*>(pagePA.Offset(KernelVirtualAddressOffset).GetAddress());
+            auto* const ppageVA = std::bit_cast<uint64_t*>(pagePA.Offset(KernelVirtualAddressOffset).GetAddress());
             return LowerTableViewT{ ppageVA };
         }
 
@@ -166,6 +172,7 @@ namespace MemoryManager
             if (arTask.MemoryState.PageGlobalDirectory == PhysicalPtr{})
             {
                 arTask.MemoryState.PageGlobalDirectory = GetFreePage();
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = arTask.MemoryState.PageGlobalDirectory;
                 ++arTask.MemoryState.KernelPagesCount;
             }
@@ -173,35 +180,39 @@ namespace MemoryManager
             // helper to convert a table's pointer to the physical memory address, assuming offset mapping
             auto tablePtrToPAOffset = [](uint64_t const* const apTable)
             {
-                return PhysicalPtr{ reinterpret_cast<uintptr_t>(apTable) - KernelVirtualAddressOffset};
+                return PhysicalPtr{ std::bit_cast<uintptr_t>(apTable) - KernelVirtualAddressOffset};
             };
 
             // PGD addresses are offset-mapped to virtual addresses
             auto const pageGlobalDirectoryVA = VirtualPtr{ arTask.MemoryState.PageGlobalDirectory.GetAddress() }.Offset(KernelVirtualAddressOffset);
-            auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ reinterpret_cast<uint64_t*>(pageGlobalDirectoryVA.GetAddress()) };
+            auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ std::bit_cast<uint64_t*>(pageGlobalDirectoryVA.GetAddress()) };
             auto newTable = false;
             auto const pageUpperDirectory = MapTable<AArch64::PageTable::Level1View>(pageGlobalDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = tablePtrToPAOffset(pageUpperDirectory.GetTablePtr());
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto pageMiddleDirectory = MapTable<AArch64::PageTable::Level2View>(pageUpperDirectory, aVirtualAddress, newTable);
+            auto const pageMiddleDirectory = MapTable<AArch64::PageTable::Level2View>(pageUpperDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = tablePtrToPAOffset(pageMiddleDirectory.GetTablePtr());
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            const auto pageTableEntry = MapTable<AArch64::PageTable::Level3View>(pageMiddleDirectory, aVirtualAddress, newTable);
+            auto const pageTableEntry = MapTable<AArch64::PageTable::Level3View>(pageMiddleDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
                 arTask.MemoryState.KernelPages[arTask.MemoryState.KernelPagesCount] = tablePtrToPAOffset(pageTableEntry.GetTablePtr());
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
             MapTableEntry(pageTableEntry, aVirtualAddress, aPhysicalPage);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{ aPhysicalPage, aVirtualAddress };
             ++arTask.MemoryState.UserPagesCount;
         }
@@ -209,18 +220,18 @@ namespace MemoryManager
 
     void* AllocateKernelPage()
     {
-        const auto physicalPage = GetFreePage();
+        auto const physicalPage = GetFreePage();
         if (physicalPage == PhysicalPtr{})
         {
             return nullptr;
         }
         // map the physical page to the kernel address space (offset-mapped)
-        return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
+        return std::bit_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
 
     void* AllocateUserPage(Scheduler::TaskStruct& arTask, VirtualPtr const aVirtualAddress)
     {
-        const auto physicalPage = GetFreePage();
+        auto const physicalPage = GetFreePage();
         if (physicalPage == PhysicalPtr{})
         {
             return nullptr;
@@ -228,37 +239,52 @@ namespace MemoryManager
 
         MapPage(arTask, aVirtualAddress, physicalPage);
         // map the physical page to the kernel address space (offset-mapped)
-        return reinterpret_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
+        return std::bit_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
     }
 
     bool CopyVirtualMemory(Scheduler::TaskStruct& arDestinationTask, const Scheduler::TaskStruct& aCurrentTask)
     {
-        for (auto curPage = 0u; curPage < aCurrentTask.MemoryState.UserPagesCount; ++curPage)
+        for (auto curPage = 0U; curPage < aCurrentTask.MemoryState.UserPagesCount; ++curPage)
         {
-            const auto pkernelVA = AllocateUserPage(arDestinationTask, aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+            auto* const pkernelVA = AllocateUserPage(arDestinationTask, aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress);
             if (pkernelVA == nullptr)
             {
                 return false;
             }
-            memcpy(pkernelVA, reinterpret_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress.GetAddress()), PageSize);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+            memcpy(pkernelVA, std::bit_cast<const void*>(aCurrentTask.MemoryState.UserPages[curPage].VirtualAddress.GetAddress()), PageSize);
         }
         return true;
     }
 
     void SetPageGlobalDirectory(PhysicalPtr const aNewPGD)
     {
-        set_pgd(reinterpret_cast<void const*>(aNewPGD.GetAddress()));
+        set_pgd(std::bit_cast<void const*>(aNewPGD.GetAddress()));
     }
 }
 
 // Called from assembler
 extern "C"
 {
-    int do_mem_abort(uintptr_t aAddress, uintptr_t aESR)
+    /**
+     * Called when a EL0 data abort fault is triggered
+     * 
+     * @param aAddress The faulting address
+     * @param aESR The value of the ESR_EL1 register
+     * @return 0 if it was handled, non-zero if it was not
+     */
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+    int do_mem_abort(uintptr_t const aAddress, uintptr_t const aESR)
     {
-        const auto dataFaultStatusCode = aESR & 0b11'1111;
+        constexpr auto dfscMask = 0b11'1111U;
+        const auto dataFaultStatusCode = aESR & dfscMask;
         // Translation faults are: 100, 101, 110, and 111 depending on the level
-        if ((dataFaultStatusCode & 0b11'1100) == 0b100)
+        // We only care if any translation fault occurs, not which specific level, so we only make sure bit 3 is set
+        // and no higher bits in the status code are
+        constexpr auto anyTranslationFaultMask = 0b11'1100U;
+        constexpr auto anyTranslationFault = 0b100U;
+        if ((dataFaultStatusCode & anyTranslationFaultMask) == anyTranslationFault)
         {
             const auto newPage = MemoryManager::GetFreePage();
             if (newPage == PhysicalPtr{})

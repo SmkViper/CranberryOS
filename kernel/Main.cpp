@@ -7,6 +7,7 @@
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
 #include "MiniUart.h"
+#include "PointerTypes.h"
 #include "Print.h"
 #include "Scheduler.h"
 #include "user_Program.h"
@@ -73,12 +74,14 @@ namespace
      */
     void KernelProcess(const void* const /*apParam*/)
     {
+        // Splitting out all the bit_casts into their own lines because they appear to crash clang-tidy in some cases
         Print::FormatToMiniUART("Kernel process started. EL {}\r\n", static_cast<uint32_t>(AArch64::CPU::GetCurrentExceptionLevel()));
         auto const startOfUserCode = std::bit_cast<uintptr_t>(&_user_start);
         auto const endOfUserCode = std::bit_cast<uintptr_t>(&_user_end);
         auto const size = endOfUserCode - startOfUserCode;
 
-        auto const processOffset = std::bit_cast<uintptr_t>(&User::Process) - startOfUserCode;
+        auto const processFnAddr = std::bit_cast<uintptr_t>(&User::Process);
+        auto const processOffset = processFnAddr - startOfUserCode;
 
         auto const succeeded = Scheduler::MoveToUserMode(&_user_start, size, processOffset);
         if (!succeeded)
@@ -94,6 +97,7 @@ extern "C"
 {
     // #TODO: Handle to the "global shared object" that clang apparently wants? Not sure what its for yet, but without
     // it there are linker issues with it thinking the object is out of range
+    // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,cppcoreguidelines-avoid-non-const-global-variables)
     void* __dso_handle;
 }
 
