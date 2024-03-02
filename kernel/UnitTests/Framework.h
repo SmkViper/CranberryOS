@@ -28,8 +28,11 @@ namespace UnitTests
         }
         else
         {
-            char buffer[256];
+            static constexpr size_t bufferSize = 256;
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+            char buffer[bufferSize];
             ::Print::FormatToBuffer(buffer, apMessage, std::forward<ArgT>(aArgs)...);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             Details::EmitTestResultImpl(aResult, buffer);
         }
     }
@@ -50,8 +53,11 @@ namespace UnitTests
         }
         else
         {
-            char buffer[256];
+            static constexpr size_t bufferSize = 256;
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+            char buffer[bufferSize];
             ::Print::FormatToBuffer(buffer, apMessage, std::forward<ArgT>(aArgs)...);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             Details::EmitTestSkipResultImpl(buffer);
         }
     }

@@ -12,12 +12,12 @@ namespace Scheduler
 
 namespace MemoryManager
 {
-    constexpr auto KernelVirtualAddressOffset = 0xFFFF'0000'0000'0000ull;
+    constexpr auto KernelVirtualAddressOffset = 0xFFFF'0000'0000'0000ULL;
     constexpr auto DeviceBaseAddress = PhysicalPtr{ 0x3F00'0000 };
 
     // sizes depend on how many bits the descriptor uses to index into pages or tables
     constexpr size_t PageSize = 1ULL << AArch64::PageTable::PageOffsetBits;
-    constexpr size_t L2BlockSize = 1ULL << (AArch64::PageTable::PageOffsetBits + AArch64::PageTable::TableIndexBits);
+    constexpr size_t L2BlockSize = 1ULL << static_cast<size_t>(AArch64::PageTable::PageOffsetBits + AArch64::PageTable::TableIndexBits);
 
     static_assert(AArch64::PageTable::PointersPerTable * sizeof(AArch64::Descriptor::Fault) == PageSize, "Expected to be able to fit a table into a page");
 
