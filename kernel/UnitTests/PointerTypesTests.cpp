@@ -1,6 +1,7 @@
 #include "../PointerTypes.h"
 
 #include <cstring>
+#include "../Print.h"
 #include "Framework.h"
 
 namespace UnitTests::PointerTypes
@@ -35,8 +36,9 @@ namespace UnitTests::PointerTypes
          */
         void PhysicalPtrPrintTest()
         {
-            char buffer[256];
+            char buffer[256]; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             Print::FormatToBuffer(buffer, "{}", PhysicalPtr{ 0xFF });
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             EmitTestResult(strcmp(buffer, "P0xff") == 0, "PhysicalPtr print format");
         }
 
@@ -45,8 +47,9 @@ namespace UnitTests::PointerTypes
          */
         void VirtualPtrPrintTest()
         {
-            char buffer[256];
+            char buffer[256]; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             Print::FormatToBuffer(buffer, "{}", VirtualPtr{ 0xFF });
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             EmitTestResult(strcmp(buffer, "V0xff") == 0, "VirtualPtr print format");
         }
 
