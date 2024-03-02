@@ -19,25 +19,14 @@ namespace Print
         {
         public:
             /**
-             * Copy constructor
-             * 
-             * @param aOther Functor to copy
-             */
-            OutputFunctorBase(OutputFunctorBase const& aOther) = delete;
-
-            /**
              * Destructor
              */
             virtual ~OutputFunctorBase() = default;
 
-            /**
-             * Assignment operator
-             * 
-             * @param aOther Functor to copy
-             * 
-             * @return This functor
-             */
+            OutputFunctorBase(OutputFunctorBase const& aOther) = delete;
+            OutputFunctorBase(OutputFunctorBase&& aOther) = delete;
             OutputFunctorBase& operator=(OutputFunctorBase const& aOther) = delete;
+            OutputFunctorBase& operator=(OutputFunctorBase&& aOther) = delete;
 
             /**
              * Write out a single character to the output
@@ -86,14 +75,16 @@ namespace Print
              * 
              * @param apBuffer Buffer to write to - assumed to be BufferSize in size and non-null
              */
-            explicit StaticBufferOutputFunctor(char (&apBuffer)[BufferSize]): pBuffer{apBuffer} {}
+            explicit StaticBufferOutputFunctor(char (&apBuffer)[BufferSize]) // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+                : pBuffer{ static_cast<char*>(apBuffer) }
+            {}
 
             /**
              * Obtains the number of characters written to the buffer
              * 
              * @return Number of characters written
              */
-            std::size_t GetCharsWritten() const {return CurWritePos;}
+            [[nodiscard]] std::size_t GetCharsWritten() const {return CurWritePos;}
 
         private:
             /**
@@ -108,17 +99,17 @@ namespace Print
                 auto success = (CurWritePos < BufferSize);
                 if (success)
                 {
-                    pBuffer[CurWritePos] = aChar;
+                    pBuffer[CurWritePos] = aChar; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                     ++CurWritePos;
                 }
                 return success;
             }
 
             char* pBuffer = nullptr;
-            std::size_t CurWritePos = 0u;
+            std::size_t CurWritePos = 0U;
         };
         template<std::size_t BufferSize>
-        StaticBufferOutputFunctor(char (&arBuffer)[BufferSize]) -> StaticBufferOutputFunctor<BufferSize>;
+        StaticBufferOutputFunctor(char (&arBuffer)[BufferSize]) -> StaticBufferOutputFunctor<BufferSize>; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
         /**
          * Base we can pass to our output function that will output the data it holds to a given functor
@@ -132,25 +123,14 @@ namespace Print
             DataWrapperBase() = default;
 
             /**
-             * Copy constructor
-             * 
-             * @param aOther Wrapper to copy
-             */
-            DataWrapperBase(DataWrapperBase const& aOther) = delete;
-
-            /**
              * Destructor
              */
             virtual ~DataWrapperBase() = default;
 
-            /**
-             * Assignment operator
-             * 
-             * @param aOther Wrapper to copy
-             * 
-             * @return This data wrapper
-             */
+            DataWrapperBase(DataWrapperBase const& aOther) = delete;
+            DataWrapperBase(DataWrapperBase&& aOther) = delete;
             DataWrapperBase& operator=(DataWrapperBase const& aOther) = delete;
+            DataWrapperBase& operator=(DataWrapperBase&& aOther) = delete;
 
             /**
              * Output the data this wrapper holds to the given functor
@@ -178,7 +158,7 @@ namespace Print
         class DataWrapper: public DataWrapperBase
         {
             // Tiny helper to make sure the static assert doesn't evaluate until the template is instantiated.
-            // TODO
+            // #TODO
             // Probably can be moved somewhere else for common usage at some point
             template<typename T>
             static constexpr bool AlwaysFalse = false;
@@ -200,7 +180,7 @@ namespace Print
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint8_t WrappedData = 0u;
+            uint8_t WrappedData = 0U;
         };
 
         template<>
@@ -217,7 +197,7 @@ namespace Print
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint16_t WrappedData = 0u;
+            uint16_t WrappedData = 0U;
         };
 
         template<>
@@ -234,7 +214,7 @@ namespace Print
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint32_t WrappedData = 0u;
+            uint32_t WrappedData = 0U;
         };
 
         template<>
@@ -251,7 +231,7 @@ namespace Print
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint64_t WrappedData = 0u;
+            uint64_t WrappedData = 0U;
         };
 
         template<>
@@ -268,7 +248,7 @@ namespace Print
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            size_t WrappedData = 0u;
+            size_t WrappedData = 0U;
         };
 
         template<>
@@ -305,7 +285,7 @@ namespace Print
          */
         inline void FormatVararg(char const* apFormatString, OutputFunctorBase& arOutput)
         {
-            FormatImpl(apFormatString, arOutput, nullptr, 0u);
+            FormatImpl(apFormatString, arOutput, nullptr, 0U);
         }
 
         /**
@@ -324,7 +304,9 @@ namespace Print
             // enough for the call.
             auto outputArgs = [apFormatString, &arOutput] (auto const&... aWrappedArgs)
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
                 Detail::DataWrapperBase const* baseArgs[] = {&aWrappedArgs...};
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
                 FormatImpl(apFormatString, arOutput, baseArgs, sizeof...(TailArgTypes) + 1 /* +1 for FirstArgType*/);
             };
 
@@ -368,7 +350,7 @@ namespace Print
      * @param aArgs The arguments to substitute into the string
      */
     template<std::size_t BufferSize, typename... ArgTypes>
-    void FormatToBuffer(char (&arBuffer)[BufferSize], char const* apFormatString, ArgTypes&&... aArgs)
+    void FormatToBuffer(char (&arBuffer)[BufferSize], char const* apFormatString, ArgTypes&&... aArgs) // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     {
         Detail::StaticBufferOutputFunctor output{arBuffer};
         Detail::FormatVararg(apFormatString, output, std::forward<ArgTypes>(aArgs)...);
