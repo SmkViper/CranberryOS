@@ -1,10 +1,15 @@
 #include "UtilsTests.h"
 
-#include "Framework.h"
+#include <bitset>
+#include <cstdint>
+
 #include "../Utils.h"
+
+#include "Framework.h"
 
 namespace UnitTests::Utils
 {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
     namespace
     {
         // #TODO: No obvious way to test MemoryMappedIO stuff yet
@@ -24,7 +29,7 @@ namespace UnitTests::Utils
             };
 
             testObj(10);
-            testObj(1.5f);
+            testObj(1.5F);
 
             EmitTestResult(intCalled && floatCalled, "Overloaded::operator()");
         }
@@ -62,6 +67,7 @@ namespace UnitTests::Utils
             EmitTestResult(ReadMultiBitValue<TestEnum>(bitset, mask, shift) == TestEnum::Value, "Read/write multi bit enum round-trip");
         }
     }
+    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
     void Run()
     {
