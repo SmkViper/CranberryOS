@@ -11,14 +11,15 @@ namespace UnitTests::KernelStdlib::Utility
         struct MoveCopyCountStruct
         {
             MoveCopyCountStruct() = default;
+            ~MoveCopyCountStruct() = default;
             MoveCopyCountStruct([[maybe_unused]] const MoveCopyCountStruct& aOther): CopyCount{1} {}
-            MoveCopyCountStruct([[maybe_unused]] MoveCopyCountStruct&& amOther): MoveCount{1} {}
-            MoveCopyCountStruct& operator=([[maybe_unused]] const MoveCopyCountStruct& aOther)
+            MoveCopyCountStruct([[maybe_unused]] MoveCopyCountStruct&& amOther) noexcept: MoveCount{1} {}
+            MoveCopyCountStruct& operator=([[maybe_unused]] const MoveCopyCountStruct& aOther) // NOLINT(cert-oop54-cpp)
             {
                 ++CopyCount;
                 return *this;
             }
-            MoveCopyCountStruct& operator=([[maybe_unused]] MoveCopyCountStruct&& amOther)
+            MoveCopyCountStruct& operator=([[maybe_unused]] MoveCopyCountStruct&& amOther) noexcept
             {
                 ++MoveCount;
                 return *this;
@@ -78,7 +79,8 @@ namespace UnitTests::KernelStdlib::Utility
             std::swap(value1, value2);
             EmitTestResult((value1 == 2) && (value2 == 1), "std::swap basic types");
 
-            MoveCopyCountStruct move1, move2;
+            MoveCopyCountStruct move1;
+            MoveCopyCountStruct move2;
             std::swap(move1, move2);
             EmitTestResult((move1.CopyCount == 0) && (move1.MoveCount != 0) && (move2.CopyCount == 0) && (move2.MoveCount != 0), "std::swap uses moves");
         }
