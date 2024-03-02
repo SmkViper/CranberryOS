@@ -4,6 +4,7 @@ namespace UnitTests::KernelStdlib::CStdInt
 {
     namespace
     {
+        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
         static_assert(sizeof(std::int8_t) == 1, "Unexpected int8_t size");
         static_assert(sizeof(std::int16_t) == 2, "Unexpected int16_t size");
         static_assert(sizeof(std::int32_t) == 4, "Unexpected int32_t size");
@@ -38,5 +39,6 @@ namespace UnitTests::KernelStdlib::CStdInt
         static_assert(UINT64_MAX == 18446744073709551615ULL, "Unexpected uint64 maximum");
 
         static_assert(UINTPTR_MAX == 18446744073709551615ULL, "Unexpected uintptr maximum");
+        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
     }
 }
