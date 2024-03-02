@@ -34,7 +34,7 @@ namespace Scheduler
         Zombie
     };
 
-    constexpr std::size_t MaxProcessPagesCS = 16u;
+    constexpr std::size_t MaxProcessPagesCS = 16U;
 
     struct UserPage
     {
@@ -46,9 +46,9 @@ namespace Scheduler
     {
         PhysicalPtr PageGlobalDirectory;
         uint32_t UserPagesCount = 0;
-        UserPage UserPages[MaxProcessPagesCS] = {};
+        UserPage UserPages[MaxProcessPagesCS] = {}; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
         uint32_t KernelPagesCount = 0;
-        PhysicalPtr KernelPages[MaxProcessPagesCS] = {};
+        PhysicalPtr KernelPages[MaxProcessPagesCS] = {}; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     };
 
     struct TaskStruct

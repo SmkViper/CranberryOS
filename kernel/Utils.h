@@ -63,9 +63,9 @@ template<typename SourceType, size_t BitsetSize>
 void WriteMultiBitValue(std::bitset<BitsetSize>& arBitset, SourceType const aValue, uint64_t const aMask, uint64_t const aShift)
 {
     static_assert(sizeof(SourceType) <= sizeof(uint64_t), "SourceType too large");
-    arBitset &= std::bitset<64>{ ~(aMask << aShift) };
+    arBitset &= std::bitset<BitsetSize>{ ~(aMask << aShift) };
     auto const maskedValue = (static_cast<uint64_t>(aValue) & aMask) << aShift;
-    arBitset |= std::bitset<64>{ maskedValue };
+    arBitset |= std::bitset<BitsetSize>{ maskedValue };
 }
 
 /**
@@ -81,7 +81,7 @@ SourceType ReadMultiBitValue(std::bitset<BitsetSize> const& aBitset, uint64_t co
 {
     static_assert(sizeof(SourceType) <= sizeof(uint64_t), "SourceType too large");
     auto const shiftedMask = aMask << aShift;
-    return static_cast<SourceType>((aBitset & std::bitset<64>{ shiftedMask }).to_ulong() >> aShift);
+    return static_cast<SourceType>((aBitset & std::bitset<BitsetSize>{ shiftedMask }).to_ulong() >> aShift);
 }
 
 #endif // KERNEL_UTILS_H
