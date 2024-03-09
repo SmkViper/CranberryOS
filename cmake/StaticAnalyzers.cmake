@@ -1,10 +1,10 @@
 macro(CranberryOS_EnableClangTidy aProject aWarningsAsErrors)
     find_program(CLANGTIDY clang-tidy)
     if(CLANGTIDY)
-        # #TODO: add "-system-headers" under header filter and reconfigure/rebuild once we fix header issues
         set(CLANG_TIDY_OPTIONS
             ${CLANGTIDY}
             -header-filter=.*
+            -system-headers
             -extra-arg=-Wno-unknown-warning-option
             -extra-arg=-Wno-ignored-optimization-argument
             -extra-arg=-Wno-unused-command-line-argument
