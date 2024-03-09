@@ -3,7 +3,7 @@ include(CheckCXXCompilerFlag)
 macro(CranberryOS_SetupOptions)
     option(CranberryOS_WARNINGS_AS_ERRORS "Warnings as errors" ON)
     option(CranberryOS_ENABLE_LTO "Link-time Optimization" ON)
-    option(CranberryOS_CLANG_TIDY "Enable clang-tidy" OFF) # #TODO: Disable until all issues are resolved
+    option(CranberryOS_CLANG_TIDY "Enable clang-tidy" ON)
 endmacro()
 
 macro(CranberryOS_Options)
