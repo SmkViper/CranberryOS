@@ -47,7 +47,7 @@ inline void operator delete[](void* /*__apPtr*/, void* /*__apPlace*/) noexcept {
  * 
  * @param __apBlock pointer to the block to return
  */
-void operator delete(void* __apBlock) noexcept;
+void operator delete(void* __apBlock) noexcept; // NOLINT(cert-dcl54-cpp,hicpp-new-delete-operators,misc-new-delete-overloads)
 
 /**
  * Return an array allocated block to the memory system
