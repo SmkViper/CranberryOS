@@ -8,7 +8,7 @@
 // only interested in the ID, which exists in the low byte of the register
 // value. So mask out the low byte to get the processor ID and if it's 0, boot
 // up. Otherwise hang the core by putting it into an infinite loop.
-// TODO: Latest firmware may have changed this so only CPU 0 starts up, with
+// #TODO: Latest firmware may have changed this so only CPU 0 starts up, with
 // the other three sleeping, requiring a memory write to wake each.
 //
 // IMPORTANT: Do not touch x0-x4, as they contain parameters from the firmware

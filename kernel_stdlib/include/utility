@@ -8,8 +8,7 @@
 
 #include <type_traits>
 
-// TODO
-// Just the basics for now
+// #TODO: Just the basics for now
 
 namespace std
 {

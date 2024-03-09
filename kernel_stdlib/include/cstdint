@@ -25,7 +25,7 @@ namespace std
     using ::uintptr_t;
 }
 
-// TODO: Macros for ptrdiff, size, sig atomic, wchar, and wint min/max values
+// #TODO: Macros for ptrdiff, size, sig atomic, wchar, and wint min/max values
 
 #endif // __KERNEL_STDLIB_CSTDINT__
 

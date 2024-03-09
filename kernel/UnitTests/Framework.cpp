@@ -123,10 +123,9 @@ namespace UnitTests
          */
         void StaticCppDestructorTest()
         {
-            // #TODO
-            // Clang seems to assume the destructor has no observable side effects, and so does not add
-            // it to the .fini_array, causing this test to fail. Need to find a way to subvert clang's
-            // analysis (printing to MiniUART and volatile access seem to not be good enough)
+            // #TODO: Clang seems to assume the destructor has no observable side effects, and so does not add it to
+            // the .fini_array, causing this test to fail. Need to find a way to subvert clang's analysis (printing to
+            // MiniUART and volatile access seem to not be good enough)
             EmitTestResult(StaticObjectTarget == StaticObjectDestructed, "Static C++ destruction");
         }
     }

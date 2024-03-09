@@ -158,8 +158,7 @@ namespace Print
         class DataWrapper: public DataWrapperBase
         {
             // Tiny helper to make sure the static assert doesn't evaluate until the template is instantiated.
-            // #TODO
-            // Probably can be moved somewhere else for common usage at some point
+            // #TODO: Probably can be moved somewhere else for common usage at some point
             template<typename T>
             static constexpr bool AlwaysFalse = false;
 

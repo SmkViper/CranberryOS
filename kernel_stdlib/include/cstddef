@@ -17,8 +17,7 @@ namespace std
 
     using ::max_align_t;
 
-    // TODO
-    // std::byte
+    // #TODO: std::byte
 }
 
 #endif // __KERNEL_STDLIB_CSTDDEF__

@@ -324,8 +324,7 @@ namespace Print::Detail
                 }
                 else
                 {
-                    // TODO
-                    // throw exception - invalid. For now, we output a placeholder
+                    // #TODO: throw exception - invalid. For now, we output a placeholder
                     success = arOutput.WriteChar('{');
                     success = success && DataWrapper<std::remove_cv_t<decltype(aElement)>>{aElement}.OutputData('d', arOutput);
                     success = success && arOutput.WriteChar('}');

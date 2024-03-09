@@ -53,7 +53,7 @@ namespace std
     [[noreturn]] void terminate() noexcept
     {
         // This function is required for exception handling, so we implement something simple here to just freeze things up
-        // TODO: Need something more visible for debugging reasons, most likely (i.e. something like a BSOD)
+        // #TODO: Need something more visible for debugging reasons, most likely (i.e. something like a BSOD)
         while (true);
     }
 }
@@ -71,7 +71,7 @@ extern "C"
      */
     void __cxa_atexit(ExitFunction /*apExitFunction*/, void* /*apThis*/, void* /*apHandle*/)
     {
-        // TODO
+        // #TODO: Implement
     }
 
     /**
@@ -85,7 +85,7 @@ extern "C"
      */
     void* __cxa_begin_catch(void* apExceptionObject)
     {
-        // TODO
+        // #TODO: Implement
         return apExceptionObject;
     }
 
@@ -104,7 +104,7 @@ extern "C"
     _Unwind_Reason_Code __gxx_personality_v0(int /*aVersion*/, _Unwind_Action /*aActions*/, uint64_t /*aExceptionClass*/,
                                              _Unwind_Exception* /*apExceptionObject*/, _Unwind_Context* /*apContext*/)
     {
-        // TODO
+        // #TODO: Implement
         return _URC_CONTINUE_UNWIND;
     }
 
@@ -116,6 +116,6 @@ extern "C"
      */
     void _Unwind_Resume(_Unwind_Exception* /*apExceptionObject*/)
     {
-        // TODO
+        // #TODO: Implement
     }
 }
