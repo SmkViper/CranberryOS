@@ -28,6 +28,7 @@ extern "C"
         // up the identity mapping.
 
         // Use an absolute jump to move to the kernel address space
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "ldr x0, =1f \n"
             "br x0 \n"
@@ -38,6 +39,7 @@ extern "C"
         );
 
         // Adjust the stack pointer by KernalVirtualAddressStart so it points into kernel space
+        // NOLINTNEXTLINE(hicpp-no-assembler)
         asm volatile(
             "mov x0, %[base] \n"
             "add sp, sp, x0 \n"

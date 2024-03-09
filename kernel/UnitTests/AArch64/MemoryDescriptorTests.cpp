@@ -1,7 +1,12 @@
 #include "MemoryDescriptorTests.h"
 
+#include <cstdint>
 #include "../../AArch64/MemoryDescriptor.h"
+#include "../../PointerTypes.h"
 #include "../Framework.h"
+
+// Using a lot of "magic numbers" in tests, so just silence the lint for the file
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
 namespace UnitTests::AArch64::MemoryDescriptor
 {
@@ -40,7 +45,7 @@ namespace UnitTests::AArch64::MemoryDescriptor
          */
         void FaultDescriptorTest()
         {
-            ::AArch64::Descriptor::Fault testDescriptor;
+            ::AArch64::Descriptor::Fault const testDescriptor;
 
             EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0b00, "Fault descriptor construction");
             EmitTestResult(::AArch64::Descriptor::Fault::IsType(0b00)
@@ -72,8 +77,9 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 && readAddress == PhysicalPtr{ 0x0000'FEFE'FEFE'F000 }
                 , "Table descriptor Address get/set");
             
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             uint64_t buffer[3] = {};
-            ::AArch64::Descriptor::Table::Write(testDescriptor, buffer, 1);
+            ::AArch64::Descriptor::Table::Write(testDescriptor, static_cast<uint64_t*>(buffer), 1);
             EmitTestResult(buffer[0] == 0
                 && buffer[1] == Details::TestAccessor::GetDescriptorValue(testDescriptor)
                 && buffer[2] == 0
@@ -99,20 +105,20 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 , "Block {} descriptor descriptor IsType with just type bits", apBlockTypeName);
             EmitTestResult(BlockT::IsType(0b1101), "Block {} descriptor with non type bits", apBlockTypeName);
 
-            auto const rawAddress = PhysicalPtr{ 0xFEFE'FEFE'FEFE'FEFEull };
+            auto const rawAddress = PhysicalPtr{ 0xFEFE'FEFE'FEFE'FEFEULL };
             testDescriptor.Address(rawAddress);
             auto const readAddress = testDescriptor.Address();
-            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == ((rawAddress.GetAddress() & AddressMask) | 0b01)
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == ((rawAddress.GetAddress() & AddressMask) | 0b01U)
                 && readAddress == PhysicalPtr{ rawAddress.GetAddress() & AddressMask }
                 , "Block {} descriptor Address get/set", apBlockTypeName);
             
             auto prevDescriptorValue = Details::TestAccessor::GetDescriptorValue(testDescriptor);
 
             // AttrIndx [4:2]
-            auto const rawAttrIndex = 0b101;
+            auto const rawAttrIndex = 0b101U;
             testDescriptor.AttrIndx(rawAttrIndex);
             auto const readRawIndex = testDescriptor.AttrIndx();
-            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == (prevDescriptorValue | (rawAttrIndex << 2))
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == (prevDescriptorValue | (rawAttrIndex << 2U))
                 && readRawIndex == rawAttrIndex
                 , "Block {} descriptor AttrIndx get/set", apBlockTypeName);
 
@@ -122,7 +128,7 @@ namespace UnitTests::AArch64::MemoryDescriptor
             auto const rawAP = BlockT::AccessPermissions::KernelROUserRO; // 0b11
             testDescriptor.AP(rawAP);
             auto const readAP = testDescriptor.AP();
-            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == (prevDescriptorValue | (static_cast<uint32_t>(rawAP) << 6))
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == (prevDescriptorValue | (static_cast<uint32_t>(rawAP) << 6U))
                 && rawAP == readAP
                 , "Block {} descriptor AP get/set", apBlockTypeName);
 
@@ -132,12 +138,13 @@ namespace UnitTests::AArch64::MemoryDescriptor
             auto const rawAF = true;
             testDescriptor.AF(rawAF);
             auto const readAF = testDescriptor.AF();
-            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == (prevDescriptorValue | (static_cast<uint32_t>(rawAF) << 10))
+            EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == (prevDescriptorValue | (static_cast<uint32_t>(rawAF) << 10U))
                 && rawAF == readAF
                 , "Block {} descriptor AF get/set", apBlockTypeName);
             
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             uint64_t buffer[3] = {};
-            BlockT::Write(testDescriptor, buffer, 1);
+            BlockT::Write(testDescriptor, static_cast<uint64_t*>(buffer), 1);
             EmitTestResult(buffer[0] == 0
                 && buffer[1] == Details::TestAccessor::GetDescriptorValue(testDescriptor)
                 && buffer[2] == 0
@@ -189,8 +196,9 @@ namespace UnitTests::AArch64::MemoryDescriptor
                 && rawAF == readAF
                 , "Page descriptor AF get/set");
             
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             uint64_t buffer[3] = {};
-            ::AArch64::Descriptor::Page::Write(testDescriptor, buffer, 1);
+            ::AArch64::Descriptor::Page::Write(testDescriptor, static_cast<uint64_t*>(buffer), 1);
             EmitTestResult(buffer[0] == 0
                 && buffer[1] == Details::TestAccessor::GetDescriptorValue(testDescriptor)
                 && buffer[2] == 0
@@ -207,3 +215,5 @@ namespace UnitTests::AArch64::MemoryDescriptor
         PageDescriptorTest();
     }
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

@@ -13,7 +13,7 @@ SECTIONS
     /* 0x00080000 is the physical address the Raspberry Pi GPU will load the kernel at */
     . = KERNEL_MAPPING_BASE + 0x00080000;
 
-    __kernel_image = .;
+    _kernel_image = .;
 
     .text.boot ALIGN(4K) : AT (ADDR(.text.boot) - KERNEL_MAPPING_BASE) {
         *(.text.boot) /* boot code section - must be first */
@@ -26,7 +26,7 @@ SECTIONS
         to "load" our process
     */
     . = ALIGN(4K);
-    __user_start = .;
+    _user_start = .;
     .text.user : AT (ADDR(.text.user) - KERNEL_MAPPING_BASE) {
         *(.text.user)
     }
@@ -43,7 +43,7 @@ SECTIONS
         CMakeFiles/kernel8.elf.dir/user_* (.bss .bss.*)
     }
     . = ALIGN(4K);
-    __user_end = .;
+    _user_end = .;
 
     .text : AT (ADDR(.text) - KERNEL_MAPPING_BASE) {
         *(.text .text.*) /* remaining code sections */
@@ -51,16 +51,16 @@ SECTIONS
 
     .rodata ALIGN(4K) : AT (ADDR(.rodata) - KERNEL_MAPPING_BASE) {
         /* .init_array is a list of pointers to constructors for static variables (requires pointer alignment) */
-        __init_start = .;
+        _init_start = .;
         KEEP(*(SORT(.init_array.*))) /* make sure constructor priorities are respected by sorting */
         KEEP(*(.init_array*))
-        __init_end = .;
+        _init_end = .;
 
         /* .fini_array is a list of pointers to destructors for static variables (requires pointer alignment) */
-        __fini_start = .;
+        _fini_start = .;
         KEEP(*(SORT(.fini_array.*))) /* make sure destructor priorities are respected by sorting */
         KEEP(*(.fini_array*))
-        __fini_end = .;
+        _fini_end = .;
 
         *(.rodata .rodata.*) /* read-only data sections */
     }
@@ -97,11 +97,11 @@ SECTIONS
     }
 
     . = ALIGN(4K);
-    __pg_dir = .;
+    _pg_dir = .;
     . += 8M; /* #TODO: we're reserving 8mb for now, but should come up with a real value at some point */
-    __pg_dir_end = .;
+    _pg_dir_end = .;
 
-    __kernel_image_end = .;
+    _kernel_image_end = .;
 
     /* strip out some general unimportant stuff we don't need */
     /DISCARD/ : { *(.comment) *(.note*) }

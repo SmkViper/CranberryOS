@@ -1,6 +1,7 @@
 target_sources(kernel8.elf
     PRIVATE
         BitsetTests.h BitsetTests.cpp
+        BitTests.cpp
         CLimitsTests.cpp
         CStdDefTests.cpp
         CStdIntTests.cpp

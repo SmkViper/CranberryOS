@@ -1,19 +1,19 @@
 #include "CPU.h"
 
-namespace AArch64
+#include <cstdint>
+
+namespace AArch64::CPU
 {
-    namespace CPU
+    ExceptionLevel GetCurrentExceptionLevel()
     {
-        ExceptionLevel GetCurrentExceptionLevel()
-        {
-            uint64_t exceptionLevel = 0;
+        uint64_t exceptionLevel = 0;
 
-            asm volatile("mrs %[value], CurrentEL" : [value] "=r"(exceptionLevel));
+        // NOLINTNEXTLINE(hicpp-no-assembler)
+        asm volatile("mrs %[value], CurrentEL" : [value] "=r"(exceptionLevel));
 
-            // The exception level is in bits 2 and 3 of the value in the CurrentEL register, so extract those and
-            // convert to our enum
-            exceptionLevel = (exceptionLevel >> 2) & 0b11;
-            return static_cast<ExceptionLevel>(exceptionLevel);
-        }
+        // The exception level is in bits 2 and 3 of the value in the CurrentEL register, so extract those and
+        // convert to our enum
+        exceptionLevel = (exceptionLevel >> 2U) & 0b11U;
+        return static_cast<ExceptionLevel>(exceptionLevel);
     }
 }

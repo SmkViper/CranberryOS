@@ -1,11 +1,17 @@
 #include "PrintTests.h"
 
+#include <cstdint>
 #include <cstring>
-#include "Framework.h"
+
 #include "../Print.h"
+
+#include "Framework.h"
 
 namespace UnitTests::Print
 {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+    // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
     namespace
     {
         class MockOutputFunctor: public ::Print::Detail::OutputFunctorBase
@@ -49,11 +55,11 @@ namespace UnitTests::Print
             ::Print::Detail::StaticBufferOutputFunctor functor{ buffer };
 
             const auto result1 = functor.WriteChar('a');
-            EmitTestResult(result1 && (functor.GetCharsWritten() == 1u) && (buffer[0] == 'a'), "StaticBufferOutputFunctor::WriteChar outputs character");
+            EmitTestResult(result1 && (functor.GetCharsWritten() == 1U) && (buffer[0] == 'a'), "StaticBufferOutputFunctor::WriteChar outputs character");
             const auto result2 = functor.WriteChar('b');
-            EmitTestResult(result2 && (functor.GetCharsWritten() == 2u) && (buffer[1] == 'b'), "StaticBufferOutputFunctor::WriteChar outputs second character");
+            EmitTestResult(result2 && (functor.GetCharsWritten() == 2U) && (buffer[1] == 'b'), "StaticBufferOutputFunctor::WriteChar outputs second character");
             const auto result3 = functor.WriteChar('c');
-            EmitTestResult(!result3 && (functor.GetCharsWritten() == 2u), "StaticBufferOutputFunctor::WriteChar returns failure if off buffer end");
+            EmitTestResult(!result3 && (functor.GetCharsWritten() == 2U), "StaticBufferOutputFunctor::WriteChar returns failure if off buffer end");
         }
 
         class MockDataWrapper: public ::Print::Detail::DataWrapperBase
@@ -103,7 +109,7 @@ namespace UnitTests::Print
         template<typename T, size_t BufferSize>
         bool OutputDataTestHelper(T const aValue, char const aFormat, bool const aExpectedResult, char const* apExpectedOutput)
         {
-            ::Print::Detail::DataWrapper<T> wrapper{ aValue };
+            ::Print::Detail::DataWrapper<T> const wrapper{ aValue };
             char buffer[BufferSize];
             ::Print::Detail::StaticBufferOutputFunctor bufferFunctor{ buffer };
 
@@ -112,7 +118,7 @@ namespace UnitTests::Print
             // #TODO: Replace with strncmp when we implement it
             char compareBuffer[BufferSize + 1] = {};
             memcpy(compareBuffer, buffer, BufferSize * sizeof(char));
-            compareBuffer[bufferFunctor.GetCharsWritten()] = '\0';
+            compareBuffer[bufferFunctor.GetCharsWritten()] = '\0'; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
 
             auto const outputMatches = (strcmp(compareBuffer, apExpectedOutput) == 0);
 
@@ -136,8 +142,8 @@ namespace UnitTests::Print
             // Aren't going to re-run all of the above for each type we support, since the internal guts are identical
             EmitTestResult(OutputDataTestHelper<uint16_t, 64>(0xFEDC, 'X', true, "0XFEDC"), "DataWrapper<uint16_t>::OutputData hex upper");
             EmitTestResult(OutputDataTestHelper<uint32_t, 64>(0xFEDC'9876, 'X', true, "0XFEDC9876"), "DataWrapper<uint32_t>::OutputData hex upper");
-            EmitTestResult(OutputDataTestHelper<uint64_t, 64>(0xFEDC'9876'BA98'5432ull, 'X', true, "0XFEDC9876BA985432"), "DataWrapper<uint64_t>::OutputData hex upper");
-            EmitTestResult(OutputDataTestHelper<size_t, 64>(0xFEDC'9876'BA98'5432ul, 'X', true, "0XFEDC9876BA985432"), "DataWrapper<size_t>::OutputData hex upper");
+            EmitTestResult(OutputDataTestHelper<uint64_t, 64>(0xFEDC'9876'BA98'5432ULL, 'X', true, "0XFEDC9876BA985432"), "DataWrapper<uint64_t>::OutputData hex upper");
+            EmitTestResult(OutputDataTestHelper<size_t, 64>(0xFEDC'9876'BA98'5432ULL, 'X', true, "0XFEDC9876BA985432"), "DataWrapper<size_t>::OutputData hex upper");
 
             EmitTestResult(OutputDataTestHelper<char const*, 64>("Hello", '\0', true, "Hello"), "DataWrapper<char const*>::OutputData");
             EmitTestResult(OutputDataTestHelper<char const*, 3>("Hello", '\0', false, "Hel"), "DataWrapper<char const*>::OutputData out of space");
@@ -202,25 +208,25 @@ namespace UnitTests::Print
         void PrintIntegerArgsTest()
         {
             char buffer[256];
-            ::Print::FormatToBuffer(buffer, "Test {}, test {}, test {}", 1u, 102u, 0u);
+            ::Print::FormatToBuffer(buffer, "Test {}, test {}, test {}", 1U, 102U, 0U);
             EmitTestResult(strcmp(buffer, "Test 1, test 102, test 0") == 0, "Print::FormatToBuffer with integer arguments");
 
-            ::Print::FormatToBuffer(buffer, "Format Test {:}", 1u);
+            ::Print::FormatToBuffer(buffer, "Format Test {:}", 1U);
             EmitTestResult(strcmp(buffer, "Format Test 1") == 0, "Print::FormatToBuffer with integer arguments and empty format string");
 
-            constexpr auto testBinaryNumber = 0b1100'1010u;
+            constexpr auto testBinaryNumber = 0b1100'1010U;
             ::Print::FormatToBuffer(buffer, "Binary Test {:b} {:B}", testBinaryNumber, testBinaryNumber);
             EmitTestResult(strcmp(buffer, "Binary Test 0b11001010 0B11001010") == 0, "Print::FormatToBuffer with integer arguments and binary format string");
 
-            constexpr auto testOctalNumber = 0123u;
-            ::Print::FormatToBuffer(buffer, "Octal Test {:o} {:o}", testOctalNumber, 0u);
+            constexpr auto testOctalNumber = 0123U;
+            ::Print::FormatToBuffer(buffer, "Octal Test {:o} {:o}", testOctalNumber, 0U);
             EmitTestResult(strcmp(buffer, "Octal Test 0123 0") == 0, "Print::FormatToBuffer with integer arguments and octal format string");
 
-            constexpr auto testDecimalNumber = 123u;
+            constexpr auto testDecimalNumber = 123U;
             ::Print::FormatToBuffer(buffer, "Decimal Test {:d}", testDecimalNumber, testDecimalNumber);
             EmitTestResult(strcmp(buffer, "Decimal Test 123") == 0, "Print::FormatToBuffer with integer arguments and decimal format string");
 
-            constexpr auto testHexNumber = 0x11ff89abu;
+            constexpr auto testHexNumber = 0x11ff89abU;
             ::Print::FormatToBuffer(buffer, "Hex Test {:x} {:X}", testHexNumber, testHexNumber);
             EmitTestResult(strcmp(buffer, "Hex Test 0x11ff89ab 0X11FF89AB") == 0, "Print::FormatToBuffer with integer arguments and hex format string");
         }
@@ -231,7 +237,7 @@ namespace UnitTests::Print
         void PrintIntegerArgsTruncatedBufferTest()
         {
             char buffer[15];
-            ::Print::FormatToBuffer(buffer, "Test {}, test {}", 1u, 102u);
+            ::Print::FormatToBuffer(buffer, "Test {}, test {}", 1U, 102U);
             EmitTestResult(strcmp(buffer, "Test 1, test 1") == 0, "Print::FormatToBuffer with integer arguments and a too-small buffer");
         }
 
@@ -278,6 +284,9 @@ namespace UnitTests::Print
             EmitTestResult(strcmp(buffer, "Hello new world {1} again") == 0, "Print::FormatToBuffer out of range braces");
         }
     }
+    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+    // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+    // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
     void Run()
     {

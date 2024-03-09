@@ -1,12 +1,16 @@
 #include "../PointerTypes.h"
 
 #include <cstring>
+#include "../Print.h"
 #include "Framework.h"
 
 namespace UnitTests::PointerTypes
 {
     namespace
     {
+        // Disable some lints for this file since they don't make sense here
+        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+
         static_assert(PhysicalPtr{}.GetAddress() == 0, "Constructor didn't make null pointer");
         static_assert(PhysicalPtr{ 10 }.GetAddress() == 10, "Constructor didn't store address");
         static_assert(PhysicalPtr{ 10 }.Offset(15).GetAddress() == 25, "Unexpected result from positive offset");
@@ -32,8 +36,9 @@ namespace UnitTests::PointerTypes
          */
         void PhysicalPtrPrintTest()
         {
-            char buffer[256];
+            char buffer[256]; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             Print::FormatToBuffer(buffer, "{}", PhysicalPtr{ 0xFF });
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             EmitTestResult(strcmp(buffer, "P0xff") == 0, "PhysicalPtr print format");
         }
 
@@ -42,10 +47,13 @@ namespace UnitTests::PointerTypes
          */
         void VirtualPtrPrintTest()
         {
-            char buffer[256];
+            char buffer[256]; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             Print::FormatToBuffer(buffer, "{}", VirtualPtr{ 0xFF });
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             EmitTestResult(strcmp(buffer, "V0xff") == 0, "VirtualPtr print format");
         }
+
+        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
     }
 
     void Run()

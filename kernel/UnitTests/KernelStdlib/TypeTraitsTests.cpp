@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <type_traits>
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 namespace UnitTests::KernelStdlib::TypeTraits
 {
     namespace
@@ -9,20 +10,20 @@ namespace UnitTests::KernelStdlib::TypeTraits
         // std::integral_constant
         ///////////////////////////////////////////////////////////////////////
 
-        static_assert(std::is_same_v<std::integral_constant<uint32_t, 10u>::value_type, uint32_t>, "Unexpected integral_constant::value_type");
-        static_assert(std::is_same_v<std::integral_constant<uint32_t, 10u>::type, std::integral_constant<uint32_t, 10u>>, "Unexpected integral_constant::type");
-        static_assert(std::integral_constant<uint32_t, 10u>::value == 10u, "Unexpected integral_constant::value");
-        static_assert(static_cast<uint32_t>(std::integral_constant<uint32_t, 10u>{}) == 10u, "Unexpected integral_constant value via cast operation");
-        static_assert(std::integral_constant<uint32_t, 10u>{}() == 10u, "Unexpected integral_constant value via invoke operation");
+        static_assert(std::is_same_v<std::integral_constant<uint32_t, 10U>::value_type, uint32_t>, "Unexpected integral_constant::value_type");
+        static_assert(std::is_same_v<std::integral_constant<uint32_t, 10U>::type, std::integral_constant<uint32_t, 10U>>, "Unexpected integral_constant::type");
+        static_assert(std::integral_constant<uint32_t, 10U>::value == 10U, "Unexpected integral_constant::value");
+        static_assert(static_cast<uint32_t>(std::integral_constant<uint32_t, 10U>{}) == 10U, "Unexpected integral_constant value via cast operation");
+        static_assert(std::integral_constant<uint32_t, 10U>{}() == 10U, "Unexpected integral_constant value via invoke operation");
 
         ///////////////////////////////////////////////////////////////////////
         // std::bool_constant/true_type/false_type
         ///////////////////////////////////////////////////////////////////////
 
         static_assert(std::is_same_v<std::true_type::value_type, bool>, "Unexpected true_type::value_type");
-        static_assert(std::true_type::value == true, "Unexpected true_type::value");
+        static_assert(std::true_type::value, "Unexpected true_type::value");
         static_assert(std::is_same_v<std::false_type::value_type, bool>, "Unexpected true_type::value_type");
-        static_assert(std::false_type::value == false, "Unexpected false_type::value");
+        static_assert(!std::false_type::value, "Unexpected false_type::value");
 
         ///////////////////////////////////////////////////////////////////////
         // std::is_same
@@ -59,9 +60,11 @@ namespace UnitTests::KernelStdlib::TypeTraits
         // std::is_array
         ///////////////////////////////////////////////////////////////////////
 
+        // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
         static_assert(std::is_array_v<int[]>, "Unexpected result for is_array with array type");
         static_assert(std::is_array_v<int[5]>, "Unexpected result for is_array with bounded array type");
         static_assert(!std::is_array_v<int*>, "Unexpected result for is_array with non-array type");
+        // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
         ///////////////////////////////////////////////////////////////////////
         // std::is_function
@@ -69,7 +72,7 @@ namespace UnitTests::KernelStdlib::TypeTraits
 
         struct DummyStruct
         {
-            int MemberFunction() const;
+            [[nodiscard]] int MemberFunction() const;
         };
 
         // Function is only used for static_assert tests, so suppress the warning that it will not be emitted
@@ -95,6 +98,41 @@ namespace UnitTests::KernelStdlib::TypeTraits
         static_assert(!std::is_function_v<int(*)(int)>, "Unexpected result for is_function with pointer to function");
 
         ///////////////////////////////////////////////////////////////////////
+        // std::is_trivially_copyable
+        ///////////////////////////////////////////////////////////////////////
+
+        struct TrivialStruct
+        {
+            int x = 0;
+            float y = 0.0F;
+        };
+        struct TrivialChild: public TrivialStruct
+        {
+            char z = 'a';
+        };
+        // Disabling linting for these structs because they're only used for testing is_trivially_copyable
+        // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
+        struct NonTrivialStruct
+        {
+            ~NonTrivialStruct() {} // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
+            int x = 0;
+            float y = 0.0F;
+        };
+        // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
+        struct VirtualStruct
+        {
+            virtual ~VirtualStruct() = default;
+            virtual int f() { return x; }
+            int x = 0;
+        };
+
+        static_assert(std::is_trivially_copyable_v<int>, "Unexpected result from is_trivially_copyable with scalar type");
+        static_assert(std::is_trivially_copyable_v<int*>, "Unexpected result from is_trivially_copyable with pointer type");
+        static_assert(std::is_trivially_copyable_v<TrivialChild>, "Unexpected result from is_trivially_copyable with trivial struct");
+        static_assert(!std::is_trivially_copyable_v<NonTrivialStruct>, "Unexpected result from is_trivially_copyable with non-trivial struct");
+        static_assert(!std::is_trivially_copyable_v<VirtualStruct>, "Unexpected result from is_trivially_copyable with struct with virtual");
+
+        ///////////////////////////////////////////////////////////////////////
         // std::remove_reference
         ///////////////////////////////////////////////////////////////////////
 
@@ -106,9 +144,11 @@ namespace UnitTests::KernelStdlib::TypeTraits
         // std::remove_extent
         ///////////////////////////////////////////////////////////////////////
 
+        // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
         static_assert(std::is_same_v<std::remove_extent_t<int*>, int*>, "Unexpected result from remove_extent with non-array type");
         static_assert(std::is_same_v<std::remove_extent_t<int[]>, int>, "Unexpected result from remove_extent with array type");
         static_assert(std::is_same_v<std::remove_extent_t<int[10]>, int>, "Unexpected result from remove_extent with sized array type");
+        // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
         ///////////////////////////////////////////////////////////////////////
         // std::remove_cv
@@ -144,6 +184,7 @@ namespace UnitTests::KernelStdlib::TypeTraits
         static_assert(std::is_same_v<std::decay_t<int&>, int>, "Unexpected result from std::decay for lvalue ref type");
         static_assert(std::is_same_v<std::decay_t<int&&>, int>, "Unexpected result from std::decay for rvalue ref type");
         static_assert(std::is_same_v<std::decay_t<const int&>, int>, "Unexpected result from std::decay for const lvalue ref type");
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
         static_assert(std::is_same_v<std::decay_t<int[2]>, int*>, "Unexpected result from std::decay for array type");
         static_assert(std::is_same_v<std::decay_t<int(int)>, int(*)(int)>, "Unexpected result from std::decay for function type");
 
@@ -160,3 +201,4 @@ namespace UnitTests::KernelStdlib::TypeTraits
         static_assert(TestEnableIf<int&>(), "Unexpected result from enable_if");
     }
 }
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

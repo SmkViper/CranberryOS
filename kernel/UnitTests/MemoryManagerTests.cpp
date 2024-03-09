@@ -1,7 +1,9 @@
 #include "MemoryManagerTests.h"
 
 #include "../MemoryManager.h"
+#include "../PointerTypes.h"
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 namespace UnitTests::MemoryManager
 {
     namespace
@@ -35,3 +37,4 @@ namespace UnitTests::MemoryManager
         // #TODO: No tests yet, probably will need some ones later
     }
 }
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

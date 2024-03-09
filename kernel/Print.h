@@ -19,25 +19,14 @@ namespace Print
         {
         public:
             /**
-             * Copy constructor
-             * 
-             * @param aOther Functor to copy
-             */
-            OutputFunctorBase(const OutputFunctorBase& aOther) = delete;
-
-            /**
              * Destructor
              */
             virtual ~OutputFunctorBase() = default;
 
-            /**
-             * Assignment operator
-             * 
-             * @param aOther Functor to copy
-             * 
-             * @return This functor
-             */
-            OutputFunctorBase& operator=(const OutputFunctorBase& aOther) = delete;
+            OutputFunctorBase(OutputFunctorBase const& aOther) = delete;
+            OutputFunctorBase(OutputFunctorBase&& aOther) = delete;
+            OutputFunctorBase& operator=(OutputFunctorBase const& aOther) = delete;
+            OutputFunctorBase& operator=(OutputFunctorBase&& aOther) = delete;
 
             /**
              * Write out a single character to the output
@@ -46,7 +35,7 @@ namespace Print
              * 
              * @return True on success
              */
-            bool WriteChar(const char aChar) { return WriteCharImpl(aChar); }
+            bool WriteChar(char const aChar) { return WriteCharImpl(aChar); }
 
         protected:
             /**
@@ -86,14 +75,16 @@ namespace Print
              * 
              * @param apBuffer Buffer to write to - assumed to be BufferSize in size and non-null
              */
-            explicit StaticBufferOutputFunctor(char (&apBuffer)[BufferSize]): pBuffer{apBuffer} {}
+            explicit StaticBufferOutputFunctor(char (&apBuffer)[BufferSize]) // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+                : pBuffer{ static_cast<char*>(apBuffer) }
+            {}
 
             /**
              * Obtains the number of characters written to the buffer
              * 
              * @return Number of characters written
              */
-            std::size_t GetCharsWritten() const {return CurWritePos;}
+            [[nodiscard]] std::size_t GetCharsWritten() const {return CurWritePos;}
 
         private:
             /**
@@ -103,22 +94,22 @@ namespace Print
              * 
              * @return True on success
              */
-            bool WriteCharImpl(char aChar) override
+            bool WriteCharImpl(char const aChar) override
             {
                 auto success = (CurWritePos < BufferSize);
                 if (success)
                 {
-                    pBuffer[CurWritePos] = aChar;
+                    pBuffer[CurWritePos] = aChar; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                     ++CurWritePos;
                 }
                 return success;
             }
 
             char* pBuffer = nullptr;
-            std::size_t CurWritePos = 0u;
+            std::size_t CurWritePos = 0U;
         };
         template<std::size_t BufferSize>
-        StaticBufferOutputFunctor(char (&arBuffer)[BufferSize]) -> StaticBufferOutputFunctor<BufferSize>;
+        StaticBufferOutputFunctor(char (&arBuffer)[BufferSize]) -> StaticBufferOutputFunctor<BufferSize>; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
         /**
          * Base we can pass to our output function that will output the data it holds to a given functor
@@ -132,25 +123,14 @@ namespace Print
             DataWrapperBase() = default;
 
             /**
-             * Copy constructor
-             * 
-             * @param aOther Wrapper to copy
-             */
-            DataWrapperBase(const DataWrapperBase& aOther) = delete;
-
-            /**
              * Destructor
              */
             virtual ~DataWrapperBase() = default;
 
-            /**
-             * Assignment operator
-             * 
-             * @param aOther Wrapper to copy
-             * 
-             * @return This data wrapper
-             */
-            DataWrapperBase& operator=(const DataWrapperBase& aOther) = delete;
+            DataWrapperBase(DataWrapperBase const& aOther) = delete;
+            DataWrapperBase(DataWrapperBase&& aOther) = delete;
+            DataWrapperBase& operator=(DataWrapperBase const& aOther) = delete;
+            DataWrapperBase& operator=(DataWrapperBase&& aOther) = delete;
 
             /**
              * Output the data this wrapper holds to the given functor
@@ -160,7 +140,7 @@ namespace Print
              * 
              * @return True on success
              */
-            bool OutputData(char aFormat, OutputFunctorBase& arOutput) const { return OutputDataImpl(aFormat, arOutput); }
+            bool OutputData(char const aFormat, OutputFunctorBase& arOutput) const { return OutputDataImpl(aFormat, arOutput); }
 
         private:
             /**
@@ -178,8 +158,7 @@ namespace Print
         class DataWrapper: public DataWrapperBase
         {
             // Tiny helper to make sure the static assert doesn't evaluate until the template is instantiated.
-            // TODO
-            // Probably can be moved somewhere else for common usage at some point
+            // #TODO: Probably can be moved somewhere else for common usage at some point
             template<typename T>
             static constexpr bool AlwaysFalse = false;
 
@@ -195,12 +174,12 @@ namespace Print
              * 
              * @param aData Data to wrap
              */
-            explicit DataWrapper(const uint8_t aData): WrappedData{aData} {}
+            explicit DataWrapper(uint8_t const aData): WrappedData{aData} {}
 
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint8_t WrappedData = 0u;
+            uint8_t WrappedData = 0U;
         };
 
         template<>
@@ -212,12 +191,12 @@ namespace Print
              * 
              * @param aData Data to wrap
              */
-            explicit DataWrapper(const uint16_t aData): WrappedData{aData} {}
+            explicit DataWrapper(uint16_t const aData): WrappedData{aData} {}
 
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint16_t WrappedData = 0u;
+            uint16_t WrappedData = 0U;
         };
 
         template<>
@@ -229,12 +208,12 @@ namespace Print
              * 
              * @param aData Data to wrap
              */
-            explicit DataWrapper(const uint32_t aData): WrappedData{aData} {}
+            explicit DataWrapper(uint32_t const aData): WrappedData{aData} {}
 
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint32_t WrappedData = 0u;
+            uint32_t WrappedData = 0U;
         };
 
         template<>
@@ -246,12 +225,12 @@ namespace Print
              * 
              * @param aData Data to wrap
              */
-            explicit DataWrapper(const uint64_t aData): WrappedData{aData} {}
+            explicit DataWrapper(uint64_t const aData): WrappedData{aData} {}
 
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            uint64_t WrappedData = 0u;
+            uint64_t WrappedData = 0U;
         };
 
         template<>
@@ -263,16 +242,16 @@ namespace Print
              * 
              * @param aData Data to wrap
              */
-            explicit DataWrapper(const size_t aData): WrappedData{aData} {}
+            explicit DataWrapper(size_t const aData): WrappedData{aData} {}
 
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            size_t WrappedData = 0u;
+            size_t WrappedData = 0U;
         };
 
         template<>
-        class DataWrapper<const char*>: public DataWrapperBase
+        class DataWrapper<char const*>: public DataWrapperBase
         {
         public:
             /**
@@ -280,22 +259,22 @@ namespace Print
              * 
              * @param aData Data to wrap
              */
-            explicit DataWrapper(const char* const apData): pWrappedData{apData} {}
+            explicit DataWrapper(char const* const apData): pWrappedData{apData} {}
 
         private:
             bool OutputDataImpl(char aFormat, OutputFunctorBase& arOutput) const override;
 
-            const char* pWrappedData = nullptr;
+            char const* pWrappedData = nullptr;
         };
 
         template<>
-        class DataWrapper<char*>: public DataWrapper<const char*>
+        class DataWrapper<char*>: public DataWrapper<char const*>
         {
         public:
-            using DataWrapper<const char*>::DataWrapper;
+            using DataWrapper<char const*>::DataWrapper;
         };
 
-        void FormatImpl(const char* apFormatString, OutputFunctorBase& arOutput, const DataWrapperBase** apDataArray, std::size_t aDataCount);
+        void FormatImpl(char const* apFormatString, OutputFunctorBase& arOutput, DataWrapperBase const* const* apDataArray, std::size_t aDataCount);
 
         /**
          * Helper to output format string using the given output functor
@@ -303,9 +282,9 @@ namespace Print
          * @param apFormatString String to output
          * @param arOutput Functor to send the string to
          */
-        inline void FormatVararg(const char* apFormatString, OutputFunctorBase& arOutput)
+        inline void FormatVararg(char const* apFormatString, OutputFunctorBase& arOutput)
         {
-            FormatImpl(apFormatString, arOutput, nullptr, 0u);
+            FormatImpl(apFormatString, arOutput, nullptr, 0U);
         }
 
         /**
@@ -317,17 +296,20 @@ namespace Print
          * @param aArgs The remaining arguments to substitute
          */
         template<typename FirstArgType, typename... TailArgTypes>
-        void FormatVararg(const char* apFormatString, OutputFunctorBase& arOutput, FirstArgType&& aFirstArg, TailArgTypes&&... aArgs)
+        void FormatVararg(char const* apFormatString, OutputFunctorBase& arOutput, FirstArgType&& aFirstArg, TailArgTypes&&... aArgs)
         {
             // Lambda used so we can convert FirstArgType and TailArgTypes to wrapped arguments, and then convert those
             // to an array of pointers to base. This basically lets us make sure the temporary wrappers last long
             // enough for the call.
-            auto outputArgs = [apFormatString, &arOutput] (const auto&... aWrappedArgs)
+            auto outputArgs = [apFormatString, &arOutput] (auto const&... aWrappedArgs)
             {
-                const Detail::DataWrapperBase* baseArgs[] = {&aWrappedArgs...};
+                // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+                Detail::DataWrapperBase const* baseArgs[] = {&aWrappedArgs...};
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
                 FormatImpl(apFormatString, arOutput, baseArgs, sizeof...(TailArgTypes) + 1 /* +1 for FirstArgType*/);
             };
 
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             outputArgs(Detail::DataWrapper<std::decay_t<FirstArgType>>{std::forward<FirstArgType>(aFirstArg)},
                 Detail::DataWrapper<std::decay_t<TailArgTypes>>{std::forward<TailArgTypes>(aArgs)}...);
         }
@@ -347,15 +329,15 @@ namespace Print
      * @param aArgs The arguments to substitute into the string
      */
     template<typename... ArgTypes>
-    void FormatToMiniUART(const char* apFormatString, ArgTypes&&... aArgs)
+    void FormatToMiniUART(char const* apFormatString, ArgTypes&&... aArgs)
     {
         Detail::MiniUARTOutputFunctor output;
         Detail::FormatVararg(apFormatString, output, std::forward<ArgTypes>(aArgs)...);
     }
 
     /**
-     * Format the given string and data, passing it to MiniUART. The format string follows a subset of the
-     * std::format specification.
+     * Format the given string and data, writing to a buffer. The format string follows a subset of the std::format
+     * specification.
      * 
      * - Regular characters (except '{' and '}') are output as-is
      * - "{{" and "}}" are escape sequences for '{' and '}' respectively
@@ -368,12 +350,12 @@ namespace Print
      * @param aArgs The arguments to substitute into the string
      */
     template<std::size_t BufferSize, typename... ArgTypes>
-    void FormatToBuffer(char (&arBuffer)[BufferSize], const char* apFormatString, ArgTypes&&... aArgs)
+    void FormatToBuffer(char (&arBuffer)[BufferSize], char const* apFormatString, ArgTypes&&... aArgs) // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     {
         Detail::StaticBufferOutputFunctor output{arBuffer};
         Detail::FormatVararg(apFormatString, output, std::forward<ArgTypes>(aArgs)...);
 
-        const auto charsWritten = output.GetCharsWritten();
+        auto const charsWritten = output.GetCharsWritten();
         const auto zeroPos = (charsWritten < BufferSize) ? charsWritten : (BufferSize - 1);
         arBuffer[zeroPos] = '\0';
     }

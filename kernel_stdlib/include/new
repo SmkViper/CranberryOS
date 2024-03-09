@@ -1,7 +1,12 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+
 #ifndef __KERNEL_STDLIB_NEW__
 #define __KERNEL_STDLIB_NEW__
 
 #include <cstddef>
+
+// #TODO: Need to flag these as "weak" so users can override them (though the kernel likely won't)
 
 /**
  * Placement new (no allocation, constructs in place)
@@ -42,13 +47,15 @@ inline void operator delete[](void* /*__apPtr*/, void* /*__apPlace*/) noexcept {
  * 
  * @param __apBlock pointer to the block to return
  */
-void operator delete(void* __apBlock) noexcept;
+void operator delete(void* __apBlock) noexcept; // NOLINT(cert-dcl54-cpp,hicpp-new-delete-operators,misc-new-delete-overloads)
 
 /**
  * Return an array allocated block to the memory system
  * 
  * @param __apBlock pointer to the first element to return
  */
-void operator delete[](void* __apBlock) noexcept;
+void operator delete[](void* __apBlock) noexcept; // NOLINT(cert-dcl54-cpp,hicpp-new-delete-operators,misc-new-delete-overloads)
 
 #endif // __KERNEL_STDLIB_NEW__
+
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

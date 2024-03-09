@@ -1,10 +1,15 @@
 #include "Scheduler.h"
 
+#include <bit>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
-#include <new>
+// Technically needed for placement new, but for some reason clang-tidy doesn't pick up on that
+#include <new> // NOLINT(misc-include-cleaner)
 #include "AArch64/SchedulerDefines.h"
 #include "IRQ.h"
 #include "MemoryManager.h"
+#include "PointerTypes.h"
 #include "TaskStructs.h"
 #include "Timer.h"
 
@@ -184,16 +189,18 @@
 namespace
 {
     // SPSR_EL1 bits - See section C5.2.18 in the ARMv8 manual
-    constexpr uint64_t PSRModeEL0tC = 0x00000000;
+    constexpr uint64_t PSRModeEL0tC = 0x0000'0000;
 
     // Expected to match what is put on the stack via the kernel_entry macro in the exception handler so it can
     // "restore" the processor state we want
     struct ProcessState
     {
-        uint64_t Registers[31] = {0u};
-        uint64_t StackPointer = 0u;
-        uint64_t ProgramCounter = 0u;
-        uint64_t ProcessorState = 0u;
+        // #TODO: Investigate improvements to eliminate lint tag
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, hicpp-avoid-c-arrays, modernize-avoid-c-arrays, cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers)
+        uint64_t Registers[31] = {0U};
+        uint64_t StackPointer = 0U;
+        uint64_t ProgramCounter = 0U;
+        uint64_t ProcessorState = 0U;
     };
 
     static_assert(offsetof(Scheduler::TaskStruct, Context) == TASK_STRUCT_CONTEXT_OFFSET, "Unexpected offset of context in task struct");
@@ -220,12 +227,21 @@ namespace
     constexpr auto TimerTickMSC = 200; // tick every 200ms
 
     constexpr auto ThreadSizeC = 4096; // 4k stack size (#TODO: Pull from page size?)
-    constexpr auto NumberOfTasksC = 64u;
-    Scheduler::TaskStruct InitTask; // task running kernel init
+    constexpr auto NumberOfTasksC = 64U;
 
+    // #TODO: We'll want something better to avoid the lint tag
+    // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+
+    Scheduler::TaskStruct InitTask; // task running kernel init
     Scheduler::TaskStruct* pCurrentTask = &InitTask;
-    Scheduler::TaskStruct* Tasks[NumberOfTasksC] = {&InitTask, nullptr};
+
+    // #TODO: Convert to std::array when we have it to remove lint
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+    Scheduler::TaskStruct* Tasks[NumberOfTasksC] = { &InitTask, nullptr };
+
     auto NumberOfTasks = 1;
+
+    // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
     /**
      * Enable scheduler preemption in the current task
@@ -265,9 +281,11 @@ namespace
             PreemptEnable();
         }
 
-        // Disable copying
+        // Disable copying/moving
         DisablePreemptingInScope(const DisablePreemptingInScope&) = delete;
+        DisablePreemptingInScope(DisablePreemptingInScope&&) = delete;
         DisablePreemptingInScope& operator=(const DisablePreemptingInScope&) = delete;
+        DisablePreemptingInScope& operator=(DisablePreemptingInScope&&) = delete;
     };
 
     /**
@@ -281,7 +299,7 @@ namespace
         {
             return;
         }
-        const auto pprevTask = pCurrentTask;
+        auto* const pprevTask = pCurrentTask;
         pCurrentTask = apNextTask;
         MemoryManager::SetPageGlobalDirectory(pCurrentTask->MemoryState.PageGlobalDirectory);
         cpu_switch_to(pprevTask, apNextTask);
@@ -293,20 +311,21 @@ namespace
     void ScheduleImpl()
     {
         // Make sure we don't get called while we're in the middle of picking a task
-        DisablePreemptingInScope disablePreempt;
+        DisablePreemptingInScope const disablePreempt;
 
         auto foundTask = false;
-        auto taskToResume = 0u;
+        auto taskToResume = 0U;
         while (!foundTask)
         {
             // Find the task with the largest counter value (i.e. the one that has the highest priority that has
             // not run in a while)
-            auto largestCounter = -1ll;
+            auto largestCounter = -1LL;
             taskToResume = 0;
-            for (auto curTask = 0u; curTask < NumberOfTasksC; ++curTask)
+            for (auto curTask = 0U; curTask < NumberOfTasksC; ++curTask)
             {
-                const auto ptask = Tasks[curTask];
-                if (ptask && (ptask->State == Scheduler::TaskState::Running) && (ptask->Counter > largestCounter))
+                // #TODO: Can hopefully remove lint tag when we get std::array
+                auto const* const ptask = Tasks[curTask]; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+                if ((ptask != nullptr) && (ptask->State == Scheduler::TaskState::Running) && (ptask->Counter > largestCounter))
                 {
                     largestCounter = ptask->Counter;
                     taskToResume = curTask;
@@ -317,9 +336,9 @@ namespace
             foundTask = (largestCounter > 0);
             if (!foundTask)
             {
-                for (const auto pcurTask : Tasks)
+                for (auto* const pcurTask : Tasks)
                 {
-                    if (pcurTask)
+                    if (pcurTask != nullptr)
                     {
                         // Increment the counter by the priority, ensuring that we don't go above 2 * priority
                         // So the longer the task has been waiting, the higher the counter should be.
@@ -330,7 +349,8 @@ namespace
             // If at least one task is running, then we should only loop around once. If all tasks are not running
             // then we keep looping until a task changes its state to running again (i.e. via an interrupt)
         }
-        SwitchTo(Tasks[taskToResume]);
+        // #TODO: Can hopefully remove lint tag when we get std::array
+        SwitchTo(Tasks[taskToResume]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
     }
 
     /**
@@ -338,7 +358,7 @@ namespace
      * 
      * @param apParam The parameter registered for our callback
      */
-    void TimerTick(const void* /*apParam*/)
+    void TimerTick(void const* const /*apParam*/)
     {
         // Only switch task if the counter has run out and it hasn't been blocked
         --pCurrentTask->Counter;
@@ -366,10 +386,10 @@ namespace
      * @param apTask Task to get the state for
      * @return The process state for the task
      */
-    void* GetTargetStateMemoryForTask(Scheduler::TaskStruct* apTask)
+    void* GetTargetStateMemoryForTask(Scheduler::TaskStruct const* const apTask)
     {
-        const auto state = reinterpret_cast<uintptr_t>(apTask) + ThreadSizeC - sizeof(ProcessState);
-        return reinterpret_cast<void*>(state);
+        const auto state = std::bit_cast<uintptr_t>(apTask) + ThreadSizeC - sizeof(ProcessState);
+        return std::bit_cast<void*>(state);
     }
 }
 
@@ -401,31 +421,33 @@ namespace Scheduler
         ScheduleImpl();
     }
 
-    int CopyProcess(const uint32_t aCloneFlags, ProcessFunctionPtr apProcessFn, const void* apParam)
+    int CopyProcess(uint32_t const aCloneFlags, ProcessFunctionPtr const apProcessFn, void const* const apParam)
     {
         // Make sure we don't get preempted in the middle of making a new task
-        DisablePreemptingInScope disablePreempt;
+        DisablePreemptingInScope const disablePreempt;
 
-        auto pmemory = reinterpret_cast<uint8_t*>(MemoryManager::AllocateKernelPage());
+        auto* const pmemory = MemoryManager::AllocateKernelPage();
         if (pmemory == nullptr)
         {
             return -1;
         }
 
-        auto pnewTask = new (pmemory) TaskStruct{};
+        // #TODO: We'll want proper ownership figured out
+        auto* const pnewTask = new (pmemory) TaskStruct{}; // NOLINT(cppcoreguidelines-owning-memory)
 
-        const auto puninitializedState = reinterpret_cast<uint8_t*>(GetTargetStateMemoryForTask(pnewTask));
-        const auto pnewState = new (puninitializedState) ProcessState{};
+        auto* const puninitializedState = GetTargetStateMemoryForTask(pnewTask);
+        // #TODO: We'll want proper ownership figured out
+        auto* const pnewState = new (puninitializedState) ProcessState{}; // NOLINT(cppcoreguidelines-owning-memory)
 
         if ((aCloneFlags & CreationFlags::KernelThreadC) == CreationFlags::KernelThreadC)
         {
-            pnewTask->Context.x19 = reinterpret_cast<uint64_t>(apProcessFn);
-            pnewTask->Context.x20 = reinterpret_cast<uint64_t>(apParam);
+            pnewTask->Context.x19 = std::bit_cast<uint64_t>(apProcessFn);
+            pnewTask->Context.x20 = std::bit_cast<uint64_t>(apParam);
         }
         else
         {
             // extract and clone the current processor state
-            const auto psourceState = reinterpret_cast<ProcessState*>(GetTargetStateMemoryForTask(pCurrentTask));
+            auto* const psourceState = std::bit_cast<ProcessState*>(GetTargetStateMemoryForTask(pCurrentTask));
             *pnewState = *psourceState;
             pnewState->Registers[0] = 0; // make sure ret_from_fork knows this is the new user process
             MemoryManager::CopyVirtualMemory(*pnewTask, *pCurrentTask);
@@ -436,17 +458,19 @@ namespace Scheduler
         pnewTask->Counter = pnewTask->Priority;
         pnewTask->PreemptCount = 1; // disable preemption until schedule_tail
 
-        pnewTask->Context.pc = reinterpret_cast<uint64_t>(ret_from_fork);
-        pnewTask->Context.sp = reinterpret_cast<uint64_t>(pnewState);
-        const auto processID = NumberOfTasks++;
-        Tasks[processID] = pnewTask;
+        pnewTask->Context.pc = std::bit_cast<uint64_t>(&ret_from_fork);
+        pnewTask->Context.sp = std::bit_cast<uint64_t>(pnewState);
+        auto const processID = NumberOfTasks++;
+        // #TODO: Can likely clean up lint tag when we get std::array
+        Tasks[processID] = pnewTask; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
         return processID;
     }
 
-    bool MoveToUserMode(const void* const apStart, const std::size_t aSize, uintptr_t aPC)
+    // #TODO: Need better parameter types to avoid bugprone API. Maybe a span for start + size
+    bool MoveToUserMode(void const* const apStart, std::size_t const aSize, uintptr_t const aPC) // NOLINT(bugprone-easily-swappable-parameters)
     {
         // We expect the state to have been constructed by CopyProcess before getting here
-        const auto pstate = reinterpret_cast<ProcessState*>(GetTargetStateMemoryForTask(pCurrentTask));
+        auto* const pstate = std::bit_cast<ProcessState*>(GetTargetStateMemoryForTask(pCurrentTask));
 
         pstate->ProgramCounter = aPC;
         pstate->ProcessorState = PSRModeEL0tC;
@@ -455,7 +479,7 @@ namespace Scheduler
         // page for us, hence why we can just blindly set StackPointer here.
         pstate->StackPointer = 2 * MemoryManager::PageSize;
 
-        const auto pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, VirtualPtr{});
+        auto* const pcodePage = MemoryManager::AllocateUserPage(*pCurrentTask, VirtualPtr{});
         if (pcodePage == nullptr)
         {
             pstate->~ProcessState();
@@ -470,10 +494,10 @@ namespace Scheduler
     {
         {
             // Make sure we don't get preempted in the middle of cleaning up the task
-            DisablePreemptingInScope disablePreempt;
+            DisablePreemptingInScope const disablePreempt;
 
             // Flag the task as a zombie so it isn't rescheduled
-            for (const auto pcurTask : Tasks)
+            for (auto* const pcurTask : Tasks)
             {
                 if (pcurTask == pCurrentTask)
                 {

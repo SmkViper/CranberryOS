@@ -1,6 +1,9 @@
 #include <cstddef>
 #include <cstdint>
 
+// Using a lot of "magic numbers" in tests, so just silence the lint for the file
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+
 namespace UnitTests::KernelStdlib::CStdDef
 {
     namespace
@@ -21,3 +24,5 @@ namespace UnitTests::KernelStdlib::CStdDef
         static_assert(offsetof(TestOffsetStruct, ExpectedAt8) == 8, "Unexpected offsetof third member");
     }
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

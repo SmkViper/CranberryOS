@@ -1,6 +1,6 @@
 #include "ExceptionTests.h"
 
-#include <exception>
+#include <exception> // NOLINT(misc-include-cleaner)
 
 namespace UnitTests::KernelStdlib::Exception
 {

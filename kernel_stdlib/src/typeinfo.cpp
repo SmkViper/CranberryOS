@@ -10,7 +10,7 @@ extern "C"
      */
     void __cxa_pure_virtual()
     {
-        // #TODO
+        // #TODO: Implement
         // infinite loop for now
         while (true) {}
     }

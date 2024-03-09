@@ -1,3 +1,8 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// We are using defines and typedef because this is a C (not C++) header
+// NOLINTBEGIN(cppcoreguidelines-macro-usage, modernize-macro-to-enum, modernize-use-using)
+
 #ifndef __KERNEL_STDLIB_STDINT_H__
 #define __KERNEL_STDLIB_STDINT_H__
 
@@ -15,8 +20,8 @@ typedef unsigned long long  uint64_t;
 
 typedef unsigned long long  uintptr_t;
 
-// TODO: Fast/least typedefs
-// TODO: intmax_t/uintmax_t typedefs
+// #TODO: Fast/least typedefs
+// #TODO: intmax_t/uintmax_t typedefs
 
 // Note that the literals for the smallest value are too large to fit in a type of said value, when interpreted as a
 // positive value, since the compiler doesn't see "-x" as a unit, but "x" with negation. So instead, we use the largest
@@ -43,9 +48,12 @@ typedef unsigned long long  uintptr_t;
 
 #define UINTPTR_MAX 0xFFFFFFFFFFFFFFFF
 
-// TODO: Fast/least min/max defines
-// TODO: intmax/uintmax min/max define
+// #TODO: Fast/least min/max defines
+// #TODO: intmax/uintmax min/max define
 
-// TODO: minimum-width integer constants macros
+// #TODO: minimum-width integer constants macros
 
 #endif // __KERNEL_STDLIB_STDINT_H__
+
+// NOLINTEND(cppcoreguidelines-macro-usage, modernize-macro-to-enum, modernize-use-using)
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

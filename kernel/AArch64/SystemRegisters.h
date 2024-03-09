@@ -25,7 +25,7 @@ namespace AArch64
     /**
      * Architectural Feature Access Control Register
      * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/CPACR-EL1--Architectural-Feature-Access-Control-Register
-    */
+     */
     class CPACR_EL1
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -33,21 +33,21 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed
-        */
+         */
         CPACR_EL1() = default;
 
         /**
          * Writes the given value to the CPACR_EL1 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(CPACR_EL1 aValue);
 
         /**
          * Reads the current state of the CPACR_EL1 register
          * 
          * @return The current state of the register
-        */
+         */
         static CPACR_EL1 Read();
 
         enum class FPENTraps: uint8_t
@@ -62,22 +62,22 @@ namespace AArch64
          * FPEN bits - controls traps of floating point and SIMD instructions
          * 
          * @param aTraps The traps for FPEN
-        */
+         */
         void FPEN(FPENTraps aTraps);
 
         /**
          * FPEN bits - controls traps of floating point and SIMD instructions
          * 
          * @return The current traps
-        */
-        FPENTraps FPEN() const;
+         */
+        [[nodiscard]] FPENTraps FPEN() const;
 
     private:
         /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit CPACR_EL1(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
@@ -90,8 +90,8 @@ namespace AArch64
         // Reserved     [27:22] (Res0)
         // TTA          [28]
         // Reserved     [63:29] (Res0)
-
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 
     /**
@@ -100,7 +100,7 @@ namespace AArch64
      * 
      * Note that the definition of this class assumes HCR_EL2.E2H is 0. But since we never expect to turn it on (it's
      * apparently a feature that lets the OS run in EL2 with the programs in EL0) this should be fine.
-    */
+     */
     class CPTR_EL2
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -108,7 +108,7 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed (and Res1 bits set)
-        */
+         */
         CPTR_EL2()
             : CPTR_EL2{ ReservedValues }
         {}
@@ -117,46 +117,46 @@ namespace AArch64
          * Writes the given value to the CPTR_EL2 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(CPTR_EL2 aValue);
 
         /**
          * Reads the current state of the CPTR_EL2 register
          * 
          * @return The current state of the register
-        */
+         */
         static CPTR_EL2 Read();
 
         /**
          * TFP Bit - Traps execution of instructions for SIMD and floating-point functionality
          * 
          * @param aTrapFPInstructions If true, SIMD and floating point instructions will trap to EL2
-        */
+         */
         void TFP(bool const aTrapFPInstructions) { RegisterValue[TFPIndex] = aTrapFPInstructions; }
 
         /**
          * TFP Bit - Traps execution of instructions for SIMD and floating-point functionality
          * 
          * @return True if SIMD and floating point instructions trap to EL2
-        */
-        bool TFP() const { return RegisterValue[TFPIndex]; }
+         */
+        [[nodiscard]] bool TFP() const { return RegisterValue[TFPIndex]; }
 
     private:
         /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit CPTR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 
         // We are currently assuming FEAT_SVE isn't available, so bit 8 is Res1
         static constexpr uint64_t ReservedValues =
-            0xFF        | // Reserved [7:0]
-            (0b1 << 8)  | // TZ
-            (0b1 << 9)  | // Reserved [9]
-            (0b11 << 12); // Reserved [13:12]
+            0xFFU         | // Reserved [7:0]
+            (0b1U << 8U)  | // TZ
+            (0b1U << 9U)  | // Reserved [9]
+            (0b11U << 12U); // Reserved [13:12]
 
         // Reserved     [7:0]   (Res1)
         // TZ           [8]     (Res1 if FEAT_SVE is not available)
@@ -170,14 +170,14 @@ namespace AArch64
         // TAM          [30]    (Res0 if FEAT_AMUv1 not implemented)
         // TCPAC        [31]
         // Reserved     [63:32] (Res0)
-
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 
     /**
      * Hypervisor Configuration Register
      * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/HCR-EL2--Hypervisor-Configuration-Register
-    */
+     */
     class HCR_EL2
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -185,43 +185,43 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed
-        */
+         */
         HCR_EL2() = default;
 
         /**
          * Writes the given value to the HCR_EL2 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(HCR_EL2 aValue);
 
         /**
          * Reads the current state of the HCR_EL2 register
          * 
          * @return The current state of the register
-        */
+         */
         static HCR_EL2 Read();
 
         /**
          * RW Bit - Execution state for lower exception levels
          * 
          * @param aEL1ExecutionIsAArch64 If true, EL1 will be AArch64, otherwise it will be AArch32
-        */
+         */
         void RW(bool const aEL1ExecutionIsAArch64) { RegisterValue[RWIndex] = aEL1ExecutionIsAArch64; }
 
         /**
          * RW Bit - Execution state for lower exception levels
          * 
          * @return True if EL1 execution state is AArch64. Otherwise it's AArch32
-        */
-        bool RW() const { return RegisterValue[RWIndex]; }
+         */
+        [[nodiscard]] bool RW() const { return RegisterValue[RWIndex]; }
 
     private:
         /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit HCR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
@@ -286,14 +286,14 @@ namespace AArch64
         // TID5         [58]    (Res0 if FEAT_MTE2 not implemented)
         // TWEDEn       [59]    (Res0 if FEAT_TWED not implemented)
         // TWEDEL       [63:60] (Res0 if FEAT_TWED not implemented)
-
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 
     /**
      * Hypervisor System Trap Register
      * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/HSTR-EL2--Hypervisor-System-Trap-Register
-    */
+     */
     class HSTR_EL2
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -301,21 +301,21 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed
-        */
+         */
         HSTR_EL2() = default;
 
         /**
          * Writes the given value to the HSTR_EL2 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(HSTR_EL2 aValue);
 
         /**
          * Reads the current state of the HSTR_EL2 register
          * 
          * @return The current state of the register
-        */
+         */
         static HSTR_EL2 Read();
 
     private:
@@ -323,7 +323,7 @@ namespace AArch64
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit HSTR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
@@ -345,40 +345,40 @@ namespace AArch64
         // Reserved     [14]    (Res0)
         // T15          [15]
         // Reserved     [63:16] (Res0)
-
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 
     /**
      * Memory Attribute Indirection Register
      * https://developer.arm.com/documentation/ddi0595/2020-12/AArch64-Registers/MAIR-EL1--Memory-Attribute-Indirection-Register--EL1-
-    */
+     */
     class MAIR_EL1
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
     public:
         /**
          * The number of attributes available
-        */
+         */
         static constexpr size_t AttributeCount = 8;
         
         /**
          * Constructor - produces a value with all attributes zeroed
-        */
+         */
         MAIR_EL1() = default;
 
         /**
          * Writes the given value to the MAIR_EL1 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(MAIR_EL1 aValue);
 
         /**
          * Reads the current state of the MAIR_EL1 register
          * 
          * @return The current state of the register
-        */
+         */
         static MAIR_EL1 Read();
 
         class Attribute
@@ -389,7 +389,7 @@ namespace AArch64
              * Obtain an attribute representing normal memory
              * 
              * @return An attribute representing normal memory
-            */
+             */
             static constexpr Attribute NormalMemory()
             {
                 // #TODO: Figure out if this needs to change and what these words mean
@@ -398,14 +398,14 @@ namespace AArch64
 
                 // Normal memory, outer non-cacheable
                 // Normal memory, inner non-cacheable
-                return Attribute{ 0b0100'0100 };
+                return Attribute{ 0b0100'0100 }; // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             }
 
             /**
              * Obtain an attribute representing device memory
              * 
              * @return An attribute representing device memory
-            */
+             */
             static constexpr Attribute DeviceMemory()
             {
                 // #TODO: Figure out if this needs to change and what these words mean
@@ -444,7 +444,7 @@ namespace AArch64
         private:
             /**
              * Creates an attribute with the given value
-            */
+             */
             explicit constexpr Attribute(uint8_t const aValue)
                 : Value{ aValue }
             {}
@@ -457,7 +457,7 @@ namespace AArch64
          * 
          * @param aIndex The attribute to set (0 - AttributeCount)
          * @param aAttribute The value to give it
-        */
+         */
         void SetAttribute(size_t aIndex, Attribute aValue);
 
         /**
@@ -465,19 +465,19 @@ namespace AArch64
          * 
          * @param aIndex The attribute to get (0 - AttributeCount)
          * @return The attribute in that slot
-        */
-        Attribute GetAttribute(size_t aIndex) const;
+         */
+        [[nodiscard]] Attribute GetAttribute(size_t aIndex) const;
 
     private:
         explicit MAIR_EL1(uint64_t aRawValue);
 
-        uint8_t Attributes[AttributeCount] = { 0 };
+        uint8_t Attributes[AttributeCount] = { 0 }; // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     };
 
     /**
      * System Control Register (EL1)
      * https://developer.arm.com/documentation/ddi0595/2021-06/AArch64-Registers/SCTLR-EL1--System-Control-Register--EL1-
-    */
+     */
     class SCTLR_EL1
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -485,7 +485,7 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed (and Res1 bits set)
-        */
+         */
         SCTLR_EL1()
             : SCTLR_EL1{ ReservedValues }
         {}
@@ -494,50 +494,50 @@ namespace AArch64
          * Writes the given value to the SCTLR_EL1 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(SCTLR_EL1 aValue);
 
         /**
          * Reads the current state of the SCTLR_EL1 register
          * 
          * @return The current state of the register
-        */
+         */
         static SCTLR_EL1 Read();
 
         /**
          * M Bit - MMU enable for EL1 & 0
          * 
          * @param aEnableMMU If true, MMU will be enabled for EL1 and 0
-        */
+         */
         void M(bool const aEnableMMU) { RegisterValue[MIndex] = aEnableMMU; }
 
         /**
          * RW Bit - Execution state for lower exception levels
          * 
          * @return True if EL1 execution state is AArch64. Otherwise it's AArch32
-        */
-        bool M() const { return RegisterValue[MIndex]; }
+         */
+        [[nodiscard]] bool M() const { return RegisterValue[MIndex]; }
 
     private:
         /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit SCTLR_EL1(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
 
         // We are currently assuming FEAT_SVE isn't available, so bit 8 is Res1
         static constexpr uint64_t ReservedValues = 
-            (1 << 7)  | // ITD
-            (1 << 8)  | // SED
-            (1 << 11) | // EOS
-            (1 << 20) | // TSCXT
-            (1 << 22) | // EIS
-            (1 << 23) | // SPAN
-            (1 << 28) | // nTLSMD
-            (1 << 29) ; // LSMAOE
+            (1U << 7U)  | // ITD
+            (1U << 8U)  | // SED
+            (1U << 11U) | // EOS
+            (1U << 20U) | // TSCXT
+            (1U << 22U) | // EIS
+            (1U << 23U) | // SPAN
+            (1U << 28U) | // nTLSMD
+            (1U << 29U) ; // LSMAOE
 
         static constexpr unsigned MIndex = 0;
         // A            [1]
@@ -588,14 +588,14 @@ namespace AArch64
         // EnALS        [56]    (Res0 if FEAT_LS64 not implemented)
         // EPAN         [57]    (Res0 if FEAT_PAN3 not implemented)
         // Reserved     [63:58] (Res0)
-
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 
     /**
      * Saved Program Status Register (EL2)
      * https://developer.arm.com/documentation/ddi0601/2023-09/AArch64-Registers/SPSR-EL2--Saved-Program-Status-Register--EL2-
-    */
+     */
     class SPSR_EL2
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -603,21 +603,21 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed
-        */
+         */
         SPSR_EL2() = default;
 
         /**
          * Writes the given value to the SPSR_EL2 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(SPSR_EL2 aValue);
 
         /**
          * Reads the current state of the SPSR_EL2 register
          * 
          * @return The current state of the register
-        */
+         */
         static SPSR_EL2 Read();
 
         enum class Mode: uint8_t
@@ -633,78 +633,78 @@ namespace AArch64
          * Mode bits - where to return to with ERET and whether to use its own stack or not
          * 
          * @param aMode The mode for ERET
-        */
+         */
         void M(Mode aMode);
 
         /**
          * Mode bits - where to return to with ERET and whether to use its own stack or not
          * 
          * @return The current ERET mode
-        */
-        Mode M() const;
+         */
+        [[nodiscard]] Mode M() const;
 
         /**
          * F Bit - FIQ interrupt mask
          * 
          * @param aFIQInterruptMask Masks (ignores) FIQ interrupts if set
-        */
+         */
         void F(bool const aFIQInterruptMask) { RegisterValue[FIndex] = aFIQInterruptMask; }
 
         /**
          * F Bit - FIQ interrupt mask
          * 
          * @return True if FIQ interrupts are masked (ignored)
-        */
-        bool F() const { return RegisterValue[FIndex]; }
+         */
+        [[nodiscard]] bool F() const { return RegisterValue[FIndex]; }
 
         /**
          * I Bit - IRQ interrupt mask
          * 
          * @param aIRQInterruptMask Masks (ignores) IRQ interrupts if set
-        */
+         */
         void I(bool const aIRQInterruptMask) { RegisterValue[IIndex] = aIRQInterruptMask; }
 
         /**
          * I Bit - IRQ interrupt mask
          * 
          * @return True if IRQ interrupts are masked (ignored)
-        */
-        bool I() const { return RegisterValue[IIndex]; }
+         */
+        [[nodiscard]] bool I() const { return RegisterValue[IIndex]; }
 
         /**
          * A Bit - SError interrupt mask
          * 
          * @param aSErrorInterruptMask Masks (ignores) SError interrupts if set
-        */
+         */
         void A(bool const aSErrorInterruptMask) { RegisterValue[AIndex] = aSErrorInterruptMask; }
 
         /**
          * A Bit - SError interrupt mask
          * 
          * @return True if SError interrupts are masked (ignored)
-        */
-        bool A() const { return RegisterValue[AIndex]; }
+         */
+        [[nodiscard]] bool A() const { return RegisterValue[AIndex]; }
 
         /**
          * D Bit - Debug exception mask
          * 
          * @param aDebugExceptionMask Masks (ignores) debug exceptions if set
-        */
+         */
         void D(bool const aDebugExceptionMask) { RegisterValue[DIndex] = aDebugExceptionMask; }
 
         /**
          * D Bit - Debug exception mask
          * 
          * @return True if debug exceptions are masked (ignored)
-        */
-        bool D() const { return RegisterValue[DIndex]; }
+         */
+        [[nodiscard]] bool D() const { return RegisterValue[DIndex]; }
 
     private:
         /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit SPSR_EL2(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
@@ -737,14 +737,14 @@ namespace AArch64
         // EXLOCK       [34]    (Res0 if FEAT_GCS not implemented)
         // PACM         [35]    (Res0 if FEAT_PAuth_LR not implemented)
         // Reserved:    [63:36] (Res0)
-
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 
     /**
      * Translation Control Register (EL1)
      * https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TCR-EL1--Translation-Control-Register--EL1-
-    */
+     */
     class TCR_EL1
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -752,36 +752,36 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed
-        */
+         */
         TCR_EL1() = default;
 
         /**
          * Writes the given value to the TCR_EL1 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write(TCR_EL1 aValue);
 
         /**
          * Reads the current state of the TCR_EL1 register
          * 
          * @return The current state of the register
-        */
+         */
         static TCR_EL1 Read();
 
         /**
          * T0SZ bits - controls the size of the memory region addressed by TTBR0_EL1
          * 
          * @param aBits the number of bits in the user region that can be used
-        */
+         */
         void T0SZ(uint8_t aBits);
 
         /**
          * T0SZ bits - controls the size of the memory region addressed by TTBR0_EL1
          * 
          * @return The number of bits in the user region that can be used
-        */
-        uint8_t T0SZ() const;
+         */
+        [[nodiscard]] uint8_t T0SZ() const;
 
         enum class T0Granule: uint8_t
         {
@@ -794,29 +794,29 @@ namespace AArch64
          * TG0 bits - controls the granule size of TTBR0_EL1
          * 
          * @param aSize The granule size for the user region
-        */
+         */
         void TG0(T0Granule aSize);
 
         /**
          * TG0 bits - controls the granule size of TTBR0_EL1
          * 
          * @return The granule size for the user region
-        */
-        T0Granule TG0() const;
+         */
+        [[nodiscard]] T0Granule TG0() const;
 
         /**
          * T1SZ bits - controls the size of the memory region addressed by TTBR1_EL1
          * 
          * @param aBits The number of bits in the kernel region that can be used
-        */
+         */
         void T1SZ(uint8_t aBits);
 
         /**
          * T1SZ bits - controls the size of the memory region addressed by TTBR1_EL1
          * 
          * @return The number of bits in the kernel region that can be used
-        */
-        uint8_t T1SZ() const;
+         */
+        [[nodiscard]] uint8_t T1SZ() const;
 
         enum class T1Granule: uint8_t
         {
@@ -829,25 +829,28 @@ namespace AArch64
          * TG1 bits - controls the granule size of TTBR1_EL1
          * 
          * @param aSize The granule size for the kernel region
-        */
+         */
         void TG1(T1Granule aSize);
 
         /**
          * TG1 bits - controls the granule size of TTBR1_EL1
          * 
          * @return The granule size for the kernel region
-        */
-        T1Granule TG1() const;
+         */
+        [[nodiscard]] T1Granule TG1() const;
 
     private:
         /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit TCR_EL1(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
+
+        // #TODO: There's probably a numeric_limits thing for this once we get it
+        static constexpr unsigned TotalAddrBits = 64; // number of bits in an address
 
         static constexpr unsigned T0SZIndex_Shift = 0; // bits [5:0]
         static constexpr uint64_t T0SZIndex_Mask = 0b11'1111;
@@ -894,15 +897,15 @@ namespace AArch64
         // TCMA1        [58]    (Res0 if FEAT_MTE2 not implemented)
         // DS           [59]    (Res0 if FEAT_LPA2 not implemented)
         // Reserved     [63:60] (Res0)
-
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 
     /**
      * Translation Table Base Register (0/1) (EL1)
      * https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR0-EL1--Translation-Table-Base-Register-0--EL1-
      * https://developer.arm.com/documentation/ddi0595/2021-09/AArch64-Registers/TTBR1-EL1--Translation-Table-Base-Register-1--EL1-
-    */
+     */
     class TTBRn_EL1
     {
         friend struct UnitTests::AArch64::SystemRegisters::Details::TestAccessor;
@@ -910,57 +913,57 @@ namespace AArch64
     public:
         /**
          * Constructor - produces a value with all bits zeroed
-        */
+         */
         TTBRn_EL1() = default;
 
         /**
          * Writes the given value to the TTBR0_EL1 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write0(TTBRn_EL1 aValue);
 
         /**
          * Writes the given value to the TTBR1_EL1 register
          * 
          * @param aValue Value to write
-        */
+         */
         static void Write1(TTBRn_EL1 aValue);
 
         /**
          * Reads the current state of the TTBR0_EL1 register
          * 
          * @return The current state of the register
-        */
+         */
         static TTBRn_EL1 Read0();
 
         /**
          * Reads the current state of the TTBR1_EL1 register
          * 
          * @return The current state of the register
-        */
+         */
         static TTBRn_EL1 Read1();
 
         /**
          * BADDR bits - Translation table base address
          * 
          * @param aBaseAddress The table base address
-        */
+         */
         void BADDR(PhysicalPtr aBaseAddress);
 
         /**
          * BADDR bits - Translation table base address
          * 
          * @return The table base address
-        */
-        PhysicalPtr BADDR() const;
+         */
+        [[nodiscard]] PhysicalPtr BADDR() const;
 
     private:
         /**
          * Create a register value from the given bits
          * 
          * @param aInitialValue The bits to start with
-        */
+         */
         explicit TTBRn_EL1(uint64_t const aInitialValue)
             : RegisterValue{ aInitialValue }
         {}
@@ -972,9 +975,11 @@ namespace AArch64
         // ASID         [63:48] (if implementation only supports 8 bits of ASID, then the top 8 bits are Res0)
 
         // Sanity check to make sure we're masking what we think we are
-        static_assert((0xFFFF'0000'0000'0000ULL & (BADDRIndex_Mask << BADDRIndex_Shift) & 1) == 0, "Bitfields overlap");
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        static_assert((0xFFFF'0000'0000'0000ULL & (BADDRIndex_Mask << BADDRIndex_Shift) & 1U) == 0, "Bitfields overlap");
 
-        std::bitset<64> RegisterValue;
+        static constexpr size_t RegisterBitCount = 64;
+        std::bitset<RegisterBitCount> RegisterValue;
     };
 }
 

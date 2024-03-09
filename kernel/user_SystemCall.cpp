@@ -1,5 +1,7 @@
 #include "user_SystemCall.h"
 
+#include <cstdint>
+
 extern "C"
 {
     // Actual system calls in user_SystemCall.S

@@ -1,10 +1,14 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// And we can modify the std namespace, because we're defining it
+// NOLINTBEGIN(cert-dcl58-cpp)
+
 #ifndef __KERNEL_STDLIB_UTILITY__
 #define __KERNEL_STDLIB_UTILITY__
 
 #include <type_traits>
 
-// TODO
-// Just the basics for now
+// #TODO: Just the basics for now
 
 namespace std
 {
@@ -16,7 +20,7 @@ namespace std
      * @return The given value as an rvalue
      */
     template<class __T>
-    constexpr std::remove_reference_t<__T>&& move(__T&& __aValue) noexcept
+    constexpr std::remove_reference_t<__T>&& move(__T&& __aValue) noexcept // NOLINT(cppcoreguidelines-missing-std-forward)
     {
         return static_cast<std::remove_reference_t<__T>&&>(__aValue);
     }
@@ -42,7 +46,7 @@ namespace std
      * @return The value to forward
      */
     template<class __T>
-    constexpr __T&& forward(std::remove_reference_t<__T>&& __aValue) noexcept
+    constexpr __T&& forward(std::remove_reference_t<__T>&& __aValue) noexcept // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
     {
         static_assert(!std::is_lvalue_reference_v<__T>, "Unexpected lvalue type for forward of rvalue");
         return static_cast<__T&&>(__aValue);
@@ -62,3 +66,6 @@ namespace std
 }
 
 #endif // __KERNEL_STDLIB_UTILITY__
+
+// NOLINTEND(cert-dcl58-cpp)
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

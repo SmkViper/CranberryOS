@@ -43,7 +43,9 @@ namespace AArch64
                 // Let the entry visitors make descriptors from raw values
                 friend struct PageTable::Details::VisitHelpers;
             private:
-                ValueConstructTag() {};
+                // We are intentionally not defaulting the constructor because otherwise it would allow people to make
+                // these without permission
+                ValueConstructTag() {}; // NOLINT(hicpp-use-equals-default,modernize-use-equals-default)
             };
 
             // Masks for the Block descriptor
@@ -74,7 +76,7 @@ namespace AArch64
                  * 
                  * @param aValue The value to construct from
                  */
-                BlockT(uint64_t aValue, ValueConstructTag) : BlockT{ aValue } {}
+                BlockT(uint64_t aValue, ValueConstructTag /* aTag */) : BlockT{ aValue } {}
 
                 /**
                  * Writes the given entry to the table
@@ -83,10 +85,10 @@ namespace AArch64
                  * @param apTable Table to write to
                  * @param aIndex Index to write to in the table
                  */
-                static void Write(BlockT const aValue, uint64_t apTable[], size_t const aIndex)
+                static void Write(BlockT const aValue, uint64_t apTable[], size_t const aIndex) // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
                 {
                     // #TODO: Range-check index with pointers per table - or make an array view type
-                    apTable[aIndex] = aValue.DescriptorBits.to_ullong();
+                    apTable[aIndex] = aValue.DescriptorBits.to_ullong(); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 }
 
                 /**
@@ -117,7 +119,7 @@ namespace AArch64
                  * 
                  * @return The attributes index
                  */
-                uint8_t AttrIndx() const
+                [[nodiscard]] uint8_t AttrIndx() const
                 {
                     return ReadMultiBitValue<uint8_t>(DescriptorBits, AttrIndxIndex_Mask, AttrIndxIndex_Shift);
                 }
@@ -145,7 +147,7 @@ namespace AArch64
                  * 
                  * @return The block permission
                  */
-                AccessPermissions AP() const
+                [[nodiscard]] AccessPermissions AP() const
                 {
                     return ReadMultiBitValue<AccessPermissions>(DescriptorBits, APIndex_Mask, APIndex_Shift);
                 }
@@ -163,7 +165,7 @@ namespace AArch64
                  * 
                  * @return True if the memory has been accessed since it was last set to false
                  */
-                bool AF() const { return DescriptorBits[AFIndex]; }
+                [[nodiscard]] bool AF() const { return DescriptorBits[AFIndex]; }
 
                 /**
                  * Sets the block address this entry points at
@@ -181,7 +183,7 @@ namespace AArch64
                  * 
                  * @return The block address
                  */
-                PhysicalPtr Address() const
+                [[nodiscard]] PhysicalPtr Address() const
                 {
                     return ReadMultiBitValue<PhysicalPtr>(DescriptorBits, AddressMask, 0 /* no shift */);
                 }
@@ -220,8 +222,8 @@ namespace AArch64
                 // Ignored      [58:55] (Reserved for software use)
                 // PBHA         [62:59] (Ignored if FEAT_HPDS2 not implemented)
                 // Ignored      [63]
-
-                std::bitset<64> DescriptorBits;
+                static constexpr size_t BitCount = 64;
+                std::bitset<BitCount> DescriptorBits;
             };
         }
 
@@ -244,7 +246,7 @@ namespace AArch64
              * 
              * @param aValue The value to construct from
             */
-            Fault(uint64_t /*aValue*/, Details::ValueConstructTag) {}
+            Fault(uint64_t /*aValue*/, Details::ValueConstructTag /* aTag */) {}
 
             /**
              * Checks to see if the value represents a descriptor of this type
@@ -285,7 +287,7 @@ namespace AArch64
              * 
              * @param aValue The value to construct from
              */
-            Table(uint64_t aValue, Details::ValueConstructTag) : Table{ aValue } {}
+            Table(uint64_t aValue, Details::ValueConstructTag /* aTag */) : Table{ aValue } {}
 
             /**
              * Writes the given entry to the table
@@ -294,7 +296,7 @@ namespace AArch64
              * @param apTable Table to write to
              * @param aIndex Index to write to in the table
              */
-            static void Write(Table aValue, uint64_t apTable[], size_t aIndex);
+            static void Write(Table aValue, uint64_t apTable[], size_t aIndex); // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
             /**
              * Checks to see if the value represents a descriptor of this type
@@ -320,7 +322,7 @@ namespace AArch64
              * 
              * @return The table address
              */
-            PhysicalPtr Address() const;
+            [[nodiscard]] PhysicalPtr Address() const;
 
         private:
             /**
@@ -343,8 +345,8 @@ namespace AArch64
             // UXNTable/XNTable [60]
             // APTable          [62:61]
             // NSTable          [63]
-
-            std::bitset<64> DescriptorBits;
+            static constexpr size_t BitCount = 64;
+            std::bitset<BitCount> DescriptorBits;
         };
 
         /**
@@ -378,7 +380,7 @@ namespace AArch64
              * 
              * @param aValue The value to construct from
              */
-            Page(uint64_t aValue, Details::ValueConstructTag) : Page{ aValue } {}
+            Page(uint64_t aValue, Details::ValueConstructTag /* aTag */) : Page{ aValue } {}
 
             /**
              * Writes the given entry to the table
@@ -387,7 +389,7 @@ namespace AArch64
              * @param apTable Table to write to
              * @param aIndex Index to write to in the table
              */
-            static void Write(Page aValue, uint64_t apTable[], size_t aIndex);
+            static void Write(Page aValue, uint64_t apTable[], size_t aIndex); // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
             /**
              * Checks to see if the value represents a descriptor of this type
@@ -413,7 +415,7 @@ namespace AArch64
              * 
              * @return The attributes index
              */
-            uint8_t AttrIndx() const;
+            [[nodiscard]] uint8_t AttrIndx() const;
 
             enum class AccessPermissions: uint8_t
             {
@@ -435,7 +437,7 @@ namespace AArch64
              * 
              * @return The page permission
              */
-            AccessPermissions AP() const;
+            [[nodiscard]] AccessPermissions AP() const;
 
             /**
              * AF Bit - Access flag
@@ -450,7 +452,7 @@ namespace AArch64
              * 
              * @return True if the memory has been accessed since it was last set to false
              */
-            bool AF() const { return DescriptorBits[AFIndex]; }
+            [[nodiscard]] bool AF() const { return DescriptorBits[AFIndex]; }
 
             /**
              * Sets the page address this entry points at
@@ -464,7 +466,7 @@ namespace AArch64
              * 
              * @return The page address
              */
-            PhysicalPtr Address() const;
+            [[nodiscard]] PhysicalPtr Address() const;
 
         private:
             /**
@@ -497,8 +499,8 @@ namespace AArch64
             // Ignored      [58:55] (Reserved for software use)
             // PBHA         [62:59] (Ignored if FEAT_HPDS2 not implemented)
             // Ignored      [63]
-
-            std::bitset<64> DescriptorBits;
+            static constexpr size_t BitCount = 64;
+            std::bitset<BitCount> DescriptorBits;
         };
     }
 }

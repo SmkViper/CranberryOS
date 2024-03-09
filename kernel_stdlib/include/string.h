@@ -1,3 +1,6 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+
 #ifndef __KERNEL_STDLIB_STRING_H__
 #define __KERNEL_STDLIB_STRING_H__
 
@@ -48,3 +51,5 @@ extern "C"
 }
 
 #endif // __KERNEL_STDLIB_STRING_H__
+
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

@@ -3,6 +3,7 @@ include(CheckCXXCompilerFlag)
 macro(CranberryOS_SetupOptions)
     option(CranberryOS_WARNINGS_AS_ERRORS "Warnings as errors" ON)
     option(CranberryOS_ENABLE_LTO "Link-time Optimization" ON)
+    option(CranberryOS_CLANG_TIDY "Enable clang-tidy" ON)
 endmacro()
 
 macro(CranberryOS_Options)
@@ -27,5 +28,8 @@ macro(CranberryOS_Options)
         endif()
     endif()
 
-    # #TODO: We should look into clang-tidy
+    include(cmake/StaticAnalyzers.cmake)
+    if(CranberryOS_CLANG_TIDY)
+        CranberryOS_EnableClangTidy(CranberryOS_Options, ${CranberryOS_WARNINGS_AS_ERRORS})
+    endif()
 endmacro()

@@ -1,16 +1,24 @@
+#include "Main.h"
+
+#include <bit>
+#include <cstdint>
 #include "AArch64/CPU.h"
-#include "Peripherals/DeviceTree.h"
 #include "UnitTests/Framework.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
-#include "Main.h"
-#include "MemoryManager.h"
 #include "MiniUart.h"
+#include "PointerTypes.h"
 #include "Print.h"
 #include "Scheduler.h"
-#include "Timer.h"
 #include "user_Program.h"
 #include "Utils.h"
+
+// Uncomment define to output the device tree to UART on boot
+//#define OUTPUT_DEVICE_TREE
+#ifdef OUTPUT_DEVICE_TREE
+#include "Peripherals/DeviceTree.h"
+#include "MemoryManager.h"
+#endif // OUTPUT_DEVICE_TREE
 
 namespace
 {
@@ -21,14 +29,14 @@ namespace
 extern "C"
 {
     // Defined by the linker to point at the start/end of the init/fini arrays
-    extern uintptr_t __init_start[];
-    extern uintptr_t __init_end[];
-    extern uintptr_t __fini_start[];
-    extern uintptr_t __fini_end[];
+    extern uintptr_t const _init_start[];
+    extern uintptr_t const _init_end[]; // past the end
+    extern uintptr_t const _fini_start[];
+    extern uintptr_t const _fini_end[]; // past the end
 
     // Defined by the linker to point at the start and end of the user "program" embedded in our image
-    extern void* __user_start;
-    extern void* __user_end;
+    extern void const* const _user_start;
+    extern void const* const _user_end; // past the end
 }
 
 namespace
@@ -38,10 +46,11 @@ namespace
      */
     void CallStaticConstructors()
     {
-        auto const init_arraySize = __init_end - __init_start;
-        for (auto curFunc = 0; curFunc < init_arraySize; ++curFunc)
+        auto const init_arraySize = std::bit_cast<uintptr_t>(&_init_end) - std::bit_cast<uintptr_t>(&_init_start);
+        for (auto curFunc = 0U; curFunc < init_arraySize; ++curFunc)
         {
-            reinterpret_cast<StaticInitFunction>(__init_start[curFunc])();
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+            reinterpret_cast<StaticInitFunction>(_init_start[curFunc])();
         }
     }
 
@@ -50,10 +59,11 @@ namespace
      */
     void CallStaticDestructors()
     {
-        auto const fini_arraySize = __fini_end - __fini_start;
-        for (auto curFunc = 0; curFunc < fini_arraySize; ++curFunc)
+        auto const fini_arraySize = std::bit_cast<uintptr_t>(&_fini_end) - std::bit_cast<uintptr_t>(&_fini_start);
+        for (auto curFunc = 0U; curFunc < fini_arraySize; ++curFunc)
         {
-            reinterpret_cast<StaticFiniFunction>(__fini_start[curFunc])();
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
+            reinterpret_cast<StaticFiniFunction>(_fini_start[curFunc])();
         }
     }
 
@@ -64,12 +74,16 @@ namespace
      */
     void KernelProcess(const void* const /*apParam*/)
     {
+        // Splitting out all the bit_casts into their own lines because they appear to crash clang-tidy in some cases
         Print::FormatToMiniUART("Kernel process started. EL {}\r\n", static_cast<uint32_t>(AArch64::CPU::GetCurrentExceptionLevel()));
-        const auto pbegin = &__user_start;
-        const auto size = reinterpret_cast<uintptr_t>(&__user_end) - reinterpret_cast<uintptr_t>(pbegin);
-        const auto processOffset = reinterpret_cast<uintptr_t>(&User::Process) - reinterpret_cast<uintptr_t>(pbegin);
+        auto const startOfUserCode = std::bit_cast<uintptr_t>(&_user_start);
+        auto const endOfUserCode = std::bit_cast<uintptr_t>(&_user_end);
+        auto const size = endOfUserCode - startOfUserCode;
 
-        const auto succeeded = Scheduler::MoveToUserMode(pbegin, size, processOffset);
+        auto const processFnAddr = std::bit_cast<uintptr_t>(&User::Process);
+        auto const processOffset = processFnAddr - startOfUserCode;
+
+        auto const succeeded = Scheduler::MoveToUserMode(&_user_start, size, processOffset);
         if (!succeeded)
         {
             MiniUART::SendString("Error while moving process to user mode\r\n");
@@ -83,8 +97,8 @@ extern "C"
 {
     // #TODO: Handle to the "global shared object" that clang apparently wants? Not sure what its for yet, but without
     // it there are linker issues with it thinking the object is out of range
+    // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,cppcoreguidelines-avoid-non-const-global-variables)
     void* __dso_handle;
-
 }
 
 namespace Kernel
@@ -106,7 +120,9 @@ namespace Kernel
         Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
         Print::FormatToMiniUART("_start: {}\r\n", aStartPointer);
         // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
-        //DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(static_cast<uintptr_t>(aDTBPointer) + MemoryManager::KernalVirtualAddressStart));
+#ifdef OUTPUT_DEVICE_TREE
+        DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(aDTBPointer.GetAddress() + MemoryManager::KernelVirtualAddressOffset));
+#endif // OUTPUT_DEVICE_TREE
 
         UnitTests::Run();
 

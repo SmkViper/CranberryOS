@@ -1,3 +1,8 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// And we can modify the std namespace, because we're defining it
+// NOLINTBEGIN(cert-dcl58-cpp)
+
 #ifndef __KERNEL_STDLIB_CSTDINT__
 #define __KERNEL_STDLIB_CSTDINT__
 
@@ -20,6 +25,9 @@ namespace std
     using ::uintptr_t;
 }
 
-// TODO: Macros for ptrdiff, size, sig atomic, wchar, and wint min/max values
+// #TODO: Macros for ptrdiff, size, sig atomic, wchar, and wint min/max values
 
 #endif // __KERNEL_STDLIB_CSTDINT__
+
+// NOLINTEND(cert-dcl58-cpp)
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

@@ -1,9 +1,12 @@
 #include "BitsetTests.h"
 
 #include <bitset>
+#include <cstddef>
 #include <cstdint>
 #include <utility>
-#include "../Framework.h"
+
+// Using a lot of "magic numbers" in tests, so just silence the lint for the file
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
 namespace UnitTests::KernelStdlib::Bitset
 {
@@ -17,10 +20,10 @@ namespace UnitTests::KernelStdlib::Bitset
          * @return The resulting bitset
          */
         template<std::size_t BitsetSize>
-        constexpr auto BitsetAndAssign(unsigned long const aInitialValue, unsigned long const aOtherValue)
+        constexpr auto BitsetAndAssign(unsigned long const aInitialValue, unsigned long const aOtherValue) // NOLINT(bugprone-easily-swappable-parameters)
         {
             std::bitset<BitsetSize> result{ aInitialValue };
-            std::bitset<BitsetSize> other{ aOtherValue };
+            std::bitset<BitsetSize> const other{ aOtherValue };
             return result &= other;
         }
 
@@ -32,10 +35,10 @@ namespace UnitTests::KernelStdlib::Bitset
          * @return The resulting bitset
          */
         template<std::size_t BitsetSize>
-        constexpr auto BitsetAnd(unsigned long const aInitialValue, unsigned long const aOtherValue)
+        constexpr auto BitsetAnd(unsigned long const aInitialValue, unsigned long const aOtherValue) // NOLINT(bugprone-easily-swappable-parameters)
         {
-            std::bitset<BitsetSize> result{ aInitialValue };
-            std::bitset<BitsetSize> other{ aOtherValue };
+            std::bitset<BitsetSize> const result{ aInitialValue };
+            std::bitset<BitsetSize> const other{ aOtherValue };
             return result & other;
         }
 
@@ -47,10 +50,10 @@ namespace UnitTests::KernelStdlib::Bitset
          * @return The resulting bitset
          */
         template<std::size_t BitsetSize>
-        constexpr auto BitsetOrAssign(unsigned long const aInitialValue, unsigned long const aOtherValue)
+        constexpr auto BitsetOrAssign(unsigned long const aInitialValue, unsigned long const aOtherValue) // NOLINT(bugprone-easily-swappable-parameters)
         {
             std::bitset<BitsetSize> result{ aInitialValue };
-            std::bitset<BitsetSize> other{ aOtherValue };
+            std::bitset<BitsetSize> const other{ aOtherValue };
             return result |= other;
         }
 
@@ -62,10 +65,10 @@ namespace UnitTests::KernelStdlib::Bitset
          * @return The resulting bitset
          */
         template<std::size_t BitsetSize>
-        constexpr auto BitsetOr(unsigned long const aInitialValue, unsigned long const aOtherValue)
+        constexpr auto BitsetOr(unsigned long const aInitialValue, unsigned long const aOtherValue) // NOLINT(bugprone-easily-swappable-parameters)
         {
-            std::bitset<BitsetSize> result{ aInitialValue };
-            std::bitset<BitsetSize> other{ aOtherValue };
+            std::bitset<BitsetSize> const result{ aInitialValue };
+            std::bitset<BitsetSize> const other{ aOtherValue };
             return result | other;
         }
 
@@ -77,10 +80,10 @@ namespace UnitTests::KernelStdlib::Bitset
          * @return The resulting bitset
          */
         template<std::size_t BitsetSize>
-        constexpr auto BitsetXorAssign(unsigned long const aInitialValue, unsigned long const aOtherValue)
+        constexpr auto BitsetXorAssign(unsigned long const aInitialValue, unsigned long const aOtherValue) // NOLINT(bugprone-easily-swappable-parameters)
         {
             std::bitset<BitsetSize> result{ aInitialValue };
-            std::bitset<BitsetSize> other{ aOtherValue };
+            std::bitset<BitsetSize> const other{ aOtherValue };
             return result ^= other;
         }
 
@@ -92,10 +95,10 @@ namespace UnitTests::KernelStdlib::Bitset
          * @return The resulting bitset
          */
         template<std::size_t BitsetSize>
-        constexpr auto BitsetXor(unsigned long const aInitialValue, unsigned long const aOtherValue)
+        constexpr auto BitsetXor(unsigned long const aInitialValue, unsigned long const aOtherValue) // NOLINT(bugprone-easily-swappable-parameters)
         {
-            std::bitset<BitsetSize> result{ aInitialValue };
-            std::bitset<BitsetSize> other{ aOtherValue };
+            std::bitset<BitsetSize> const result{ aInitialValue };
+            std::bitset<BitsetSize> const other{ aOtherValue };
             return result ^ other;
         }
 
@@ -108,7 +111,7 @@ namespace UnitTests::KernelStdlib::Bitset
          * @return The resulting bitset
          */
         template<std::size_t BitsetSize>
-        constexpr auto BitsetIndexSet(unsigned long const aInitialValue, size_t const aPos, bool const aValue)
+        constexpr auto BitsetIndexSet(unsigned long const aInitialValue, size_t const aPos, bool const aValue) // NOLINT(bugprone-easily-swappable-parameters)
         {
             std::bitset<BitsetSize> result{ aInitialValue };
             result[aPos] = aValue;
@@ -160,9 +163,10 @@ namespace UnitTests::KernelStdlib::Bitset
         {
             using std::swap;
 
-            std::bitset<BitsetSize> value1, value2;
+            std::bitset<BitsetSize> value1;
             value1[aPos] = true;
 
+            std::bitset<BitsetSize> value2;
             swap(value1[aPos], value2[aPos]);
 
             return !value1[aPos] && value2[aPos];
@@ -225,7 +229,7 @@ namespace UnitTests::KernelStdlib::Bitset
             std::bitset<BitsetSize> value;
             value[aPos] = true;
 
-            typename decltype(value)::const_reference constBitRef = value[aPos];
+            typename decltype(value)::const_reference const constBitRef = value[aPos];
             return constBitRef;
         }
 
@@ -276,9 +280,9 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(std::bitset<0>{ 10 }.to_ullong() == 0ULL, "Unexpected to_ullong() result");
         static_assert(std::bitset<0>{}.size() == 0, "Unexpected size() result");
         // #TODO: Can't test test() on bitset<0> because any bit is out of range
-        static_assert(std::bitset<0>{ 10 }.all() == true, "Unexpected all() result");
-        static_assert(std::bitset<0>{ 10 }.any() == false, "Unexpected any() result");
-        static_assert(std::bitset<0>{ 10 }.none() == true, "Unexpected none() result");
+        static_assert(std::bitset<0>{ 10 }.all(), "Unexpected all() result");
+        static_assert(!std::bitset<0>{ 10 }.any(), "Unexpected any() result");
+        static_assert(std::bitset<0>{ 10 }.none(), "Unexpected none() result");
         static_assert(BitsetAnd<0>(0b11, 0b101).to_ulong() == 0, "Unexpected & result");
         static_assert(BitsetOr<0>(0b11, 0b101).to_ulong() == 0, "Unexpected | result");
         static_assert(BitsetXor<0>(0b11, 0b101).to_ulong() == 0, "Unexpected ^ result");
@@ -299,26 +303,26 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(std::bitset<64>{ 0b11 }.flip().to_ulong() == ~0b11UL, "Unexpected flip() result");
         static_assert(std::bitset<64>{ 0b11 }.flip(1).to_ulong() == 0b01, "Unexpected flip(pos) result");
         static_assert(std::bitset<64>{ 0b11 }.flip(2).to_ulong() == 0b111, "Unexpected flip(pos) result");
-        static_assert(std::bitset<64>{ 0b11 }[1] == true, "Unexpected operator[] result");
+        static_assert(std::bitset<64>{ 0b11 }[1], "Unexpected operator[] result");
         static_assert(BitsetIndexSet<64>(0b11, 2, true).to_ulong() == 0b111, "Unexpected operator[] (set) result");
         static_assert(BitsetIndexSet<64>(0b11, 1, false).to_ulong() == 0b001, "Unexpected operator[] (set) result");
         static_assert(std::bitset<64>{ 10 }.to_ullong() == 10ULL, "Unexpected to_ullong() result");
         static_assert(std::bitset<64>{}.size() == 64, "Unexpected size() result");
-        static_assert(std::bitset<64>{ 0b11 }.test(1) == true, "Unexpected test() result");
-        static_assert(std::bitset<64>{ 0b11 }.test(2) == false, "Unexpected test() result");
-        static_assert(std::bitset<64>{ 10 }.all() == false, "Unexpected all() result");
-        static_assert(std::bitset<64>{ UINT64_MAX }.all() == true, "Unexpected all() result");
-        static_assert(std::bitset<64>{ 0 }.any() == false, "Unexpected any() result");
-        static_assert(std::bitset<64>{ 10 }.any() == true, "Unexpected any() result");
-        static_assert(std::bitset<64>{ 0 }.none() == true, "Unexpected none() result");
-        static_assert(std::bitset<64>{ 10 }.none() == false, "Unexpected none() result");
+        static_assert(std::bitset<64>{ 0b11 }.test(1), "Unexpected test() result");
+        static_assert(!std::bitset<64>{ 0b11 }.test(2), "Unexpected test() result");
+        static_assert(!std::bitset<64>{ 10 }.all(), "Unexpected all() result");
+        static_assert(std::bitset<64>{ UINT64_MAX }.all(), "Unexpected all() result");
+        static_assert(!std::bitset<64>{ 0 }.any(), "Unexpected any() result");
+        static_assert(std::bitset<64>{ 10 }.any(), "Unexpected any() result");
+        static_assert(std::bitset<64>{ 0 }.none(), "Unexpected none() result");
+        static_assert(!std::bitset<64>{ 10 }.none(), "Unexpected none() result");
         static_assert(BitsetAnd<64>(0b11, 0b101).to_ulong() == 0b001, "Unexpected & result");
         static_assert(BitsetOr<64>(0b11, 0b101).to_ulong() == 0b111, "Unexpected | result");
         static_assert(BitsetXor<64>(0b11, 0b101).to_ulong() == 0b110, "Unexpected ^ result");
 
         // Reference tests for bitset<64>
         // operator bool tested by index tests above
-        static_assert(~(std::bitset<64>{ 0b11 }[1]) == false, "Unexpected bit reference ~ result");
+        static_assert(!(~(std::bitset<64>{ 0b11 }[1])), "Unexpected bit reference ~ result");
         // operator =(bool) tested by index tests above
         static_assert(BitReferenceAssign<64>(10, 1), "Unexpected bit reference operator=(reference) result");
         static_assert(BitReferenceFlip<64>(10), "Unexpected bit reference flip() result");
@@ -327,7 +331,7 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(BitReferenceBoolSwap<64>(10), "Unexpected bit reference swap bool& result");
         static_assert(ConstBitReferenceConstruct<64>(10), "Unexpected const bit reference conversion result");
         static_assert(ConstBitReferenceBool<64>(10), "Unexpected const bit reference bool() result");
-        static_assert(ConstBitReferenceNot<64>(10) == false, "Unexpected const bit reference operator~ result");
+        static_assert(!ConstBitReferenceNot<64>(10), "Unexpected const bit reference operator~ result");
 
         // A bitset that is smaller than its internal type
         static_assert(sizeof(std::bitset<32>) == 8, "Unexpected size of partial bitset");
@@ -344,26 +348,26 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(std::bitset<32>{ 0b11 }.flip().to_ulong() == ~0b11U, "Unexpected flip() result");
         static_assert(std::bitset<32>{ 0b11 }.flip(1).to_ulong() == 0b01, "Unexpected flip(pos) result");
         static_assert(std::bitset<32>{ 0b11 }.flip(2).to_ulong() == 0b111, "Unexpected flip(pos) result");
-        static_assert(std::bitset<32>{ 0b11 }[1] == true, "Unexpected operator[] result");
+        static_assert(std::bitset<32>{ 0b11 }[1], "Unexpected operator[] result");
         static_assert(BitsetIndexSet<32>(0b11, 2, true).to_ulong() == 0b111, "Unexpected operator[] (set) result");
         static_assert(BitsetIndexSet<32>(0b11, 1, false).to_ulong() == 0b001, "Unexpected operator[] (set) result");
         static_assert(std::bitset<32>{ 10 }.to_ullong() == 10ULL, "Unexpected to_ullong() result");
         static_assert(std::bitset<32>{}.size() == 32, "Unexpected size() result");
-        static_assert(std::bitset<32>{ 0b11 }.test(1) == true, "Unexpected test() result");
-        static_assert(std::bitset<32>{ 0b11 }.test(2) == false, "Unexpected test() result");
-        static_assert(std::bitset<32>{ 10 }.all() == false, "Unexpected all() result");
-        static_assert(std::bitset<32>{ UINT32_MAX }.all() == true, "Unexpected all() result"); // makes sure that the top 32 bits don't count
-        static_assert(std::bitset<32>{ 0 }.any() == false, "Unexpected any() result");
-        static_assert(std::bitset<32>{ 10 }.any() == true, "Unexpected any() result");
-        static_assert(std::bitset<32>{ 0 }.none() == true, "Unexpected none() result");
-        static_assert(std::bitset<32>{ 10 }.none() == false, "Unexpected none() result");
+        static_assert(std::bitset<32>{ 0b11 }.test(1), "Unexpected test() result");
+        static_assert(!std::bitset<32>{ 0b11 }.test(2), "Unexpected test() result");
+        static_assert(!std::bitset<32>{ 10 }.all(), "Unexpected all() result");
+        static_assert(std::bitset<32>{ UINT32_MAX }.all(), "Unexpected all() result"); // makes sure that the top 32 bits don't count
+        static_assert(!std::bitset<32>{ 0 }.any(), "Unexpected any() result");
+        static_assert(std::bitset<32>{ 10 }.any(), "Unexpected any() result");
+        static_assert(std::bitset<32>{ 0 }.none(), "Unexpected none() result");
+        static_assert(!std::bitset<32>{ 10 }.none(), "Unexpected none() result");
         static_assert(BitsetAnd<32>(0b11, 0b101).to_ulong() == 0b001, "Unexpected & result");
         static_assert(BitsetOr<32>(0b11, 0b101).to_ulong() == 0b111, "Unexpected | result");
         static_assert(BitsetXor<32>(0b11, 0b101).to_ulong() == 0b110, "Unexpected ^ result");
 
         // Reference tests for bitset<32>
         // operator bool tested by index tests above
-        static_assert(~(std::bitset<32>{ 0b11 }[1]) == false, "Unexpected bit reference ~ result");
+        static_assert(!(~(std::bitset<32>{ 0b11 }[1])), "Unexpected bit reference ~ result");
         // operator =(bool) tested by index tests above
         static_assert(BitReferenceAssign<32>(10, 1), "Unexpected bit reference operator=(reference) result");
         static_assert(BitReferenceFlip<32>(10), "Unexpected bit reference flip() result");
@@ -372,7 +376,7 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(BitReferenceBoolSwap<32>(10), "Unexpected bit reference swap bool& result");
         static_assert(ConstBitReferenceConstruct<32>(10), "Unexpected const bit reference conversion result");
         static_assert(ConstBitReferenceBool<32>(10), "Unexpected const bit reference bool() result");
-        static_assert(ConstBitReferenceNot<32>(10) == false, "Unexpected const bit reference operator~ result");
+        static_assert(!ConstBitReferenceNot<32>(10), "Unexpected const bit reference operator~ result");
 
         // A bitset that is larger than its internal type, partially filled
         static_assert(sizeof(std::bitset<96>) == 16, "Unexpected size of large bitset");
@@ -381,26 +385,26 @@ namespace UnitTests::KernelStdlib::Bitset
         // #TODO: Need a good way to test high numbers with large bitsets, since to_ulong won't return the right value for
         // any bits over 64 (cause it's returning an unsigned long). And when we put in the range checking it'll throw
         // anyway
-        static_assert(std::bitset<96>{ 0 }.set(65, true)[65] == true, "Unexpected set() result");
-        static_assert(std::bitset<96>{ 0 }.flip(65)[65] == true, "Unexpected flip(pos) result");
+        static_assert(std::bitset<96>{ 0 }.set(65, true)[65], "Unexpected set() result");
+        static_assert(std::bitset<96>{ 0 }.flip(65)[65], "Unexpected flip(pos) result");
         // operator[] (get) being tested above
-        static_assert(BitsetIndexSet<96>(0, 65, true)[65] == true, "Unexpected operator[] (set) result");
+        static_assert(BitsetIndexSet<96>(0, 65, true)[65], "Unexpected operator[] (set) result");
         // to_ulong tested above
         static_assert(std::bitset<96>{ 10 }.to_ullong() == 10ULL, "Unexpected to_ullong result");
         static_assert(std::bitset<96>{}.size() == 96, "Unexpected size() result");
-        static_assert(std::bitset<96>{ 0 }.set(65).test(65) == true, "Unexpected test() result");
-        static_assert(std::bitset<96>{ 0 }.set(65).test(66) == false, "Unexpected test() result");
-        static_assert(std::bitset<96>{ 10 }.all() == false, "Unexpected all() result");
-        static_assert(std::bitset<96>{ UINT64_MAX }.all() == false, "Unexpected all() result");
-        static_assert(std::bitset<96>{ 0 }.flip().all() == true, "Unexpected all() result");
-        static_assert(std::bitset<96>{ 0 }.any() == false, "Unexpected any() result");
-        static_assert(std::bitset<96>{ 0 }.set(65, true).any() == true, "Unexpected any() result");
-        static_assert(std::bitset<96>{ 0 }.none() == true, "Unexpected none() result");
-        static_assert(std::bitset<96>{ 10 }.none() == false, "Unexpected none() result");
+        static_assert(std::bitset<96>{ 0 }.set(65).test(65), "Unexpected test() result");
+        static_assert(!std::bitset<96>{ 0 }.set(65).test(66), "Unexpected test() result");
+        static_assert(!std::bitset<96>{ 10 }.all(), "Unexpected all() result");
+        static_assert(!std::bitset<96>{ UINT64_MAX }.all(), "Unexpected all() result");
+        static_assert(std::bitset<96>{ 0 }.flip().all(), "Unexpected all() result");
+        static_assert(!std::bitset<96>{ 0 }.any(), "Unexpected any() result");
+        static_assert(std::bitset<96>{ 0 }.set(65, true).any(), "Unexpected any() result");
+        static_assert(std::bitset<96>{ 0 }.none(), "Unexpected none() result");
+        static_assert(!std::bitset<96>{ 10 }.none(), "Unexpected none() result");
 
         // Reference tests for bitset<96>
         // operator bool tested by index tests above
-        static_assert(~(std::bitset<96>{ 0 }.set(65, true)[65]) == false, "Unexpected bit reference ~ result");
+        static_assert(!(~(std::bitset<96>{ 0 }.set(65, true)[65])), "Unexpected bit reference ~ result");
         // operator =(bool) tested by index tests above
         static_assert(BitReferenceAssign<96>(85, 90), "Unexpected bit reference operator=(reference) result");
         static_assert(BitReferenceFlip<96>(85), "Unexpected bit reference flip() result");
@@ -409,7 +413,7 @@ namespace UnitTests::KernelStdlib::Bitset
         static_assert(BitReferenceBoolSwap<96>(85), "Unexpected bit reference swap bool& result");
         static_assert(ConstBitReferenceConstruct<96>(85), "Unexpected const bit reference conversion result");
         static_assert(ConstBitReferenceBool<96>(85), "Unexpected const bit reference bool() result");
-        static_assert(ConstBitReferenceNot<96>(85) == false, "Unexpected const bit reference operator~ result");
+        static_assert(!ConstBitReferenceNot<96>(85), "Unexpected const bit reference operator~ result");
     }
 
     void Run()
@@ -417,3 +421,5 @@ namespace UnitTests::KernelStdlib::Bitset
         // #TODO: No tests yet, probably will want some when we have exceptions implemented for the things that throw
     }
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

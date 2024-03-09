@@ -3,4 +3,5 @@ target_sources(kernel_stdlib
         exception.cpp
         new.cpp
         string.cpp
+        typeinfo.cpp
 )

@@ -1,6 +1,6 @@
 #include "NewTests.h"
 
-#include <new>
+#include <new> // NOLINT(misc-include-cleaner)
 
 namespace UnitTests::KernelStdlib::New
 {

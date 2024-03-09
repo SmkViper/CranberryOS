@@ -1,6 +1,7 @@
 # Manually adding the headers here, instead of in a CMakeLists.txt file in the include folder to keep
 # said folder "clean" and able to be copied around if needed.
 set(HEADER_LIST
+    "include/bit"
     "include/bitset"
     "include/climits"
     "include/cstddef"

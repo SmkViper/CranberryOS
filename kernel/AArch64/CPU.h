@@ -3,25 +3,22 @@
 
 #include <cstdint>
 
-namespace AArch64
+namespace AArch64::CPU
 {
-    namespace CPU
+    enum class ExceptionLevel : uint8_t
     {
-        enum class ExceptionLevel : uint8_t
-        {
-            EL0 = 0, // user land
-            EL1 = 1, // OS level
-            EL2 = 2, // hypervisor
-            EL3 = 3  // firmware (secure/insecure world switching)
-        };
+        EL0 = 0, // user land
+        EL1 = 1, // OS level
+        EL2 = 2, // hypervisor
+        EL3 = 3  // firmware (secure/insecure world switching)
+    };
 
-        /**
-         * Obtains the current exception level we're running under
-         * 
-         * @return The current exception level
-        */
-        ExceptionLevel GetCurrentExceptionLevel();
-    }
+    /**
+     * Obtains the current exception level we're running under
+     * 
+     * @return The current exception level
+     */
+    ExceptionLevel GetCurrentExceptionLevel();
 }
 
 #endif // KERNEL_AARCH64_CPU_H
