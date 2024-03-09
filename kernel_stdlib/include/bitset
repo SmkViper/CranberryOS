@@ -1,3 +1,8 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// And we can modify the std namespace, because we're defining it
+// NOLINTBEGIN(cert-dcl58-cpp)
+
 #ifndef __KERNEL_STDLIB_BITSET__
 #define __KERNEL_STDLIB_BITSET__
 
@@ -16,20 +21,30 @@ namespace std
             friend typename _Container::_ConstReference; // let the const reference access our data
             using _StorageType = typename _Container::_StorageType;
         public:
+            constexpr ~_BitReference() = default;
+
             /**
              * Copy constructor (points this at the same bit that the other reference is)
              * 
              * @param __aOther The other reference to copy from
-            */
+             */
             constexpr _BitReference(_BitReference const& /*__aOther*/) = default;
+
+            /**
+             * Move constructor (points this at the same bit that the other reference is)
+             * 
+             * @param __aOther The other reference to move from
+             */
+            constexpr _BitReference(_BitReference&& /*__aOther*/) = default;
 
             /**
              * Returns the value of the bit
              * 
              * @return The value of the bit
-            */
-            constexpr operator bool() const noexcept
+             */
+            constexpr operator bool() const noexcept // NOLINT(hicpp-explicit-conversions)
             {
+                // We are explicitly allowing implicit conversion to bool because we are a "reference" to a bool
                 return static_cast<bool>((*__pWord) & _Mask);
             }
 
@@ -37,7 +52,7 @@ namespace std
              * Returns the inverse of the value of the bit
              * 
              * @return The inverse of the bit value
-            */
+             */
             constexpr bool operator~() const noexcept
             {
                 return !static_cast<bool>(*this);
@@ -48,7 +63,7 @@ namespace std
              * 
              * @param __aValue The value to give to the bit
              * @return This bit reference
-            */
+             */
             constexpr _BitReference& operator=(bool __aValue) noexcept
             {
                 if (__aValue)
@@ -68,15 +83,30 @@ namespace std
              * 
              * @param __aValue The reference to the bit to set this one's value to
              * @return This bit reference
-            */
-            constexpr _BitReference& operator=(_BitReference const& __aValue) noexcept
+             */
+            constexpr _BitReference& operator=(_BitReference const& __aValue) noexcept // NOLINT(bugprone-unhandled-self-assignment,cert-oop54-cpp)
             {
-                return operator=(static_cast<bool>(__aValue));
+                // Disabled self-assignment lint because we do actually handle it just fine
+                operator=(static_cast<bool>(__aValue));
+                return *this;
+            }
+
+            /**
+             * Sets the value of this bit to equal the value of the other bit. Does NOT repoint the reference to the
+             * bit the other one points at (so it's not a move assignment operator in that sense)
+             * 
+             * @param __aValue The reference to the bit to set this one's value to
+             * @return This bit reference
+             */
+            constexpr _BitReference& operator=(_BitReference&& __aValue) noexcept
+            {
+                operator=(static_cast<bool>(__aValue));
+                return *this;
             }
 
             /**
              * Flips this bit
-            */
+             */
             constexpr void flip() noexcept
             {
                 *__pWord ^= _Mask;
@@ -88,7 +118,7 @@ namespace std
              * 
              * @param __apWord Pointer to the word being accessed
              * @param __aMask Mask to the specific bit
-            */
+             */
             constexpr _BitReference(_StorageType* const __apWord, _StorageType const __aMask) noexcept
                 : __pWord{ __apWord }
                 , _Mask{ __aMask }
@@ -149,7 +179,7 @@ namespace std
         template<class _Container>
         constexpr void swap(bool& __aLeft, _BitReference<_Container> __aRight) noexcept
         {
-            bool __value = __aLeft;
+            bool const __value = __aLeft;
             __aLeft = __aRight;
             __aRight = __value;
         }
@@ -160,30 +190,47 @@ namespace std
             friend typename _Container::_Self; // let the bitset access our private constructor
             using _StorageType = typename _Container::_StorageType;
         public:
+            constexpr ~_BitConstReference() = default;
+
             /**
              * Copy constructor (points this at the same bit that the other reference is)
              * 
              * @param __aOther The other reference to copy from
-            */
+             */
             constexpr _BitConstReference(_BitConstReference const& /*__aOther*/) = default;
+
+            /**
+             * Move constructor (points this at the same bit that the other reference is)
+             * 
+             * @param __aOther The other reference to move from
+             */
+            constexpr _BitConstReference(_BitConstReference&& /*__aOther*/) = default;
 
             /**
              * Copy constructor from a non-const reference (points to the same bit)
              * 
              * @param __aOther The other reference to copy from
-            */
-            constexpr _BitConstReference(_BitReference<_Container> const& __aOther)
+             */
+            constexpr _BitConstReference(_BitReference<_Container> const& __aOther) // NOLINT(hicpp-explicit-conversions)
                 : __pWord{ __aOther.__pWord }
                 , _Mask{ __aOther._Mask }
-            {}
+            {
+                // We are explicitly allowing implicit conversion from non-const
+            }
+
+            // Deleting these constructors because we don't re-point the "reference", and this is a reference to const,
+            // so the value can't change
+            _BitConstReference& operator=(_BitConstReference const&) = delete;
+            _BitConstReference& operator=(_BitConstReference&&) = delete;
 
             /**
              * Returns the value of the bit
              * 
              * @return The value of the bit
-            */
-            constexpr operator bool() const noexcept
+             */
+            constexpr operator bool() const noexcept // NOLINT(hicpp-explicit-conversions)
             {
+                // We are explicitly allowing implicit conversion to bool because we are a "reference" to a bool
                 return static_cast<bool>((*__pWord) & _Mask);
             }
 
@@ -191,7 +238,7 @@ namespace std
              * Returns the inverse of the value of the bit
              * 
              * @return The inverse of the bit value
-            */
+             */
             constexpr bool operator~() const noexcept
             {
                 return !static_cast<bool>(*this);
@@ -203,13 +250,11 @@ namespace std
              * 
              * @param __apWord Pointer to the word being accessed
              * @param __aMask Mask to the specific bit
-            */
+             */
             constexpr _BitConstReference(_StorageType const* const __apWord, _StorageType const __aMask) noexcept
                 : __pWord{ __apWord }
                 , _Mask{ __aMask }
             {}
-
-            _BitConstReference& operator=(_BitConstReference const&) = delete;
 
             _StorageType const* __pWord = nullptr;
             _StorageType _Mask = 0;
@@ -228,14 +273,14 @@ namespace std
 
             /**
              * Constructs the bitset with all bits zeroed
-            */
+             */
             constexpr _Bitset() noexcept = default;
 
             /**
              * Constructs the bitset with the lowest (rightmost) bits set to the specified value
              * 
              * @param __aValue The value to set the low bits to
-            */
+             */
             constexpr explicit _Bitset(unsigned long long const __aValue) noexcept
 #if __SIZEOF_SIZE_T__ == 8
                 : _Words{ __aValue }
@@ -249,7 +294,7 @@ namespace std
              * 
              * @param __aPos The bit to make a reference for
              * @return A reference to the given bit
-            */
+             */
             constexpr _Reference _MakeReference(size_t const __aPos) noexcept
             {
                 return _Reference{ &(_Words[__aPos / _BitsPerWord]), _StorageType{ 1 } << __aPos % _BitsPerWord };
@@ -260,7 +305,7 @@ namespace std
              * 
              * @param __aPos The bit to make a reference for
              * @return A const reference to the given bit
-            */
+             */
             constexpr _ConstReference _MakeReference(size_t const __aPos) const noexcept
             {
                 return _ConstReference{ &(_Words[__aPos / _BitsPerWord]), _StorageType{ 1 } << __aPos % _BitsPerWord };
@@ -270,7 +315,7 @@ namespace std
              * ANDs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to AND with
-            */
+             */
             constexpr void operator&=(_Bitset const& __aOther) noexcept
             {
                 for (auto __curIndex = 0U; __curIndex < _WordCount; ++__curIndex)
@@ -283,7 +328,7 @@ namespace std
              * ORs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to OR with
-            */
+             */
             constexpr void operator|=(_Bitset const& __aOther) noexcept
             {
                 for (auto __curIndex = 0U; __curIndex < _WordCount; ++__curIndex)
@@ -296,7 +341,7 @@ namespace std
              * XORs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to XOR with
-            */
+             */
             constexpr void operator^=(_Bitset const& __aOther) noexcept
             {
                 for (auto __curIndex = 0U; __curIndex < _WordCount; ++__curIndex)
@@ -307,12 +352,13 @@ namespace std
 
             /**
              * Flips all the bits in the bitset
-            */
+             */
             constexpr void _Flip() noexcept
             {
                 // Handle all the full words first
                 auto __remainingBits = _Size;
                 _StorageType* __curWord = _Words;
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
                 {
                     *__curWord = ~(*__curWord);
@@ -333,8 +379,8 @@ namespace std
              * Convert the bitset to an unsigned long
              * 
              * @return The value of the bitset as an unsigned long
-            */
-            constexpr unsigned long _ToULong() const
+             */
+            [[nodiscard]] constexpr unsigned long _ToULong() const
             {
                 // #TODO: If _Size is greater than the number of bits in an unsigned long, then throw if we have any
                 // valid bits set higher than that range
@@ -345,8 +391,8 @@ namespace std
              * Convert the bitset to an unsigned long long
              * 
              * @return The value of the bitset as an unsigned long long
-            */
-            constexpr unsigned long long _ToULongLong() const
+             */
+            [[nodiscard]] constexpr unsigned long long _ToULongLong() const
             {
                 // #TODO: If _Size is greater than the number of bits in an unsigned long long, then throw if we have
                 // any valid bits set higher than that range
@@ -369,15 +415,16 @@ namespace std
              * Checks to see if all bits in the bitset are set
              * 
              * @return True if all bits are set
-            */
-            constexpr bool _All() const noexcept
+             */
+            [[nodiscard]] constexpr bool _All() const noexcept
             {
                 // Handle all the full words first
                 auto __remainingBits = _Size;
                 _StorageType const* __curWord = _Words;
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
                 {
-                    if (~(*__curWord))
+                    if ((~(*__curWord)) != 0)
                     {
                         return false;
                     }
@@ -387,7 +434,7 @@ namespace std
                 if (__remainingBits > 0)
                 {
                     auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - __remainingBits);
-                    if ((~(*__curWord)) & __mask)
+                    if (((~(*__curWord)) & __mask) != 0)
                     {
                         return false;
                     }
@@ -399,15 +446,16 @@ namespace std
              * Checks to see if any bits in the bitset are set
              * 
              * @return True if any bits are set
-            */
-            constexpr bool _Any() const noexcept
+             */
+            [[nodiscard]] constexpr bool _Any() const noexcept
             {
                 // Handle all the full words first
                 auto __remainingBits = _Size;
                 _StorageType const* __curWord = _Words;
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
                 {
-                    if (*__curWord)
+                    if ((*__curWord) != 0)
                     {
                         return true;
                     }
@@ -418,7 +466,7 @@ namespace std
                 if (__remainingBits > 0)
                 {
                     auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - __remainingBits);
-                    if ((*__curWord) & __mask)
+                    if (((*__curWord) & __mask) != 0)
                     {
                         return true;
                     }
@@ -427,6 +475,7 @@ namespace std
             }
 
         private:
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
             _StorageType _Words[_WordCount] = { 0 };
         };
 
@@ -443,14 +492,14 @@ namespace std
 
             /**
              * Constructs the bitset with all bits zeroed
-            */
+             */
             constexpr _Bitset() noexcept = default;
 
             /**
              * Constructs the bitset with the lowest (rightmost) bits set to the specified value
              * 
              * @param __aValue The value to set the low bits to
-            */
+             */
             constexpr explicit _Bitset(unsigned long long const __aValue) noexcept
                 : _Word{
                     _Size == _BitsPerWord ? static_cast<_StorageType>(__aValue)
@@ -463,7 +512,7 @@ namespace std
              * 
              * @param __aPos The bit to make a reference for
              * @return A reference to the given bit
-            */
+             */
             constexpr _Reference _MakeReference(size_t const __aPos) noexcept
             {
                 return _Reference{ &_Word, _StorageType{ 1 } << __aPos };
@@ -474,8 +523,8 @@ namespace std
              * 
              * @param __aPos The bit to make a reference for
              * @return A const reference to the given bit
-            */
-            constexpr _ConstReference _MakeReference(size_t const __aPos) const noexcept
+             */
+            [[nodiscard]] constexpr _ConstReference _MakeReference(size_t const __aPos) const noexcept
             {
                 return _ConstReference{ &_Word, _StorageType{ 1 } << __aPos };
             }
@@ -484,7 +533,7 @@ namespace std
              * ANDs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to AND with
-            */
+             */
             constexpr void operator&=(_Bitset const& __aOther) noexcept
             {
                 _Word &= __aOther._Word;
@@ -494,7 +543,7 @@ namespace std
              * ORs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to OR with
-            */
+             */
             constexpr void operator|=(_Bitset const& __aOther) noexcept
             {
                 _Word |= __aOther._Word;
@@ -504,7 +553,7 @@ namespace std
              * XORs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to XOR with
-            */
+             */
             constexpr void operator^=(_Bitset const& __aOther) noexcept
             {
                 _Word ^= __aOther._Word;
@@ -512,7 +561,7 @@ namespace std
 
             /**
              * Flips all the bits in the bitset
-            */
+             */
             constexpr void _Flip() noexcept
             {
                 // Make sure we only flip bits that are part of the bitset
@@ -525,8 +574,8 @@ namespace std
              * Convert the bitset to an unsigned long
              * 
              * @return The value of the bitset as an unsigned long
-            */
-            constexpr unsigned long _ToULong() const
+             */
+            [[nodiscard]] constexpr unsigned long _ToULong() const
             {
                 return _Word;
             }
@@ -535,8 +584,8 @@ namespace std
              * Convert the bitset to an unsigned long long
              * 
              * @return The value of the bitset as an unsigned long long
-            */
-            constexpr unsigned long long _ToULongLong() const
+             */
+            [[nodiscard]] constexpr unsigned long long _ToULongLong() const
             {
                 return _Word;
             }
@@ -545,24 +594,24 @@ namespace std
              * Checks to see if all bits in the bitset are set
              * 
              * @return True if all bits are set
-            */
-            constexpr bool _All() const noexcept
+             */
+            [[nodiscard]] constexpr bool _All() const noexcept
             {
                 // Make sure we're only testing valid bits
                 auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - _Size);
-                return !((~_Word) & __mask);
+                return ((~_Word) & __mask) == 0;
             }
 
             /**
              * Checks to see if any bits in the bitset are set
              * 
              * @return True if any bits are set
-            */
-            constexpr bool _Any() const noexcept
+             */
+            [[nodiscard]] constexpr bool _Any() const noexcept
             {
                 
                 auto const __mask = ~_StorageType{ 0 } >> (_BitsPerWord - _Size);
-                return _Word & __mask;
+                return (_Word & __mask) != 0;
             }
 
         private:
@@ -582,14 +631,14 @@ namespace std
 
             /**
              * Constructs the bitset with all bits zeroed
-            */
+             */
             constexpr _Bitset() noexcept = default;
 
             /**
              * Constructs the bitset with the lowest (rightmost) bits set to the specified value
              * 
              * @param __aValue The value to set the low bits to
-            */
+             */
             constexpr explicit _Bitset(unsigned long long const /*__aValue*/) noexcept {}
 
             /**
@@ -597,8 +646,8 @@ namespace std
              * 
              * @param __aPos The bit to make a reference for
              * @return A reference to the given bit
-            */
-            constexpr _Reference _MakeReference(size_t const /*__aPos*/) noexcept
+             */
+            [[nodiscard]] constexpr _Reference _MakeReference(size_t const /*__aPos*/) noexcept // NOLINT(readability-convert-member-functions-to-static)
             {
                 return _Reference{ nullptr, 1 };
             }
@@ -608,8 +657,8 @@ namespace std
              * 
              * @param __aPos The bit to make a reference for
              * @return A const reference to the given bit
-            */
-            constexpr _ConstReference _MakeReference(size_t const /*__aPos*/) const noexcept
+             */
+            [[nodiscard]] constexpr _ConstReference _MakeReference(size_t const /*__aPos*/) const noexcept // NOLINT(readability-convert-member-functions-to-static)
             {
                 return _ConstReference{ nullptr, 1 };
             }
@@ -618,34 +667,34 @@ namespace std
              * ANDs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to AND with
-            */
+             */
             constexpr void operator&=(_Bitset const& /*__aOther*/) noexcept {}
 
             /**
              * ORs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to OR with
-            */
+             */
             constexpr void operator|=(_Bitset const& /*__aOther*/) noexcept {}
 
             /**
              * XORs the bits in this bitset with another one
              * 
              * @param __aOther The other bitset to XOR with
-            */
+             */
             constexpr void operator^=(_Bitset const& /*__aOther*/) noexcept {}
 
             /**
              * Flips all the bits in the bitset
-            */
+             */
             constexpr void _Flip() noexcept {}
 
             /**
              * Convert the bitset to an unsigned long
              * 
              * @return The value of the bitset as an unsigned long
-            */
-            constexpr unsigned long _ToULong() const
+             */
+            [[nodiscard]] constexpr unsigned long _ToULong() const // NOLINT(readability-convert-member-functions-to-static)
             {
                 return 0;
             }
@@ -654,8 +703,8 @@ namespace std
              * Convert the bitset to an unsigned long long
              * 
              * @return The value of the bitset as an unsigned long long
-            */
-            constexpr unsigned long long _ToULongLong() const
+             */
+            [[nodiscard]] constexpr unsigned long long _ToULongLong() const // NOLINT(readability-convert-member-functions-to-static)
             {
                 return 0;
             }
@@ -664,8 +713,8 @@ namespace std
              * Checks to see if all bits in the bitset are set
              * 
              * @return True if all bits are set
-            */
-            constexpr bool _All() const noexcept
+             */
+            [[nodiscard]] constexpr bool _All() const noexcept // NOLINT(readability-convert-member-functions-to-static)
             {
                 // Matches the behavior of libc++
                 return true;
@@ -675,8 +724,8 @@ namespace std
              * Checks to see if any bits in the bitset are set
              * 
              * @return True if any bits are set
-            */
-            constexpr bool _Any() const noexcept
+             */
+            [[nodiscard]] constexpr bool _Any() const noexcept // NOLINT(readability-convert-member-functions-to-static)
             {
                 // Matches the behavior of libc++
                 return false;
@@ -697,15 +746,15 @@ namespace std
 
         /**
          * Construct a new bitset with bits zeroed out
-        */
+         */
         constexpr bitset() noexcept = default;
 
         /**
          * Construct a new bitset with the low bits (right most) set to the value
          * 
          * @param __aValue The value to set the low bits to
-        */
-        constexpr bitset(unsigned long long __aValue) : _Base{ __aValue } {}
+         */
+        constexpr bitset(unsigned long long __aValue) : _Base{ __aValue } {} // NOLINT(hicpp-explicit-conversions)
 
         // #TODO: bitset constructor from basic_string
         // #TODO: bitset constructor from basic_string_view
@@ -716,7 +765,7 @@ namespace std
          * 
          * @param __aOther The other bitset to AND with
          * @return This bitset
-        */
+         */
         constexpr bitset& operator&=(bitset const& __aOther) noexcept
         {
             _Base::operator&=(__aOther);
@@ -728,7 +777,7 @@ namespace std
          * 
          * @param __aOther The other bitset to OR with
          * @return This bitset
-        */
+         */
         constexpr bitset& operator|=(bitset const& __aOther) noexcept
         {
             _Base::operator|=(__aOther);
@@ -740,7 +789,7 @@ namespace std
          * 
          * @param __aOther The other bitset to XOR with
          * @return This bitset
-        */
+         */
         constexpr bitset& operator^=(bitset const& __aOther) noexcept
         {
             _Base::operator^=(__aOther);
@@ -757,7 +806,7 @@ namespace std
          * @param __aPos The bit to set or clear
          * @param __aVal Whether to set or clear the bit
          * @return This bitset
-        */
+         */
         constexpr bitset& set(size_t const __aPos, bool __aVal = true)
         {
             // #TODO: Throw if out of range
@@ -772,7 +821,7 @@ namespace std
          * 
          * @param __aPos The bit to clear
          * @return This bitset
-        */
+         */
         constexpr bitset& reset(size_t const __aPos)
         {
             // #TODO: Throw if out of range
@@ -784,7 +833,7 @@ namespace std
          * Return the NOT of this bitset
          * 
          * @return The NOT of this bitset
-        */
+         */
         constexpr bitset operator~() const noexcept
         {
             bitset __copy{ *this };
@@ -796,7 +845,7 @@ namespace std
          * Flips the bits in this bitset
          * 
          * @return This bitset
-        */
+         */
         constexpr bitset& flip() noexcept
         {
             _Base::_Flip();
@@ -808,7 +857,7 @@ namespace std
          * 
          * @param __aPos The bit to flip
          * @return This bitset
-        */
+         */
         constexpr bitset& flip(size_t const __aPos)
         {
             // #TODO: Throw if position out of range
@@ -822,7 +871,7 @@ namespace std
          * 
          * @param __aPos The bit to get a reference to
          * @return A const reference to the bit
-        */
+         */
         constexpr const_reference operator[](size_t const __aPos) const { return _Base::_MakeReference(__aPos); }
 
         /**
@@ -830,15 +879,15 @@ namespace std
          * 
          * @param __aPos The bit to get a reference to
          * @return A reference to the bit
-        */
+         */
         constexpr reference operator[](size_t const __aPos) { return _Base::_MakeReference(__aPos); }
 
         /**
          * Convert this bitset to an unsigned long
          * 
          * @return The bits in this bitset as an unsigned long
-        */
-        constexpr unsigned long to_ulong() const
+         */
+        [[nodiscard]] constexpr unsigned long to_ulong() const
         {
             return _Base::_ToULong();
         }
@@ -847,8 +896,8 @@ namespace std
          * Convert this bitset to an unsigned long long
          * 
          * @return The bits in this bitset as an unsigned long long
-        */
-        constexpr unsigned long long to_ullong() const
+         */
+        [[nodiscard]] constexpr unsigned long long to_ullong() const
         {
             return _Base::_ToULongLong();
         }
@@ -860,8 +909,8 @@ namespace std
          * Obtains the number of bits in the bitset
          * 
          * @return The number of bits
-        */
-        constexpr size_t size() const noexcept { return _Size; }
+         */
+        [[nodiscard]] constexpr size_t size() const noexcept { return _Size; }
 
         // #TODO: operator==
         // #TODO: operator!=
@@ -871,8 +920,8 @@ namespace std
          * 
          * @param __aPos The bit to test
          * @return True if the bit set, false otherwise
-        */
-        constexpr bool test(size_t const __aPos) const
+         */
+        [[nodiscard]] constexpr bool test(size_t const __aPos) const
         {
             // #TODO: Throw if pos is out of range
             return (*this)[__aPos];
@@ -882,8 +931,8 @@ namespace std
          * Check to see if all bits are set
          * 
          * @return True if all bits are set
-        */
-        constexpr bool all() const noexcept
+         */
+        [[nodiscard]] constexpr bool all() const noexcept
         {
             return _Base::_All();
         }
@@ -892,8 +941,8 @@ namespace std
          * Check to see if any bits are set
          * 
          * @return True if any bits are set
-        */
-        constexpr bool any() const noexcept
+         */
+        [[nodiscard]] constexpr bool any() const noexcept
         {
             return _Base::_Any();
         }
@@ -902,8 +951,8 @@ namespace std
          * Check to see if no bits are set
          * 
          * @return True if no bets are set
-        */
-        constexpr bool none() const noexcept
+         */
+        [[nodiscard]] constexpr bool none() const noexcept
         {
             return !any();
         }
@@ -918,7 +967,7 @@ namespace std
      * @param __aLeft The first bitset
      * @param __aRight The second bitset
      * @return The two bitsets ANDed together
-    */
+     */
     template<size_t _Size>
     constexpr bitset<_Size> operator&(bitset<_Size> const& __aLeft, bitset<_Size> const& __aRight) noexcept
     {
@@ -933,7 +982,7 @@ namespace std
      * @param __aLeft The first bitset
      * @param __aRight The second bitset
      * @return The two bitsets ORed together
-    */
+     */
     template<size_t _Size>
     constexpr bitset<_Size> operator|(bitset<_Size> const& __aLeft, bitset<_Size> const& __aRight) noexcept
     {
@@ -948,7 +997,7 @@ namespace std
      * @param __aLeft The first bitset
      * @param __aRight The second bitset
      * @return The two bitsets XORed together
-    */
+     */
     template<size_t _Size>
     constexpr bitset<_Size> operator^(bitset<_Size> const& __aLeft, bitset<_Size> const& __aRight) noexcept
     {
@@ -961,3 +1010,6 @@ namespace std
 }
 
 #endif // __KERNEL_STDLIB_BITSET__
+
+// NOLINTEND(cert-dcl58-cpp)
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
