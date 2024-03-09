@@ -1,3 +1,8 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// We are using defines because this is a C (not C++) header
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #ifndef __KERNEL_STDLIB_LIMITS_H__
 #define __KERNEL_STDLIB_LIMITS_H__
 
@@ -35,3 +40,6 @@
 #define ULLONG_MAX  (__LONG_LONG_MAX__ * 2ULL + 1ULL)
 
 #endif // __KERNEL_STDLIB_LIMITS_H__
+
+// NOLINTEND(cppcoreguidelines-macro-usage)
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
