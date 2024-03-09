@@ -1,3 +1,8 @@
+// This is a "system" file, so we get to use reserved identifiers
+// NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// We are using defines and typedef because this is a C (not C++) header
+// NOLINTBEGIN(cppcoreguidelines-macro-usage, modernize-macro-to-enum, modernize-use-using)
+
 #ifndef __KERNEL_STDLIB_STDDEF_H__
 #define __KERNEL_STDLIB_STDDEF_H__
 
@@ -16,3 +21,6 @@ typedef struct
 #define offsetof(type, member) __builtin_offsetof(type, member)
 
 #endif // __KERNEL_STDLIB_STDDEF_H__
+
+// NOLINTEND(cppcoreguidelines-macro-usage, modernize-macro-to-enum, modernize-use-using)
+// NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
