@@ -13,31 +13,23 @@ namespace std
     class type_info
     {
     public:
-        /**
-         * Copy constructor - deleted
-         * 
-         * @param __aOther type_info to copy
-         */
+        // Deleting copy and move constructor
         type_info(const type_info& __aOther) = delete;
+        type_info(type_info&& __aOther) = delete;
 
         /**
          * Destructor
          */
-        virtual ~type_info() {}
+        virtual ~type_info() = default;
 
-        /**
-         * Assignment operator - deleted
-         * 
-         * @param __aOther type_info to copy
-         * 
-         * @return This type info
-         */
+        // Deleting copy and move assignment
         type_info operator=(const type_info& __aOther) = delete;
+        type_info operator=(type_info&& __aOther) = delete;
 
         /**
          * Obtains the implementation-defined name of the type
          */
-        const char* name() const
+        [[nodiscard]] const char* name() const
         {
             return __pName;
         }
@@ -49,7 +41,7 @@ namespace std
          * 
          * @return If this type_info precedes the other one
          */
-        bool before(const type_info& __aOther) const noexcept
+        [[nodiscard]] bool before(const type_info& __aOther) const noexcept
         {
             // #TODO: Should probably be std::less when we get that
             // we assume the names are merged and a pointer compare will work

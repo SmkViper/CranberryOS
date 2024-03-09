@@ -310,6 +310,7 @@ namespace Print
                 FormatImpl(apFormatString, arOutput, baseArgs, sizeof...(TailArgTypes) + 1 /* +1 for FirstArgType*/);
             };
 
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             outputArgs(Detail::DataWrapper<std::decay_t<FirstArgType>>{std::forward<FirstArgType>(aFirstArg)},
                 Detail::DataWrapper<std::decay_t<TailArgTypes>>{std::forward<TailArgTypes>(aArgs)}...);
         }

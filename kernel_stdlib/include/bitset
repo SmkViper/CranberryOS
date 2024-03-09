@@ -137,7 +137,7 @@ namespace std
         template<class _Container>
         constexpr void swap(_BitReference<_Container> __aLeft, _BitReference<_Container> __aRight) noexcept
         {
-            bool __value = __aLeft;
+            bool const __value = __aLeft;
             __aLeft = __aRight;
             __aRight = __value;
         }
@@ -151,7 +151,7 @@ namespace std
         template<class _ContainerA, class _ContainerB>
         constexpr void swap(_BitReference<_ContainerA> __aLeft, _BitReference<_ContainerB> __aRight) noexcept
         {
-            bool __value = __aLeft;
+            bool const __value = __aLeft;
             __aLeft = __aRight;
             __aRight = __value;
         }
@@ -165,7 +165,7 @@ namespace std
         template<class _Container>
         constexpr void swap(_BitReference<_Container> __aLeft, bool& __aRight) noexcept
         {
-            bool __value = __aLeft;
+            bool const __value = __aLeft;
             __aLeft = __aRight;
             __aRight = __value;
         }
@@ -295,8 +295,9 @@ namespace std
              * @param __aPos The bit to make a reference for
              * @return A reference to the given bit
              */
-            constexpr _Reference _MakeReference(size_t const __aPos) noexcept
+            [[nodiscard]] constexpr _Reference _MakeReference(size_t const __aPos) noexcept
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
                 return _Reference{ &(_Words[__aPos / _BitsPerWord]), _StorageType{ 1 } << __aPos % _BitsPerWord };
             }
 
@@ -306,8 +307,9 @@ namespace std
              * @param __aPos The bit to make a reference for
              * @return A const reference to the given bit
              */
-            constexpr _ConstReference _MakeReference(size_t const __aPos) const noexcept
+            [[nodiscard]] constexpr _ConstReference _MakeReference(size_t const __aPos) const noexcept
             {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
                 return _ConstReference{ &(_Words[__aPos / _BitsPerWord]), _StorageType{ 1 } << __aPos % _BitsPerWord };
             }
 
@@ -357,7 +359,7 @@ namespace std
             {
                 // Handle all the full words first
                 auto __remainingBits = _Size;
-                _StorageType* __curWord = _Words;
+                auto* __curWord = static_cast<_StorageType*>(_Words);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
                 {
@@ -420,7 +422,7 @@ namespace std
             {
                 // Handle all the full words first
                 auto __remainingBits = _Size;
-                _StorageType const* __curWord = _Words;
+                auto const* __curWord = static_cast<_StorageType const*>(_Words);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
                 {
@@ -451,7 +453,7 @@ namespace std
             {
                 // Handle all the full words first
                 auto __remainingBits = _Size;
-                _StorageType const* __curWord = _Words;
+                auto const* __curWord = static_cast<_StorageType const*>(_Words);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 for (; __remainingBits >= _BitsPerWord; ++__curWord, __remainingBits -= _BitsPerWord)
                 {
