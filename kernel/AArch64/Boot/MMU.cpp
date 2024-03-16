@@ -1,17 +1,18 @@
 // IMPORTANT: Code in this file should be very careful with accessing any global variables, as the MMU is not
 // not initialized, and the linker maps everythin the kernel into the higher-half.
 
+#include "MMU.h"
+
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include "../../Debug.h"
 #include "../../MemoryManager.h"
 #include "../../PointerTypes.h"
 #include "../../Utils.h"
 #include "../MemoryDescriptor.h"
 #include "../MemoryPageTables.h"
 #include "../SystemRegisters.h"
-#include "MMU.h"
-#include "Output.h"
 
 // Address translation documentation: https://documentation-service.arm.com/static/5efa1d23dbdee951c1ccdec5?token=
 
@@ -51,7 +52,7 @@ namespace AArch64::Boot
             {
                 if (aBegin >= aEnd)
                 {
-                    Panic("Begin should be before end");
+                    Debug::Panic("Begin should be before end");
                 }
             }
 
@@ -118,15 +119,15 @@ namespace AArch64::Boot
             {
                 if (Start > End)
                 {
-                    Panic("Bump allocator start is past the end");
+                    Debug::Panic("Bump allocator start is past the end");
                 }
                 if (Start.GetAddress() % MemoryManager::PageSize != 0)
                 {
-                    Panic("Bump allocator start address is not aligned to a page size");
+                    Debug::Panic("Bump allocator start address is not aligned to a page size");
                 }
                 if (End.GetAddress() % MemoryManager::PageSize != 0)
                 {
-                    Panic("Bump allocator start address is not aligned to a page size");
+                    Debug::Panic("Bump allocator start address is not aligned to a page size");
                 }
             }
 
@@ -139,7 +140,7 @@ namespace AArch64::Boot
             {
                 if (Current >= End)
                 {
-                    Panic("Bump allocator out of memory");
+                    Debug::Panic("Bump allocator out of memory");
                 }
 
                 auto const retPage = Current;
@@ -181,11 +182,11 @@ namespace AArch64::Boot
                 },
                 [](Descriptor::L1Block)
                 {
-                    Panic("Should not have level 1 blocks in boot tables");
+                    Debug::Panic("Should not have level 1 blocks in boot tables");
                 },
                 [](Descriptor::L2Block)
                 {
-                    Panic("Should not have level 2 blocks in boot tables");
+                    Debug::Panic("Should not have level 2 blocks in boot tables");
                 }
             });
 

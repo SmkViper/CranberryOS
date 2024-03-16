@@ -19,6 +19,11 @@ namespace AArch64::CPU
      * @return The current exception level
      */
     ExceptionLevel GetCurrentExceptionLevel();
+
+    /**
+     * Halts the CPU (never returns)
+     */
+    [[noreturn]] void Halt();
 }
 
 #endif // KERNEL_AARCH64_CPU_H

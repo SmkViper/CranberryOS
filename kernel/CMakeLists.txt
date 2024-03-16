@@ -2,6 +2,7 @@ set(LINKER_SCRIPT "link.ld")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${CMAKE_CURRENT_SOURCE_DIR}/${LINKER_SCRIPT}")
 
 add_executable(kernel8.elf
+    Debug.h Debug.cpp
     ExceptionVectorHandlers.h ExceptionVectorHandlers.cpp
     ExceptionVectors.S
     IRQ.h IRQ.S

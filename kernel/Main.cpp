@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <cstdint>
+#include "AArch64/Boot/Output.h"
 #include "AArch64/CPU.h"
 #include "UnitTests/Framework.h"
 #include "ExceptionVectorHandlers.h"
@@ -109,6 +110,9 @@ namespace Kernel
         CallStaticConstructors();
 
         MiniUART::Init();
+        // #TODO: Update panic/debug to output to miniuart
+        MiniUART::SendString(AArch64::Boot::GetOutputBuffer());
+
         irq_vector_init();
         Scheduler::InitTimer();
         ExceptionVectors::EnableInterruptController();

@@ -1,10 +1,11 @@
 // IMPORTANT: Code in this file should be very careful with accessing any global variables, as the MMU is not
 // not initialized, and the linker maps everythin the kernel into the higher-half.
 
+#include "ExceptionLevel.h"
+
+#include "../../Debug.h"
 #include "../CPU.h"
 #include "../SystemRegisters.h"
-#include "ExceptionLevel.h"
-#include "Output.h"
 
 namespace AArch64::Boot
 {
@@ -70,17 +71,17 @@ namespace AArch64::Boot
 
         if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL3)
         {
-            Panic("Unknown exception level (above EL3)");
+            Debug::Panic("Unknown exception level (above EL3)");
         }
         else if (initialExceptionLevel < AArch64::CPU::ExceptionLevel::EL1)
         {
-            Panic("We must at least be in EL1 to boot");
+            Debug::Panic("We must at least be in EL1 to boot");
         }
 
         if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL2)
         {
             // #TODO: Figure out how to handle EL3
-            Panic("We don't yet know how to switch from EL3 to EL2");
+            Debug::Panic("We don't yet know how to switch from EL3 to EL2");
         }
         if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL1)
         {

@@ -1,4 +1,5 @@
 #include <cstdint>
+#include "../../Debug.h"
 #include "../../Main.h"
 #include "../../MemoryManager.h"
 #include "../../PointerTypes.h"
@@ -49,6 +50,9 @@ extern "C"
         );
 
         // #TODO: Unmap identity mapping
+
+        // #TODO: Right now we only can output once the MMU is set up - need to fix this so it works during the boot process
+        Debug::OutputDebug("calling kmain");
 
         Kernel::kmain(PhysicalPtr{ aDTBPointer }, aX1Reserved, aX2Reserved, aX3Reserved, PhysicalPtr{ aStartPointer });
     }

@@ -8,14 +8,19 @@ namespace AArch64::Boot
      * 
      * @param apMessage Message to output
      */
-    void Panic(char const* apMessage);
+    void PanicImpl(char const* apMessage);
 
     /**
      * Outputs a debug message during the boot process (no MMU)
      * 
      * @param apMessage Message to output
      */
-    void OutputDebug(char const* apMessage);
+    void OutputDebugImpl(char const* apMessage);
+
+    /**
+     * Obtains the current output buffer contents
+     */
+    char const* GetOutputBuffer();
 }
 
 #endif // KERNEL_AARCH64_BOOT_OUTPUT_H

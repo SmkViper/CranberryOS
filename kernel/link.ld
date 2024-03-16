@@ -101,6 +101,15 @@ SECTIONS
     . += 8M; /* #TODO: we're reserving 8mb for now, but should come up with a real value at some point */
     _pg_dir_end = .;
 
+    /*
+        Reserving 4k of the image so we can have a buffer to output debug and panic strings before any other output
+        system is available
+    */
+    . = ALIGN(4K);
+    _output_buffer = .;
+    . += 4K;
+    _output_buffer_end = .;
+
     _kernel_image_end = .;
 
     /* strip out some general unimportant stuff we don't need */
