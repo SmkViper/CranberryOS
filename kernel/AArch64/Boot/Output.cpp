@@ -7,9 +7,13 @@
 #include <cstring>
 
 #include "../CPU.h"
+#include "../../MemoryManager.h"
 
 extern "C"
 {
+    // DO NOT ACCESS DIRECTLY
+    // We can access these before the MMU is set up, so always go through the GetX() functions instead
+
     // from link.ld
     // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
     extern char _output_buffer[];
@@ -21,11 +25,54 @@ namespace AArch64::Boot
 {
     namespace
     {
+        // DO NOT ACCESS DIRECTLY
+        // We can access these before the MMU is set up, so always go through the GetX() functions instead
+
         // Kind of janky, but keep track of whether we've written anything so we can ensure that if they request the
         // buffer with no output, they get nothing
         auto AnyOutputWritten = false; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
         // #TODO: Switch to function level static once we support __cxa_guard_acquire/__cxa_guard_release
         auto BufferOffset = 0ULL; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+        /**
+         * Obtain the buffer start pointer, adjusted for whether the MMU is on or not
+         * 
+         * @return The buffer start pointer
+         */
+        char* GetBufferStart()
+        {
+            return MemoryManager::AdjustKernelPtrForMMU(static_cast<char*>(_output_buffer));
+        }
+
+        /**
+         * Obtain the buffer end pointer, adjusted for whether the MMU is on or not
+         * 
+         * @return The buffer end pointer
+         */
+        char* GetBufferEnd()
+        {
+            return MemoryManager::AdjustKernelPtrForMMU(static_cast<char*>(_output_buffer_end));
+        }
+
+        /**
+         * Obtain the any output written bool, adjusted for whether the MMU is on or not
+         * 
+         * @return Reference to the output written bool
+         */
+        bool& GetAnyOutputWritten()
+        {
+            return *MemoryManager::AdjustKernelPtrForMMU(&AnyOutputWritten);
+        }
+
+        /**
+         * Obtain the buffer offset, adjusted for whether the MMU is on or not
+         * 
+         * @return Reference to the buffer offset index
+         */
+        unsigned long long& GetBufferOffset()
+        {
+            return *MemoryManager::AdjustKernelPtrForMMU(&BufferOffset);
+        }
 
         /**
          * Output text to our buffer
@@ -35,14 +82,18 @@ namespace AArch64::Boot
          */
         void OutputText(char const* const apMessage, bool const aNewLine) // NOLINT(misc-no-recursion)
         {
-            AnyOutputWritten = true;
+            auto* pbufferStart = GetBufferStart();
+            auto* pbufferEnd = GetBufferEnd();
+            auto& rbufferOffset = GetBufferOffset();
+
+            GetAnyOutputWritten() = true;
             // #TODO: Switch to function level static once we support __cxa_guard_acquire/__cxa_guard_release
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-            auto const BufferSizeCS = static_cast<std::size_t>(_output_buffer_end - _output_buffer);
+            auto const BufferSizeCS = static_cast<std::size_t>(pbufferEnd - pbufferStart);
 
             auto const messageLen = strlen(apMessage);
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-            auto const remainingLen = BufferSizeCS - BufferOffset;
+            auto const remainingLen = BufferSizeCS - rbufferOffset;
             
             if ((messageLen + 1) > remainingLen)
             {
@@ -54,16 +105,17 @@ namespace AArch64::Boot
                 // the debugger
                 static constexpr auto bufferFullMsgLen = ((sizeof(bufferFullMsg) / sizeof(bufferFullMsg[0])) - 1);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-                memcpy(_output_buffer, "PANIC: Output buffer full", bufferFullMsgLen);
+                memcpy(pbufferStart, "PANIC: Output buffer full", bufferFullMsgLen);
 
                 CPU::Halt();
             }
             else
             {
                 // NOLINTNEXTLINE(bugprone-not-null-terminated-result,cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay,cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                memcpy(_output_buffer + BufferOffset, apMessage, messageLen);
-                BufferOffset += messageLen;
-                _output_buffer[BufferOffset] = '\0';
+                memcpy(pbufferStart + rbufferOffset, apMessage, messageLen);
+                rbufferOffset += messageLen;
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                pbufferStart[rbufferOffset] = '\0';
                 // do NOT increment the offset so any next write will bash the null
 
                 if (aNewLine)
@@ -89,10 +141,11 @@ namespace AArch64::Boot
 
     char const* GetOutputBuffer()
     {
-        if (!AnyOutputWritten)
+        char* pbufferStart = GetBufferStart();
+        if (!GetAnyOutputWritten())
         {
-            _output_buffer[0] = 0;
+            *pbufferStart = 0;
         }
-        return static_cast<char const*>(_output_buffer);
+        return pbufferStart;
     }
 }

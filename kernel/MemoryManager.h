@@ -1,6 +1,7 @@
 #ifndef KERNEL_MEMORY_MANAGER_H
 #define KERNEL_MEMORY_MANAGER_H
 
+#include <bit>
 #include <cstdint>
 #include "AArch64/MemoryPageTables.h"
 #include "PointerTypes.h"
@@ -12,6 +13,11 @@ namespace Scheduler
 
 namespace MemoryManager
 {
+    namespace Internal
+    {
+        bool MMUEnabled();
+    }
+
     constexpr auto KernelVirtualAddressOffset = 0xFFFF'0000'0000'0000ULL;
     constexpr auto DeviceBaseAddress = PhysicalPtr{ 0x3F00'0000 };
 
@@ -141,6 +147,29 @@ namespace MemoryManager
     constexpr VirtualPtr CalculateBlockEnd(VirtualPtr const aPtr, size_t const aBlockSize)
     {
         return VirtualPtr{ CalculateBlockEnd(aPtr.GetAddress(), aBlockSize) };
+    }
+
+    /**
+     * Adjusts the given pointer in the kernel image (i.e. static variables) for whether the MMU is on or not
+     * 
+     * @param apPtr The pointer to adjust
+     * 
+     * @return The adjusted pointer
+     */
+    template<typename PtrT>
+    PtrT* AdjustKernelPtrForMMU(PtrT* const apPtr)
+    {
+        // #TODO: Need to figure out better what pointers to static data look like consistently
+        if (Internal::MMUEnabled())
+        {
+            auto const pointerInt = std::bit_cast<uintptr_t>(apPtr);
+            return std::bit_cast<PtrT*>(pointerInt | KernelVirtualAddressOffset);
+        }
+        else
+        {
+            auto const pointerInt = std::bit_cast<uintptr_t>(apPtr);
+            return std::bit_cast<PtrT*>(pointerInt & (~KernelVirtualAddressOffset));
+        }
     }
 }
 

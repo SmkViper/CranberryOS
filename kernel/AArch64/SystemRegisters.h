@@ -512,9 +512,9 @@ namespace AArch64
         void M(bool const aEnableMMU) { RegisterValue[MIndex] = aEnableMMU; }
 
         /**
-         * RW Bit - Execution state for lower exception levels
+         * M Bit - MMU enable for EL1 & 0
          * 
-         * @return True if EL1 execution state is AArch64. Otherwise it's AArch32
+         * @return True if MMU is enabled
          */
         [[nodiscard]] bool M() const { return RegisterValue[MIndex]; }
 

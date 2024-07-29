@@ -5,6 +5,7 @@
 #include "AArch64/Boot/Output.h"
 #include "AArch64/CPU.h"
 #include "UnitTests/Framework.h"
+#include "Debug.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
 #include "MiniUart.h"
@@ -69,6 +70,28 @@ namespace
     }
 
     /**
+     * The debug output function for when UART is available
+     * 
+     * @param apMessage Message to output
+     */
+    void UARTDebugOutput(char const* apMessage)
+    {
+        Print::FormatToMiniUART("{}\r\n", apMessage);
+    }
+
+    /**
+     * The panic function for when UART is available
+     * 
+     * @param apMessage Message to output
+     */
+    void UARTPanicOutput(char const* apMessage)
+    {
+        Print::FormatToMiniUART("PANIC: {}\r\n", apMessage);
+        // #TODO: Would be nice if we could trigger a breakpoint in some way
+        AArch64::CPU::Halt();
+    }
+
+    /**
      * Process trampoline which will move to user mode
      * 
      * @param apParam The parameter sent to the process
@@ -110,8 +133,12 @@ namespace Kernel
         CallStaticConstructors();
 
         MiniUART::Init();
-        // #TODO: Update panic/debug to output to miniuart
         MiniUART::SendString(AArch64::Boot::GetOutputBuffer());
+        
+        Debug::SetPanicFunction(UARTPanicOutput);
+        Debug::SetDebugOutFunction(UARTDebugOutput);
+
+        Debug::OutputDebug("UART initialized, output updated");
 
         irq_vector_init();
         Scheduler::InitTimer();

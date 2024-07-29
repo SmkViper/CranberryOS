@@ -20,8 +20,16 @@ extern "C"
     void boot_kernel(uint32_t const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
         uint64_t const aX3Reserved, uint32_t const aStartPointer)
     {
+        // #TODO: So we have this working in QEMU, but it still doesn't work on real hardware.
+        // Probably need to put in some debugging code to get the addresses of statics and pointers and see if the
+        // adjust code is working on real hardware. We can pass the values through to kmain() and output them there via
+        // the UART
+        
+        //Debug::OutputDebug("Switching to EL1...");
         AArch64::Boot::SwitchToEL1();
+        //Debug::OutputDebug("Setting up page tables...");
         AArch64::Boot::CreatePageTables();
+        //Debug::OutputDebug("Enabling MMU...");
         AArch64::Boot::EnableMMU();
 
         // The MMU is now on, but our stack pointer and instruction pointer are still pointing at the original physical
@@ -51,9 +59,7 @@ extern "C"
 
         // #TODO: Unmap identity mapping
 
-        // #TODO: Right now we only can output once the MMU is set up - need to fix this so it works during the boot process
-        Debug::OutputDebug("calling kmain");
-
+        Debug::OutputDebug("Calling kmain()...");
         Kernel::kmain(PhysicalPtr{ aDTBPointer }, aX1Reserved, aX2Reserved, aX3Reserved, PhysicalPtr{ aStartPointer });
     }
 }

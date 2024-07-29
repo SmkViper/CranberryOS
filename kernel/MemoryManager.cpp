@@ -6,6 +6,7 @@
 #include <cstring>
 #include "AArch64/MemoryDescriptor.h"
 #include "AArch64/MemoryPageTables.h"
+#include "AArch64/SystemRegisters.h"
 #include "PointerTypes.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"
@@ -215,6 +216,20 @@ namespace MemoryManager
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
             arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{ aPhysicalPage, aVirtualAddress };
             ++arTask.MemoryState.UserPagesCount;
+        }
+    }
+
+    namespace Internal
+    {
+        /**
+         * Checks to see if the MMU is enabled or not
+         * 
+         * @return Whether the MMU is enabled or not
+         */
+        bool MMUEnabled()
+        {
+            auto const sctlr_el1 = AArch64::SCTLR_EL1::Read();
+            return sctlr_el1.M();
         }
     }
 
