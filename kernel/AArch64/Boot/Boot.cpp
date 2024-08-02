@@ -21,9 +21,17 @@ extern "C"
         uint64_t const aX3Reserved, uint32_t const aStartPointer)
     {
         // #TODO: So we have this working in QEMU, but it still doesn't work on real hardware.
-        // Probably need to put in some debugging code to get the addresses of statics and pointers and see if the
-        // adjust code is working on real hardware. We can pass the values through to kmain() and output them there via
-        // the UART
+        // Did a bunch more experimentation and it seems that we can output a string up to 7 characters long (plus null
+        // terminator), but one that is 8 + terminator causes real hardware to halt. I.e. Debug::OutputDebug("Test567")
+        // works just fine before all the code below, but Debug::OutputDebug("Test5678") does not. I confirmed that
+        // reading the data in the string works just fine (strlen doesn't halt), but the memcpy to the buffer does.
+        //
+        // Reproducing the memcpy loop here in testing reproduces the halt on real hardware, but adding an if check
+        // (even if it never passes) makes the memcpy loop work, which implies to me that the compiler might be doing
+        // some tricky optimizations using instructions that are invalid until we've done all this initial setup work.
+        // I initially thought it was doing some SIMD work (which isn't turned on until SwitchToEL1 returns) but none
+        // of the three outputs below will work, including the ones after SIMD is turned on) so that isn't it. (Or
+        // there is more than one issue that is causing the halt that I haven't found yet)
         
         //Debug::OutputDebug("Switching to EL1...");
         AArch64::Boot::SwitchToEL1();

@@ -82,8 +82,12 @@ namespace AArch64::Boot
          */
         void OutputText(char const* const apMessage, bool const aNewLine) // NOLINT(misc-no-recursion)
         {
-            auto* pbufferStart = GetBufferStart();
-            auto* pbufferEnd = GetBufferEnd();
+            // Since we are called during the boot process, possibly before the MMU is set up, apMessage might be a
+            // virtual address instead of a physical one, so we need to adjust the pointer for that
+            auto const* const pfixedMessage = MemoryManager::AdjustKernelPtrForMMU(apMessage);
+
+            auto* const pbufferStart = GetBufferStart();
+            auto* const pbufferEnd = GetBufferEnd();
             auto& rbufferOffset = GetBufferOffset();
 
             GetAnyOutputWritten() = true;
@@ -91,7 +95,7 @@ namespace AArch64::Boot
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             auto const BufferSizeCS = static_cast<std::size_t>(pbufferEnd - pbufferStart);
 
-            auto const messageLen = strlen(apMessage);
+            auto const messageLen = strlen(pfixedMessage);
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
             auto const remainingLen = BufferSizeCS - rbufferOffset;
             
@@ -112,7 +116,7 @@ namespace AArch64::Boot
             else
             {
                 // NOLINTNEXTLINE(bugprone-not-null-terminated-result,cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay,cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                memcpy(pbufferStart + rbufferOffset, apMessage, messageLen);
+                memcpy(pbufferStart + rbufferOffset, pfixedMessage, messageLen);
                 rbufferOffset += messageLen;
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 pbufferStart[rbufferOffset] = '\0';
