@@ -1,5 +1,7 @@
 // This is a "system" file, so we get to use reserved identifiers
 // NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// We have no file extension, likely causing clang-tidy to trip up here - we definitely don't want internal linkage
+// NOLINTBEGIN(misc-use-internal-linkage)
 
 #ifndef __KERNEL_STDLIB_NEW__
 #define __KERNEL_STDLIB_NEW__
@@ -56,6 +58,23 @@ void operator delete(void* __apBlock) noexcept; // NOLINT(cert-dcl54-cpp,hicpp-n
  */
 void operator delete[](void* __apBlock) noexcept; // NOLINT(cert-dcl54-cpp,hicpp-new-delete-operators,misc-new-delete-overloads)
 
+/**
+ * Return memory to the memory system with a size hint
+ * 
+ * @param __apBlock pointer to the block to return
+ * @param __aSize Size of the block being deleted
+ */
+void operator delete(void* __apBlock, std::size_t __aSize) noexcept; // NOLINT(cert-dcl54-cpp,hicpp-new-delete-operators,misc-new-delete-overloads)
+
+/**
+ * Return an array allocated block to the memory system with a size hint
+ * 
+ * @param __apBlock pointer to the first element to return
+ * @param __aSize Size of the block being deleted
+ */
+void operator delete[](void* __apBlock, std::size_t __aSize) noexcept; // NOLINT(cert-dcl54-cpp,hicpp-new-delete-operators,misc-new-delete-overloads)
+
 #endif // __KERNEL_STDLIB_NEW__
 
+// NOLINTEND(misc-use-internal-linkage)
 // NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

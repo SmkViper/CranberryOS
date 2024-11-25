@@ -107,7 +107,7 @@ namespace
         auto const processFnAddr = std::bit_cast<uintptr_t>(&User::Process);
         auto const processOffset = processFnAddr - startOfUserCode;
 
-        auto const succeeded = Scheduler::MoveToUserMode(&_user_start, size, processOffset);
+        auto const succeeded = Scheduler::MoveToUserMode(static_cast<void const*>(&_user_start), size, processOffset);
         if (!succeeded)
         {
             MiniUART::SendString("Error while moving process to user mode\r\n");

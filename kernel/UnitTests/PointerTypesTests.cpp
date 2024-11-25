@@ -56,6 +56,9 @@ namespace UnitTests::PointerTypes
         // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
     }
 
+    // #TODO: Figure out if there is a better way to fix this
+    // Unclear why clang-tidy thinks internal linkage works here, as it's called from Framework.cpp
+    // NOLINTNEXTLINE(misc-use-internal-linkage)
     void Run()
     {
         PhysicalPtrPrintTest();

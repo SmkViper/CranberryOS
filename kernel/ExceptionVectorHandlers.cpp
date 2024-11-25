@@ -100,6 +100,9 @@ extern "C"
 
 namespace ExceptionVectors
 {
+    // #TODO: Figure out if this can be fixed
+    // Unsure why clang-tidy trips on this, as it's called from Main.cpp
+    // NOLINTNEXTLINE(misc-use-internal-linkage)
     void EnableInterruptController()
     {
         MemoryMappedIO::Put32(MemoryMappedIO::IRQ::InterruptEnable1, SystemTimerIRQ1);

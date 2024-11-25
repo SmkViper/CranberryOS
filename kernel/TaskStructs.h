@@ -28,7 +28,7 @@ namespace Scheduler
         uint64_t pc = 0; // x30
     };
 
-    enum class TaskState : int64_t
+    enum class TaskState : int64_t // NOLINT(performance-enum-size)
     {
         Running,
         Zombie

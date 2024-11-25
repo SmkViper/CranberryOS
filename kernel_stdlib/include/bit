@@ -2,6 +2,8 @@
 // NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 // And we can modify the std namespace, because we're defining it
 // NOLINTBEGIN(cert-dcl58-cpp)
+// We have no file extension, likely causing clang-tidy to trip up here - we definitely don't want internal linkage
+// NOLINTBEGIN(misc-use-internal-linkage)
 
 #ifndef __KERNEL_STDLIB_BIT__
 #define __KERNEL_STDLIB_BIT__
@@ -29,5 +31,6 @@ namespace std
 
 #endif // __KERNEL_STDLIB_BIT__
 
+// NOLINTEND(misc-use-internal-linkage)
 // NOLINTEND(cert-dcl58-cpp)
 // NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

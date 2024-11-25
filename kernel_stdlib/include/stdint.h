@@ -1,7 +1,7 @@
 // This is a "system" file, so we get to use reserved identifiers
 // NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 // We are using defines and typedef because this is a C (not C++) header
-// NOLINTBEGIN(cppcoreguidelines-macro-usage, modernize-macro-to-enum, modernize-use-using)
+// NOLINTBEGIN(cppcoreguidelines-macro-usage, cppcoreguidelines-macro-to-enum, modernize-macro-to-enum, modernize-use-using)
 
 #ifndef __KERNEL_STDLIB_STDINT_H__
 #define __KERNEL_STDLIB_STDINT_H__
@@ -55,5 +55,5 @@ typedef unsigned long long  uintptr_t;
 
 #endif // __KERNEL_STDLIB_STDINT_H__
 
-// NOLINTEND(cppcoreguidelines-macro-usage, modernize-macro-to-enum, modernize-use-using)
+// NOLINTEND(cppcoreguidelines-macro-usage, cppcoreguidelines-macro-to-enum, modernize-macro-to-enum, modernize-use-using)
 // NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)

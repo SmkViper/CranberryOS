@@ -170,9 +170,10 @@ namespace AArch64::PageTable
              * @param aVirtualAddress The address to set the entry for
              * @param aValue The value to set for that entry
              */
-            template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>>
+            template<typename DescriptorT, typename = std::enable_if_t<ValidType<DescriptorT>>> // NOLINT(modernize-use-constraints)
             void SetEntryForVA(VirtualPtr const aVirtualAddress, DescriptorT const aValue) const
             {
+                // #TODO: Update to requires
                 auto const tableIndex = (aVirtualAddress.GetAddress() >> AddressShift) & AddressMask;
                 // #TODO: Assert if tableIndex is out of range
                 DescriptorT::Write(aValue, pTable, tableIndex);
@@ -194,9 +195,9 @@ namespace AArch64::PageTable
     }
 
     // Each entry covers 512GB of address space
-    using Level0View = Details::PageView<PageOffsetBits + TableIndexBits * 3, Descriptor::Fault, Descriptor::Table>;
+    using Level0View = Details::PageView<PageOffsetBits + (TableIndexBits * 3), Descriptor::Fault, Descriptor::Table>;
     // Each entry covers 1GB of address space
-    using Level1View = Details::PageView<PageOffsetBits + TableIndexBits * 2, Descriptor::Fault, Descriptor::Table, Descriptor::L1Block>;
+    using Level1View = Details::PageView<PageOffsetBits + (TableIndexBits * 2), Descriptor::Fault, Descriptor::Table, Descriptor::L1Block>;
     // Each entry covers 2MB of address space
     using Level2View = Details::PageView<PageOffsetBits + TableIndexBits, Descriptor::Fault, Descriptor::Table, Descriptor::L2Block>;
     // Each entry covers 4KB of address space

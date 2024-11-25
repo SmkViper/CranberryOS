@@ -295,7 +295,7 @@ namespace Print::Detail
      */
     void FormatImpl(char const* const apFormatString, OutputFunctorBase& arOutput, DataWrapperBase const* const* const apDataArray, std::size_t const aDataCount) // NOLINT(readability-function-cognitive-complexity)
     {
-        enum class ParseState
+        enum class ParseState : uint8_t
         {
             OutputCharacter,
             OpenBrace,

@@ -192,10 +192,12 @@ namespace UnitTests::KernelStdlib::TypeTraits
         // std::enable_if
         ///////////////////////////////////////////////////////////////////////
 
+        // #TODO: Update the following to requires
+
         template<class T>
-        constexpr typename std::enable_if_t<std::is_reference_v<T>, bool> TestEnableIf() { return true; }
+        constexpr typename std::enable_if_t<std::is_reference_v<T>, bool> TestEnableIf() { return true; } // NOLINT(modernize-use-constraints)
         template<class T>
-        constexpr typename std::enable_if_t<!std::is_reference_v<T>, bool> TestEnableIf() { return false; }
+        constexpr typename std::enable_if_t<!std::is_reference_v<T>, bool> TestEnableIf() { return false; } // NOLINT(modernize-use-constraints)
 
         static_assert(!TestEnableIf<int>(), "Unexpected result from enable_if");
         static_assert(TestEnableIf<int&>(), "Unexpected result from enable_if");

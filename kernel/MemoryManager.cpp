@@ -214,7 +214,10 @@ namespace MemoryManager
 
             MapTableEntry(pageTableEntry, aVirtualAddress, aPhysicalPage);
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-            arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{ aPhysicalPage, aVirtualAddress };
+            arTask.MemoryState.UserPages[arTask.MemoryState.UserPagesCount] = Scheduler::UserPage{
+                .PhysicalAddress = aPhysicalPage,
+                .VirtualAddress = aVirtualAddress
+            };
             ++arTask.MemoryState.UserPagesCount;
         }
     }
