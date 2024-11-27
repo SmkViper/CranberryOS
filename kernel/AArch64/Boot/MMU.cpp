@@ -78,7 +78,7 @@ namespace AArch64::Boot
             {
                 if (aBegin > aEnd)
                 {
-                    //Panic("Begin should be before or equal to end");
+                    Debug::Panic("Begin should be before or equal to end");
                 }
             }
 
@@ -226,8 +226,7 @@ namespace AArch64::Boot
          * 
          * @param arAllocator Allocator for memory pages
          * @param aRootPage The root page table
-         * @param aVAStart The start of the virtual address range to map
-         * @param aVAEnd The end of the virtual address range to map
+         * @param aVARange The virtual address range to map
          * @param aPhysicalAddress The physical address to map to
          * @param aMAIRIndex The index into the MAIR register for the attributes for this memory
          */

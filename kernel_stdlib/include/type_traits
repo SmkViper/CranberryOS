@@ -290,6 +290,12 @@ namespace std
      */
     template<bool __Value, class __T = void>
     using enable_if_t = typename enable_if<__Value, __T>::type; // NOLINT(modernize-type-traits)
+
+    /**
+     * Maps any sequence of types to void - helps with SFINAE to detect when something exists or not
+     */
+    template<class...>
+    using void_t = void;
 }
 
 #endif // __KERNEL_STDLIB_TYPE_TRAITS__

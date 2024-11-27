@@ -2,12 +2,14 @@
 
 #include <bit>
 #include <bitset>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include "AArch64/MemoryDescriptor.h"
 #include "AArch64/MemoryPageTables.h"
 #include "AArch64/SystemRegisters.h"
 #include "PointerTypes.h"
+#include "Print.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"
 #include "Utils.h"
@@ -99,11 +101,9 @@ namespace MemoryManager
          * @param arNewTable OUT: Set to true if a new table had to be made, otherwise false
          * @return The table for the specified address - new or existing
          */
-        template<class LowerTableViewT, class TableViewT>
-        LowerTableViewT MapTable(TableViewT aTable, VirtualPtr const aUserVirtualAddress, bool& arNewTable)
+        template<class TableViewT>
+        auto MapTable(TableViewT aTable, VirtualPtr const aUserVirtualAddress, bool& arNewTable) -> AArch64::PageTable::ChildTableView_t<TableViewT>
         {
-            // #TODO: Can we make a relationship between TableViewT and LowerTableViewT so it can be deduced?
-
             arNewTable = false; // assume we don't need a new table
 
             auto const entry = aTable.GetEntryForVA(aUserVirtualAddress);
@@ -140,7 +140,7 @@ namespace MemoryManager
 
             // virtual address for memory in the kernel is physical address plus offset
             auto* const ppageVA = std::bit_cast<uint64_t*>(pagePA.Offset(KernelVirtualAddressOffset).GetAddress());
-            return LowerTableViewT{ ppageVA };
+            return AArch64::PageTable::ChildTableView_t<TableViewT>{ ppageVA };
         }
 
         /**
@@ -188,7 +188,7 @@ namespace MemoryManager
             auto const pageGlobalDirectoryVA = VirtualPtr{ arTask.MemoryState.PageGlobalDirectory.GetAddress() }.Offset(KernelVirtualAddressOffset);
             auto const pageGlobalDirectory = AArch64::PageTable::Level0View{ std::bit_cast<uint64_t*>(pageGlobalDirectoryVA.GetAddress()) };
             auto newTable = false;
-            auto const pageUpperDirectory = MapTable<AArch64::PageTable::Level1View>(pageGlobalDirectory, aVirtualAddress, newTable);
+            auto const pageUpperDirectory = MapTable(pageGlobalDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
@@ -196,7 +196,7 @@ namespace MemoryManager
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            auto const pageMiddleDirectory = MapTable<AArch64::PageTable::Level2View>(pageUpperDirectory, aVirtualAddress, newTable);
+            auto const pageMiddleDirectory = MapTable(pageUpperDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
@@ -204,7 +204,7 @@ namespace MemoryManager
                 ++arTask.MemoryState.KernelPagesCount;
             }
 
-            auto const pageTableEntry = MapTable<AArch64::PageTable::Level3View>(pageMiddleDirectory, aVirtualAddress, newTable);
+            auto const pageTableEntry = MapTable(pageMiddleDirectory, aVirtualAddress, newTable);
             if (newTable)
             {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
@@ -233,6 +233,107 @@ namespace MemoryManager
         {
             auto const sctlr_el1 = AArch64::SCTLR_EL1::Read();
             return sctlr_el1.M();
+        }
+    }
+
+    namespace Debug
+    {
+        namespace
+        {
+            template<typename ViewT>
+            void OutputTableToUART(ViewT const aView, size_t const aIndent)
+            {
+                // #TODO: Need a better way to do this, for now we know there won't be many
+                // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+                char indentBuffer[10] = {};
+                memset(indentBuffer, '\t', aIndent); // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+                indentBuffer[aIndent] = '\0'; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+                auto const* const indentStr = static_cast<char const*>(indentBuffer);
+
+                // #TODO: Still rather too noisy due to how many tables we have, so we likely need a better way to
+                // output the information. Right now we're "collapsing" all consecutive page mappings (but without
+                // regard to any flags on the pages, which we'll want to break out)
+
+                // Too noisy to output every single page, so we record the first one we see and then output the range
+                // when we see a non-page
+                ptrdiff_t lastSeenPageIndex = -1; // #TODO: std::optional<size_t>
+                auto outputPageRangeAndReset = [&lastSeenPageIndex, indentStr](size_t const aCurIndex)
+                {
+                    if (lastSeenPageIndex >= 0)
+                    {
+                        // #TODO: output virtual address range
+                        Print::FormatToMiniUART("{}[{} - {}]: Pages\r\n",
+                            indentStr,
+                            static_cast<uint32_t>(lastSeenPageIndex), // #TODO: Remove cast when we support ptrdiff_t
+                            aCurIndex - 1
+                        );
+                    }
+                    lastSeenPageIndex = -1;
+                };
+
+                // #TODO: Move to ranged for when possible
+                for (auto curPageIndex = 0U; curPageIndex < AArch64::PageTable::PointersPerTable; ++curPageIndex)
+                {
+                    auto const entry = aView.GetEntry(curPageIndex);
+                    entry.Visit(Overloaded{
+                        [curPageIndex, outputPageRangeAndReset](AArch64::Descriptor::Fault)
+                        {
+                            outputPageRangeAndReset(curPageIndex);
+                        },
+                        [curPageIndex, aIndent, indentStr, &outputPageRangeAndReset](AArch64::Descriptor::Table const aTable)
+                        {
+                            outputPageRangeAndReset(curPageIndex);
+                            Print::FormatToMiniUART("{}[{}]: Table - {}\r\n", indentStr, curPageIndex, aTable.Address());
+                            if constexpr(AArch64::PageTable::HasChildTableView_v<ViewT>)
+                            {
+                                // assuming offset mapping
+                                auto const virtualTableAddress = VirtualPtr{ aTable.Address().GetAddress() }.Offset(KernelVirtualAddressOffset);
+                                OutputTableToUART(AArch64::PageTable::ChildTableView_t<ViewT>{ std::bit_cast<uint64_t*>(virtualTableAddress.GetAddress()) }, aIndent + 1 );
+                            }
+                            else
+                            {
+                                static_cast<void>(aIndent); // we don't use indent in this branch - suppress the warning
+                                Print::FormatToMiniUART("{}\tERROR: No defined child table type\r\n", indentStr);
+                            }
+                        },
+                        [curPageIndex, indentStr, &outputPageRangeAndReset](AArch64::Descriptor::L1Block const aBlock)
+                        {
+                            outputPageRangeAndReset(curPageIndex);
+                            Print::FormatToMiniUART("{}[{}]: L1Block - {}\r\n", indentStr, curPageIndex, aBlock.Address());
+                        },
+                        [curPageIndex, indentStr, &outputPageRangeAndReset](AArch64::Descriptor::L2Block const aBlock)
+                        {
+                            outputPageRangeAndReset(curPageIndex);
+                            Print::FormatToMiniUART("{}[{}]: L2Block - {}\r\n", indentStr, curPageIndex, aBlock.Address());
+                        },
+                        [curPageIndex, &lastSeenPageIndex](AArch64::Descriptor::Page)
+                        {
+                            if (lastSeenPageIndex < 0)
+                            {
+                                lastSeenPageIndex = curPageIndex;
+                                // #TODO: Calculate virtual address range
+                                // #TODO: Are going to want to likely keep track of other information to see if page
+                                // information has changed and output and reset the range if so
+                            }
+                        }
+                    });
+                }
+                // output any remaining pages we have
+                outputPageRangeAndReset(AArch64::PageTable::PointersPerTable);
+            }
+        }
+
+        void OutputKernelPagesToUART()
+        {
+            // #TODO: Probably want to make this more flexible to output to other locations, but for now UART is fine
+            auto const kernelSpaceTTBRn = AArch64::TTBRn_EL1::Read1();
+            auto const physicalTableAddress = kernelSpaceTTBRn.BADDR();
+            // assuming offset mapping
+            auto const virtualTableAddress = VirtualPtr{ physicalTableAddress.GetAddress() }.Offset(KernelVirtualAddressOffset);
+            
+            Print::FormatToMiniUART("Kernel table address: {} - {}\r\n", physicalTableAddress, virtualTableAddress);
+
+            OutputTableToUART(AArch64::PageTable::Level0View{ std::bit_cast<uint64_t*>(virtualTableAddress.GetAddress()) }, 0);
         }
     }
 

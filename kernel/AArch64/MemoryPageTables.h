@@ -189,6 +189,20 @@ namespace AArch64::PageTable
                 return pTable;
             }
 
+            /**
+             * Obtain the given entry from the table
+             * 
+             * @param aIndex The entry to get (assumed to be in range)
+             * @return The requested entry
+             */
+            [[nodiscard]] Entry GetEntry(size_t const aIndex) const
+            {
+                // #TODO: Would like to get range-for support, but need an iterator for that
+                // #TODO: Assert if aIndex is out of range
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                return Entry{pTable[aIndex], EntryConstructTag{}};
+            }
+
         private:
             uint64_t* pTable = nullptr;
         };
@@ -202,6 +216,27 @@ namespace AArch64::PageTable
     using Level2View = Details::PageView<PageOffsetBits + TableIndexBits, Descriptor::Fault, Descriptor::Table, Descriptor::L2Block>;
     // Each entry covers 4KB of address space
     using Level3View = Details::PageView<PageOffsetBits, Descriptor::Fault, Descriptor::Page>;
+
+    template<typename ViewT>
+    struct ChildTableView {};
+
+    template<>
+    struct ChildTableView<Level0View> { using type = Level1View; };
+    template<>
+    struct ChildTableView<Level1View> { using type = Level2View; };
+    template<>
+    struct ChildTableView<Level2View> { using type = Level3View; };
+
+    template<typename ViewT>
+    using ChildTableView_t = ChildTableView<ViewT>::type;
+
+    template<typename, typename = void>
+    struct HasChildTableView : std::false_type {};
+    template<typename ViewT>
+    struct HasChildTableView<ViewT, std::void_t<typename ChildTableView<ViewT>::type>> : std::true_type {};
+    
+    template<typename ViewT>
+    constexpr bool HasChildTableView_v = HasChildTableView<ViewT>::value;
 }
 
 #endif // KERNEL_AARCH64_MEMORY_PAGE_TABLES_H

@@ -22,9 +22,9 @@ First, you'll have to grab the `bcm2710-rpi-3-b.dtb` file from the [Raspberry Pi
 
 Then run QEMU with the following command:
 
-`qemu-system-aarch64 -M raspi3b -kernel kernel8.img -serial null -serial stdio -dtb <path>/bcm2710-rpi-3-b.dtb`
+`qemu-system-aarch64 -M raspi3b -kernel <path>/build/kernel/kernel8.img -serial null -serial stdio -dtb <path>/bcm2710-rpi-3-b.dtb`
 
-(Assuming this is run from the `build\kernel` folder which contains the kernel image file)
+There is also a `LaunchQEMU.sh` shell script to run the OS in QEMU, assuming the `dtb` file is put into `build/kernel`. The parallel script `LaunchQEMUHaltForGDB.sh` does the same, but halts QEMU on the first instruction so a GDB-compatible debugger can be attached.
 
 ### Real Hardware
 * Create a microSD card formatted as the Raspberry Pi expects, with the `bootcode.bin`, `fixup.dat`, `start.elf`, `*.dtb` files, and `Overlays` folder - all from the `boot` folder in the [Raspberry Pi firmware repository](https://github.com/raspberrypi/firmware).

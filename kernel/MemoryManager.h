@@ -17,6 +17,13 @@ namespace MemoryManager
     {
         bool MMUEnabled();
     }
+    namespace Debug
+    {
+        /**
+         * Output the kernel mapping tables to the UART for debugging
+         */
+        void OutputKernelPagesToUART();
+    }
 
     constexpr auto KernelVirtualAddressOffset = 0xFFFF'0000'0000'0000ULL;
     constexpr auto DeviceBaseAddress = PhysicalPtr{ 0x3F00'0000 };
@@ -159,6 +166,7 @@ namespace MemoryManager
     template<typename PtrT>
     PtrT* AdjustKernelPtrForMMU(PtrT* const apPtr)
     {
+        // #TODO: Need to probably remove the need for this, as unless we're in boot, the MMU is always turned on
         // #TODO: Need to figure out better what pointers to static data look like consistently
         if (Internal::MMUEnabled())
         {

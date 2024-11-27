@@ -8,6 +8,7 @@
 #include "Debug.h"
 #include "ExceptionVectorHandlers.h"
 #include "IRQ.h"
+#include "MemoryManager.h"
 #include "MiniUart.h"
 #include "PointerTypes.h"
 #include "Print.h"
@@ -156,6 +157,8 @@ namespace Kernel
 #endif // OUTPUT_DEVICE_TREE
 
         UnitTests::Run();
+
+        MemoryManager::Debug::OutputKernelPagesToUART();
 
         const auto clockFrequencyHz = Timing::GetSystemCounterClockFrequencyHz();
         Print::FormatToMiniUART("System clock freq: {}hz\r\n", clockFrequencyHz);
