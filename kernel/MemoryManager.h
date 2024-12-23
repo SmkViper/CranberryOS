@@ -20,9 +20,9 @@ namespace MemoryManager
     namespace Debug
     {
         /**
-         * Output the kernel mapping tables to the UART for debugging
+         * Output our current virtual address ranges to UART for debugging
          */
-        void OutputKernelPagesToUART();
+        void OutputKernelVARangesToUART();
     }
 
     constexpr auto KernelVirtualAddressOffset = 0xFFFF'0000'0000'0000ULL;

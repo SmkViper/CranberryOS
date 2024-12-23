@@ -158,7 +158,7 @@ namespace Kernel
 
         UnitTests::Run();
 
-        MemoryManager::Debug::OutputKernelPagesToUART();
+        MemoryManager::Debug::OutputKernelVARangesToUART();
 
         const auto clockFrequencyHz = Timing::GetSystemCounterClockFrequencyHz();
         Print::FormatToMiniUART("System clock freq: {}hz\r\n", clockFrequencyHz);

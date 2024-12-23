@@ -203,6 +203,21 @@ namespace AArch64::PageTable
                 return Entry{pTable[aIndex], EntryConstructTag{}};
             }
 
+            /**
+             * Gets the virtual address for an entry, given the base address for the view
+             * 
+             * @param aIndex The index into the table
+             * @param aBaseAddr The base virtual address the table maps out
+             * @return The address for the given entry
+             */
+            [[nodiscard]] static VirtualPtr GetAddressForEntry(size_t const aIndex, VirtualPtr const aBaseAddr)
+            {
+                // #TODO: Should probably add some checks to make sure aIndex is in range and the bits of aBaseAddr
+                // that correspond to the parts of the address we address are zero
+                auto const addrBits = (aIndex & AddressMask) << AddressShift;
+                return VirtualPtr{ aBaseAddr.GetAddress() + addrBits };
+            }
+
         private:
             uint64_t* pTable = nullptr;
         };
@@ -228,7 +243,7 @@ namespace AArch64::PageTable
     struct ChildTableView<Level2View> { using type = Level3View; };
 
     template<typename ViewT>
-    using ChildTableView_t = ChildTableView<ViewT>::type;
+    using ChildTableView_t = typename ChildTableView<ViewT>::type;
 
     template<typename, typename = void>
     struct HasChildTableView : std::false_type {};

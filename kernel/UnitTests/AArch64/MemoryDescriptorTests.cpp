@@ -94,7 +94,8 @@ namespace UnitTests::AArch64::MemoryDescriptor
         template<uint64_t AddressMask>
         void BlockDescriptorTest(char const* const apBlockTypeName)
         {
-            using BlockT = ::AArch64::Descriptor::Details::BlockT<AddressMask>;
+            // #TODO: Use actual size in some way in case we want to test against things
+            using BlockT = ::AArch64::Descriptor::Details::BlockT<AddressMask, 1024>;
             BlockT testDescriptor;
 
             EmitTestResult(Details::TestAccessor::GetDescriptorValue(testDescriptor) == 0b01, "Block {} descriptor construction", apBlockTypeName);

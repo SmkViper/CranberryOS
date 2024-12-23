@@ -2,7 +2,6 @@
 
 #include <bit>
 #include <bitset>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include "AArch64/MemoryDescriptor.h"
@@ -240,100 +239,181 @@ namespace MemoryManager
     {
         namespace
         {
-            template<typename ViewT>
-            void OutputTableToUART(ViewT const aView, size_t const aIndent)
+            struct MemoryRange
             {
-                // #TODO: Need a better way to do this, for now we know there won't be many
-                // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-                char indentBuffer[10] = {};
-                memset(indentBuffer, '\t', aIndent); // NOLINT(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-                indentBuffer[aIndent] = '\0'; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
-                auto const* const indentStr = static_cast<char const*>(indentBuffer);
+                // #TODO: Remove this when we have std::optional
+                /**
+                 * Checks to see if a range is in progress or not
+                 * 
+                 * @return True if there is a valid range being interated over
+                 */
+                [[nodiscard]] bool RangeInProgress() const { return Start != NoRangeCS; }
 
-                // #TODO: Still rather too noisy due to how many tables we have, so we likely need a better way to
-                // output the information. Right now we're "collapsing" all consecutive page mappings (but without
-                // regard to any flags on the pages, which we'll want to break out)
+                // #TODO: Remove this when we have std::optional
+                /**
+                 * Resets the range to represent no range
+                 */
+                void Reset() { Start = NoRangeCS; }
 
-                // Too noisy to output every single page, so we record the first one we see and then output the range
-                // when we see a non-page
-                ptrdiff_t lastSeenPageIndex = -1; // #TODO: std::optional<size_t>
-                auto outputPageRangeAndReset = [&lastSeenPageIndex, indentStr](size_t const aCurIndex)
+                /**
+                 * Start a new range of memory using the given address and descriptor
+                 * 
+                 * @param aStart Start of the range
+                 * @param aDescriptor The descriptor for the first page or block in the range
+                 */
+                template<typename DescriptorT>
+                void StartNewRange(VirtualPtr const aStart, DescriptorT const& aDescriptor)
                 {
-                    if (lastSeenPageIndex >= 0)
-                    {
-                        // #TODO: output virtual address range
-                        Print::FormatToMiniUART("{}[{} - {}]: Pages\r\n",
-                            indentStr,
-                            static_cast<uint32_t>(lastSeenPageIndex), // #TODO: Remove cast when we support ptrdiff_t
-                            aCurIndex - 1
-                        );
-                    }
-                    lastSeenPageIndex = -1;
-                };
+                    Start = aStart;
+                    End = Start.Offset(DescriptorT::SizeCS - 1ULL);
+                    AttrIndx = aDescriptor.AttrIndx();
+                    AP = static_cast<decltype(AP)>(aDescriptor.AP()); // #TODO: underlying_type
+                    AF = aDescriptor.AF();
+                }
 
+                /**
+                 * Attempts to extend the range, returning true if it succeeded
+                 * 
+                 * @param aStart Start of the memory the descriptor is for
+                 * @param aDescriptor The descriptor to check
+                 * @return True if the range was extended, false if it wasn't
+                 */
+                template<typename DescriptorT>
+                [[nodiscard]] bool ExtendRange(VirtualPtr const aStart, DescriptorT const& aDescriptor)
+                {
+                    if (RangeInProgress() && (aStart == End.Offset(1ULL) && SameMemoryAttributes(aDescriptor)))
+                    {
+                        End = End.Offset(DescriptorT::SizeCS);
+                        return true;
+                    }
+                    return false;
+                }
+
+                /**
+                 * Checks to see if the given descriptor is pointing at the same type of memory as the range
+                 * 
+                 * @param aDescriptor Descriptor to check
+                 * @return True if the memory attributes match
+                 */
+                template<typename DescriptorT>
+                [[nodiscard]] bool SameMemoryAttributes(DescriptorT const& aDescriptor) const
+                {
+                    return (aDescriptor.AttrIndx() == AttrIndx) &&
+                        (static_cast<decltype(AP)>(aDescriptor.AP()) == AP) && // #TODO: underlying_type
+                        (aDescriptor.AF() == AF);
+                }
+
+                // #TODO: Remove this when we have std::optional
+                constexpr static VirtualPtr NoRangeCS = VirtualPtr{ 0xFFFF'FFFF'FFFF'FFFF };
+
+                VirtualPtr Start = NoRangeCS;
+                VirtualPtr End = NoRangeCS;
+                uint8_t AttrIndx = 0;
+                uint8_t AP = 0;
+                bool AF = false;
+            };
+
+            /**
+             * Outputs the given range if it is valid
+             * 
+             * @param aRange Range to output
+             */
+            void OutputRangeIfValid(MemoryRange const& aRange)
+            {
+                if (aRange.RangeInProgress())
+                {
+                    Print::FormatToMiniUART("{} - {}:\r\n", aRange.Start, aRange.End);
+                    Print::FormatToMiniUART("\tAttrIndx: {}\r\n", aRange.AttrIndx);
+                    Print::FormatToMiniUART("\tAP: {}\r\n", aRange.AP);
+                    Print::FormatToMiniUART("\tAF: {}\r\n", aRange.AF ? "true" : "false"); // #TODO: Update when we support bool format
+                }
+            }
+
+            /**
+             * Output the virtual address range to UART for the given view
+             * 
+             * @param aView The table to iterate
+             * @param aViewRootVA The root virtual address of the view
+             * @param arActiveRange The currently active range which will be updated
+             */
+            template<typename ViewT>
+            void OutputKernelVARangesToUARTImpl(ViewT const aView, VirtualPtr const aViewRootVA, MemoryRange& arActiveRange)
+            {
                 // #TODO: Move to ranged for when possible
                 for (auto curPageIndex = 0U; curPageIndex < AArch64::PageTable::PointersPerTable; ++curPageIndex)
                 {
                     auto const entry = aView.GetEntry(curPageIndex);
+                    auto const entryBaseAddr = ViewT::GetAddressForEntry(curPageIndex, aViewRootVA);
                     entry.Visit(Overloaded{
-                        [curPageIndex, outputPageRangeAndReset](AArch64::Descriptor::Fault)
+                        [&arActiveRange](AArch64::Descriptor::Fault)
                         {
-                            outputPageRangeAndReset(curPageIndex);
+                            OutputRangeIfValid(arActiveRange);
+                            arActiveRange.Reset();
                         },
-                        [curPageIndex, aIndent, indentStr, &outputPageRangeAndReset](AArch64::Descriptor::Table const aTable)
+                        [&arActiveRange, entryBaseAddr](AArch64::Descriptor::Table const aTable)
                         {
-                            outputPageRangeAndReset(curPageIndex);
-                            Print::FormatToMiniUART("{}[{}]: Table - {}\r\n", indentStr, curPageIndex, aTable.Address());
                             if constexpr(AArch64::PageTable::HasChildTableView_v<ViewT>)
                             {
                                 // assuming offset mapping
+                                // #TODO: We can likely do better
                                 auto const virtualTableAddress = VirtualPtr{ aTable.Address().GetAddress() }.Offset(KernelVirtualAddressOffset);
-                                OutputTableToUART(AArch64::PageTable::ChildTableView_t<ViewT>{ std::bit_cast<uint64_t*>(virtualTableAddress.GetAddress()) }, aIndent + 1 );
+                                OutputKernelVARangesToUARTImpl(
+                                    AArch64::PageTable::ChildTableView_t<ViewT>{ std::bit_cast<uint64_t*>(virtualTableAddress.GetAddress()) },
+                                    entryBaseAddr,
+                                    arActiveRange
+                                );
                             }
                             else
                             {
-                                static_cast<void>(aIndent); // we don't use indent in this branch - suppress the warning
-                                Print::FormatToMiniUART("{}\tERROR: No defined child table type\r\n", indentStr);
+                                OutputRangeIfValid(arActiveRange);
+                                arActiveRange.Reset();
+
+                                // #TODO: Should probably be an assert
+                                Print::FormatToMiniUART("ERROR: No defined child table type for table at {}\r\n", entryBaseAddr);
                             }
                         },
-                        [curPageIndex, indentStr, &outputPageRangeAndReset](AArch64::Descriptor::L1Block const aBlock)
+                        [&arActiveRange, entryBaseAddr](auto const aBlockOrPage)
                         {
-                            outputPageRangeAndReset(curPageIndex);
-                            Print::FormatToMiniUART("{}[{}]: L1Block - {}\r\n", indentStr, curPageIndex, aBlock.Address());
-                        },
-                        [curPageIndex, indentStr, &outputPageRangeAndReset](AArch64::Descriptor::L2Block const aBlock)
-                        {
-                            outputPageRangeAndReset(curPageIndex);
-                            Print::FormatToMiniUART("{}[{}]: L2Block - {}\r\n", indentStr, curPageIndex, aBlock.Address());
-                        },
-                        [curPageIndex, &lastSeenPageIndex](AArch64::Descriptor::Page)
-                        {
-                            if (lastSeenPageIndex < 0)
+                            auto const rangeExtended = arActiveRange.ExtendRange(entryBaseAddr, aBlockOrPage);
+                            if (!rangeExtended)
                             {
-                                lastSeenPageIndex = curPageIndex;
-                                // #TODO: Calculate virtual address range
-                                // #TODO: Are going to want to likely keep track of other information to see if page
-                                // information has changed and output and reset the range if so
+                                OutputRangeIfValid(arActiveRange);
+                                arActiveRange.StartNewRange(entryBaseAddr, aBlockOrPage);
                             }
                         }
                     });
                 }
-                // output any remaining pages we have
-                outputPageRangeAndReset(AArch64::PageTable::PointersPerTable);
+            }
+
+            /**
+             * Outputs virtual address information to UART
+             * 
+             * @param aTable The table register to output from
+             * @param aBaseAddr The base address for the given register (0 for base register 0, and the high bits set
+             * for base register 1)
+             */
+            void OutputKernelVARangesToUART(AArch64::TTBRn_EL1 const aTable, VirtualPtr const aBaseAddr)
+            {
+                // #TODO: Probably want to make this more flexible to output to other locations, but for now UART is fine
+                auto const physicalTableAddress = aTable.BADDR();
+                // assuming offset mapping
+                // #TODO: Need to handle this better
+                auto const virtualTableAddress = VirtualPtr{ physicalTableAddress.GetAddress() }.Offset(KernelVirtualAddressOffset);
+
+                MemoryRange range;
+                OutputKernelVARangesToUARTImpl(
+                    AArch64::PageTable::Level0View{ std::bit_cast<uint64_t*>(virtualTableAddress.GetAddress()) },
+                    aBaseAddr,
+                    range
+                );
             }
         }
 
-        void OutputKernelPagesToUART()
+        void OutputKernelVARangesToUART()
         {
-            // #TODO: Probably want to make this more flexible to output to other locations, but for now UART is fine
-            auto const kernelSpaceTTBRn = AArch64::TTBRn_EL1::Read1();
-            auto const physicalTableAddress = kernelSpaceTTBRn.BADDR();
-            // assuming offset mapping
-            auto const virtualTableAddress = VirtualPtr{ physicalTableAddress.GetAddress() }.Offset(KernelVirtualAddressOffset);
-            
-            Print::FormatToMiniUART("Kernel table address: {} - {}\r\n", physicalTableAddress, virtualTableAddress);
-
-            OutputTableToUART(AArch64::PageTable::Level0View{ std::bit_cast<uint64_t*>(virtualTableAddress.GetAddress()) }, 0);
+            OutputKernelVARangesToUART(AArch64::TTBRn_EL1::Read0(), VirtualPtr{ 0ULL });
+            // #TODO: Better way to calculate the base address for TTBR1?
+            OutputKernelVARangesToUART(AArch64::TTBRn_EL1::Read1(), VirtualPtr{ KernelVirtualAddressOffset });
         }
     }
 

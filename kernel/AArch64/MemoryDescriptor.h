@@ -57,13 +57,14 @@ namespace AArch64
              * 
              * @tparam AddressMask The mask to use for addresses for this block
              */
-            template<uint64_t AddressMask>
+            template<uint64_t AddressMask, size_t Size>
             class BlockT
             {
                 friend struct UnitTests::AArch64::MemoryDescriptor::Details::TestAccessor;
                 friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
                 static constexpr uint64_t Type = 0b01;
             public:
+                static constexpr size_t SizeCS = Size;
                 /**
                  * Constructor, sets type bits, but everything else is zeroed
                  */
@@ -349,15 +350,19 @@ namespace AArch64
             std::bitset<BitCount> DescriptorBits;
         };
 
+        // #TODO: Calculate size rather than hard coding
         /**
          * An entry in table 1 that points at a block of memory (1GB)
          */
-        using L1Block = Details::BlockT<Details::L1Address_Mask>;
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        using L1Block = Details::BlockT<Details::L1Address_Mask, 0x1000ULL /*4kb page*/ * 512ULL /*entries per L2 block*/ * 512ULL /*entries per L1 block*/>;
 
+        // #TODO: Calculate size rather than hard coding
         /**
          * An entry in table 1 that points at a block of memory (2MB)
          */
-        using L2Block = Details::BlockT<Details::L2Address_Mask>;
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        using L2Block = Details::BlockT<Details::L2Address_Mask, 0x1000ULL /*4kb page*/ * 512ULL /*entries per block*/>;
 
         /**
          * An entry in table 3 that points at a page
@@ -368,6 +373,7 @@ namespace AArch64
             friend struct UnitTests::AArch64::MemoryPageTables::Details::TestAccessor;
             static constexpr uint64_t Type = 0b11;
         public:
+            static constexpr size_t SizeCS = 0x1000ULL; // #TODO: Assuming 4kb pages
             /**
              * Constructor, sets type bits, but everything else is zeroed
              */
