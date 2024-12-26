@@ -153,7 +153,7 @@ namespace Kernel
         Print::FormatToMiniUART("_start: {}\r\n", aStartPointer);
         // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
 #ifdef OUTPUT_DEVICE_TREE
-        DeviceTree::ParseDeviceTree(reinterpret_cast<uint8_t const*>(aDTBPointer.GetAddress() + MemoryManager::KernelVirtualAddressOffset));
+        DeviceTree::ParseDeviceTree(std::bit_cast<uint8_t const*>(aDTBPointer.Offset(MemoryManager::KernelVirtualAddressOffset).GetAddress()));
 #endif // OUTPUT_DEVICE_TREE
 
         UnitTests::Run();

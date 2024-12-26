@@ -3,6 +3,7 @@
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include "../PointerTypes.h"
 #include "../Print.h"
 #include "../MiniUart.h"
 
@@ -59,7 +60,110 @@ namespace DeviceTree
             uint32_t nameoff = 0; // offset into the strings block where the name is stored
         };
 
-        // #TODO: A lot of these utilities should probably be moved somewhere for conveinience
+        // Holds information that some properties need to extract their data. Comes from #address-cells and #size-cells
+        // properties on the given node. See DeviceTree specification section 2.3.5
+        struct CellInformation
+        {
+            uint32_t AddressCells = 2; // Number of 32-bit cells addresses are composed of
+            uint32_t SizeCells = 1; // Number of 32-bit cells sizes are composed of
+        };
+
+        // We can't allocate memory at this point, so this is a really dumb stack to keep track of cell information
+        // #TODO: Can likely come up with a better system, like code that can find nodes relative to other nodes or by
+        // path/name. Alternatively, a static stack like this might be useful elsewhere
+        class CellInformationStack
+        {
+        public:
+            CellInformationStack() = default;
+            CellInformationStack(CellInformationStack const&) = delete;
+            CellInformationStack(CellInformationStack&&) = delete;
+            ~CellInformationStack() = default;
+            CellInformationStack const& operator=(CellInformationStack const&) = delete;
+            CellInformationStack const& operator=(CellInformationStack&&) = delete;
+
+            /**
+             * Pushes a new bit of cell information with default values onto the stack
+             * 
+             * @return True if there was space and a new value was pushed
+             */
+            [[nodiscard]] bool Push();
+
+            /**
+             * Pops the top bit of cell information off the stack
+             * 
+             * @return True if there was something popped
+             */
+            [[nodiscard]] bool Pop();
+
+            /**
+             * Obtains the top of the stack, or defaults if the stack is empty
+             * 
+             * @return The top of the stack, or default values
+             */
+            [[nodiscard]] CellInformation Top() const;
+
+            /**
+             * Sets the values on the current top, or does nothing if empty
+             * 
+             * @param aNewTop The new top values
+             * @return True if values were set, false if they were ignored
+             */
+            bool SetTop(CellInformation aNewTop);
+
+            /**
+             * Checks to see if the stack is empty
+             * 
+             * @return True if stack is empty
+             */
+            [[nodiscard]] bool Empty() const { return Size == 0; }
+        private:
+            static constexpr uint32_t MaxSizeCS = 10;
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+            CellInformation Stack[MaxSizeCS] = {};
+            uint32_t Size = 0;
+        };
+
+        bool CellInformationStack::Push()
+        {
+            if (Size >= MaxSizeCS)
+            {
+                return false;
+            }
+            Stack[Size] = CellInformation{}; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            ++Size;
+            return true;
+        }
+
+        bool CellInformationStack::Pop()
+        {
+            if (Size == 0)
+            {
+                return false;
+            }
+            --Size;
+            return true;
+        }
+
+        CellInformation CellInformationStack::Top() const
+        {
+            if (Size == 0)
+            {
+                return CellInformation{};
+            }
+            return Stack[Size - 1U]; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+        }
+
+        bool CellInformationStack::SetTop(CellInformation const aNewTop)
+        {
+            if (Size == 0)
+            {
+                return false;
+            }
+            Stack[Size - 1U] = aNewTop; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            return true;
+        }
+
+        // #TODO: A lot of these utilities should probably be moved somewhere for convenience
 
         /**
          * Converts a big-endian number to native endian (for our kernel)
@@ -389,20 +493,98 @@ namespace DeviceTree
         }
 
         /**
+         * Read a cell-sized value (assumed to be 32 or 64 bits in size)
+         * 
+         * @param apValue The value data
+         * @param aCellCount The number of 32 bit cells to read
+         * @return The value constructed from the read data
+         */
+        template<typename ReturnT>
+        [[nodiscard]] auto ReadCellSizedValue(uint8_t const* const apValue, uint32_t const aCellCount) -> ReturnT
+        {
+            uint64_t nativeValue = 0;
+            if (aCellCount == 1)
+            {
+                uint32_t bevalue = 0;
+                std::memcpy(&bevalue, apValue, sizeof(bevalue));
+                nativeValue = BEToNative(bevalue);
+            }
+            else if (aCellCount == 2)
+            {
+                uint64_t bevalue = 0;
+                std::memcpy(&bevalue, apValue, sizeof(bevalue));
+                nativeValue = BEToNative(bevalue);
+            }
+            // any other sizes are either 0 or not supported
+            return ReturnT{ nativeValue };
+        }
+
+        /**
+         * Pretty-prints a "reg" property
+         * 
+         * @param apValue Property value data
+         * @param aLen Length of the value data
+         * @param aCellInfo Cell information needed to parse the data
+         */
+        void PrettyPrintReg(uint8_t const* const apValue, size_t const aLen, CellInformation const aCellInfo)
+        {
+            // cells are 32 bits in size, so make sure address and size information is 64 bits or less
+            if ((aCellInfo.AddressCells <= 2) && (aCellInfo.SizeCells <= 2))
+            {
+                // reg is a list of concatinated address and size cell values
+                uint8_t const* pcurValue = apValue;
+                size_t curOffset = 0;
+                while (curOffset < aLen)
+                {
+                    auto const address = ReadCellSizedValue<PhysicalPtr>(pcurValue, aCellInfo.AddressCells);
+                    Print::FormatToMiniUART("{}<{}", (curOffset == 0) ? "" : ", ", address);
+
+                    auto const addressSize = aCellInfo.AddressCells * sizeof(uint32_t);
+                    pcurValue += addressSize; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                    curOffset += addressSize;
+
+                    if (aCellInfo.SizeCells > 0)
+                    {
+                        auto const size = ReadCellSizedValue<size_t>(pcurValue, aCellInfo.SizeCells);
+                        Print::FormatToMiniUART(", {}>", size);
+                        auto const sizeSize = aCellInfo.AddressCells * sizeof(uint32_t);
+                        pcurValue += sizeSize; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        curOffset += sizeSize;
+                    }
+                    else
+                    {
+                        Print::FormatToMiniUART(">");
+                    }
+                }
+                if (curOffset != aLen)
+                {
+                    MiniUART::SendString(", <BAD ADDR/SIZE PAIR LIST>");
+                }
+            }
+            else
+            {
+                Print::FormatToMiniUART("<SIZES TOO LARGE> (sizes: {}, {}) ", aCellInfo.AddressCells, aCellInfo.SizeCells);
+                PrettyPrintUnknownValue(apValue, aLen);
+            }
+        }
+
+        /**
          * Tries to pretty-print known property values
          * 
          * @param apName Name of the property
          * @param apValue Property data
          * @param aLen Length of the property data
+         * @param aCellInfo The cell information for this property
          */
-        void PrettyPrintValue(char const* const apName, uint8_t const* const apValue, size_t aLen)
+        void PrettyPrintValue(char const* const apName, uint8_t const* const apValue, size_t const aLen,
+            CellInformation const aCellInfo)
         {
             // #TODO: For now we're just handling the common stuff (there's like a better way to do this too)
             if (strcmp(apName, "compatible") == 0)
             {
                 PrettyPrintStringList(apValue, aLen);
             }
-            else if ((strcmp(apName, "model") == 0) || (strcmp(apName, "status") == 0) || (strcmp(apName, "name") == 0) || (strcmp(apName, "device-type") == 0))
+            else if ((strcmp(apName, "model") == 0) || (strcmp(apName, "status") == 0) || (strcmp(apName, "name") == 0) || (strcmp(apName, "device_type") == 0))
             {
                 PrettyPrintString(apValue, aLen);
             }
@@ -414,7 +596,10 @@ namespace DeviceTree
             {
                 PrettyPrintUInt32(apValue, aLen);
             }
-            // #TODO: reg - see section 2.3.6
+            else if (strcmp(apName, "reg") == 0)
+            {
+                PrettyPrintReg(apValue, aLen, aCellInfo);
+            }
             // #TODO: ranges - see section 2.3.8
             // #TODO: dma-ranges - see section 2.3.9
             // dma-coherent is always empty, so we won't see it
@@ -431,10 +616,11 @@ namespace DeviceTree
          * @param aBaseAddr Base address for offsets in the header
          * @param apExtraData The location of the extra data in the table
          * @param aIndentLevel Level of indentation to use
+         * @param arCurStack The current cell information stack
          * @return The new position of the pointer after the extra data and alignment
          */
         uint8_t const* OutputProp(fdt_header const& aHeader, uint8_t const* const aBaseAddr, // NOLINT(bugprone-easily-swappable-parameters)
-            uint8_t const* const apExtraData, uint32_t const aIndentLevel)
+            uint8_t const* const apExtraData, uint32_t const aIndentLevel, CellInformationStack& arCurStack)
         {
             fdt_prop_extra_data dataHeader;
             std::memcpy(&dataHeader, apExtraData, sizeof(dataHeader));
@@ -447,6 +633,28 @@ namespace DeviceTree
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic)
             char const* pname = reinterpret_cast<char const*>(aBaseAddr + aHeader.off_dt_strings + dataHeader.nameoff);
             MiniUART::SendString(pname);
+
+            // #TODO: There is likely a far better way to handle this
+            if (strcmp(pname, "#address-cells") == 0)
+            {
+                auto currentCellInfo = arCurStack.Top();
+                if (dataHeader.len == sizeof(currentCellInfo.AddressCells))
+                {
+                    std::memcpy(&currentCellInfo.AddressCells, pendPtr, sizeof(currentCellInfo.AddressCells));
+                    currentCellInfo.AddressCells = BEToNative(currentCellInfo.AddressCells);
+                    arCurStack.SetTop(currentCellInfo);
+                }
+            }
+            else if (strcmp(pname, "#size-cells") == 0)
+            {
+                auto currentCellInfo = arCurStack.Top();
+                if (dataHeader.len == sizeof(currentCellInfo.SizeCells))
+                {
+                    std::memcpy(&currentCellInfo.SizeCells, pendPtr, sizeof(currentCellInfo.SizeCells));
+                    currentCellInfo.SizeCells = BEToNative(currentCellInfo.SizeCells);
+                    arCurStack.SetTop(currentCellInfo);
+                }
+            }
             
             if (dataHeader.len == 0)
             {
@@ -455,7 +663,7 @@ namespace DeviceTree
             else
             {
                 MiniUART::SendString(" = ");
-                PrettyPrintValue(pname, pendPtr, dataHeader.len);
+                PrettyPrintValue(pname, pendPtr, dataHeader.len, arCurStack.Top());
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 pendPtr += dataHeader.len;
                 MiniUART::SendString(";\r\n");
@@ -500,6 +708,7 @@ namespace DeviceTree
             MiniUART::SendString("Structure block:\r\n");
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             uint8_t const* pcurToken = aBaseAddr + aHeader.off_dt_struct;
+            CellInformationStack infoStack;
             auto indentLevel = 0U;
             auto done = false;
             while (!done)
@@ -514,17 +723,47 @@ namespace DeviceTree
                 switch (token)
                 {
                 case FDT_BEGIN_NODE:
-                    pcurToken = OutputBeginNode(pcurToken, indentLevel);
-                    ++indentLevel;
+                    {
+                        // fine if the stack is empty, as we'll get the defaults
+                        auto const parentCellInfo = infoStack.Top();
+
+                        pcurToken = OutputBeginNode(pcurToken, indentLevel);
+
+                        // inherit default values from our parent
+                        if (infoStack.Push())
+                        {
+                            infoStack.SetTop(parentCellInfo);
+                        }
+                        else
+                        {
+                            Print::FormatToMiniUART("Out of cell information stack space, aborting\r\n");
+                            done = true;
+                        }
+                    
+                        ++indentLevel;
+                    }
                     break;
 
                 case FDT_END_NODE:
                     --indentLevel;
+                    if (!infoStack.Pop())
+                    {
+                        Print::FormatToMiniUART("Cell information stack out of sync (too many pops), aborting\r\n");
+                        done = true;
+                    }
                     pcurToken = OutputEndNode(pcurToken, indentLevel);
                     break;
 
                 case FDT_PROP:
-                    pcurToken = OutputProp(aHeader, aBaseAddr, pcurToken, indentLevel);
+                    if (infoStack.Empty())
+                    {
+                        Print::FormatToMiniUART("Cell information stack out of sync (empty), aborting\r\n");
+                        done = true;
+                    }
+                    else
+                    {
+                        pcurToken = OutputProp(aHeader, aBaseAddr, pcurToken, indentLevel, infoStack);
+                    }
                     break;
 
                 case FDT_NOP:
