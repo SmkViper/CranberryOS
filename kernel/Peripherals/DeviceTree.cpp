@@ -3,6 +3,7 @@
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include "../BigEndian.h"
 #include "../PointerTypes.h"
 #include "../Print.h"
 #include "../MiniUart.h"
@@ -23,23 +24,23 @@ namespace DeviceTree
         struct fdt_header
         {
             // NOTE: All values are big-endian when loaded from memory
-            uint32_t magic = 0; // "Magic" number to verify the header is valid
-            uint32_t totalsize = 0; // The total size of the device tree blob, including all padding
-            uint32_t off_dt_struct = 0; // Offset to the structure block from the header, in bytes
-            uint32_t off_dt_strings = 0; // Offset to the strings block from the header, in bytes
-            uint32_t off_mem_rsvmap = 0; // Offset to the memory reservation block from the header, in bytes
-            uint32_t version = 0; // The version of the data structure
-            uint32_t last_comp_version = 0; // The lowest version which this structure is backwards compatible with
-            uint32_t boot_cpuid_phys = 0; // Physical ID of the boot CPU. Same as the "reg" property of the CPU node
-            uint32_t size_dt_strings = 0; // Length in bytes of the strings block
-            uint32_t size_dt_struct = 0; // Length in bytes of the structs block
+            BigEndian<uint32_t> magic = 0; // "Magic" number to verify the header is valid
+            BigEndian<uint32_t> totalsize = 0; // The total size of the device tree blob, including all padding
+            BigEndian<uint32_t> off_dt_struct = 0; // Offset to the structure block from the header, in bytes
+            BigEndian<uint32_t> off_dt_strings = 0; // Offset to the strings block from the header, in bytes
+            BigEndian<uint32_t> off_mem_rsvmap = 0; // Offset to the memory reservation block from the header, in bytes
+            BigEndian<uint32_t> version = 0; // The version of the data structure
+            BigEndian<uint32_t> last_comp_version = 0; // The lowest version which this structure is backwards compatible with
+            BigEndian<uint32_t> boot_cpuid_phys = 0; // Physical ID of the boot CPU. Same as the "reg" property of the CPU node
+            BigEndian<uint32_t> size_dt_strings = 0; // Length in bytes of the strings block
+            BigEndian<uint32_t> size_dt_struct = 0; // Length in bytes of the structs block
         };
 
         // From DeviceTree specification, section 5.3.2
         struct fdt_reserve_entry
         {
-            uint64_t address = 0; // start of the reserved block
-            uint64_t size = 0; // size of the reserved block
+            BigEndian<uint64_t> address = 0; // start of the reserved block
+            BigEndian<uint64_t> size = 0; // size of the reserved block
         };
 
         // From DeviceTree specification, section 5.4.1
@@ -56,8 +57,8 @@ namespace DeviceTree
 
         struct fdt_prop_extra_data
         {
-            uint32_t len = 0; // length of the property's value in bytes (may be 0)
-            uint32_t nameoff = 0; // offset into the strings block where the name is stored
+            BigEndian<uint32_t> len = 0; // length of the property's value in bytes (may be 0)
+            BigEndian<uint32_t> nameoff = 0; // offset into the strings block where the name is stored
         };
 
         // Holds information that some properties need to extract their data. Comes from #address-cells and #size-cells
@@ -163,108 +164,6 @@ namespace DeviceTree
             return true;
         }
 
-        // #TODO: A lot of these utilities should probably be moved somewhere for convenience
-
-        /**
-         * Converts a big-endian number to native endian (for our kernel)
-         * 
-         * @param aBigEndianNumber The number to convert
-         * @return The converted number
-         */
-        constexpr uint16_t BEToNative(uint16_t const aBigEndianNumber)
-        {
-            constexpr uint16_t LowByteMask = 0x00FFU;
-            constexpr uint16_t HighByteMask = 0xFF00U;
-            constexpr uint16_t ByteShift = 8U;
-
-            // Excessive casting because of all the automatic promotions to int losing the signedness
-            auto const lowByte = static_cast<uint16_t>(aBigEndianNumber & LowByteMask);
-            auto const highByte = static_cast<uint16_t>(aBigEndianNumber & HighByteMask);
-            return static_cast<uint16_t>(static_cast<uint16_t>(lowByte << ByteShift) | static_cast<uint16_t>(highByte >> ByteShift));
-        }
-
-        /**
-         * Converts a big-endian number to native endian (for our kernel)
-         * 
-         * @param aBigEndianNumber The number to convert
-         * @return The converted number
-         */
-        constexpr uint32_t BEToNative(uint32_t const aBigEndianNumber)
-        {
-            constexpr uint32_t HighHalfMask = 0xFFFF'0000U;
-            constexpr uint32_t LowHalfMask = 0x0000'FFFFU;
-            constexpr uint32_t ShiftHalf = 16U;
-
-            return BEToNative(static_cast<uint16_t>((aBigEndianNumber & HighHalfMask) >> ShiftHalf)) |
-                (static_cast<uint32_t>(BEToNative(static_cast<uint16_t>(aBigEndianNumber & LowHalfMask))) << ShiftHalf);
-        }
-
-        /**
-         * Converts a big-endian number to native endian (for our kernel)
-         * 
-         * @param aBigEndianNumber The number to convert
-         * @return The converted number
-         */
-        constexpr uint64_t BEToNative(uint64_t const aBigEndianNumber)
-        {
-            constexpr uint64_t HighHalfMask = 0xFFFF'FFFF'0000'0000U;
-            constexpr uint64_t LowHalfMask = 0x0000'0000'FFFF'FFFFU;
-            constexpr uint64_t ShiftHalf = 32U;
-
-            return BEToNative(static_cast<uint32_t>((aBigEndianNumber & HighHalfMask) >> ShiftHalf)) |
-                (static_cast<uint64_t>(BEToNative(static_cast<uint32_t>(aBigEndianNumber & LowHalfMask))) << ShiftHalf);
-        }
-
-        /**
-         * Converts a big-endian header to native endian (for our kernel)
-         * 
-         * @param aBigEndianStruct The header to convert
-         * @return The converted header
-         */
-        constexpr fdt_header BEToNative(fdt_header const& aBigEndianStruct)
-        {
-            fdt_header result;
-            result.magic = BEToNative(aBigEndianStruct.magic);
-            result.totalsize = BEToNative(aBigEndianStruct.totalsize);
-            result.off_dt_struct = BEToNative(aBigEndianStruct.off_dt_struct);
-            result.off_dt_strings = BEToNative(aBigEndianStruct.off_dt_strings);
-            result.off_mem_rsvmap = BEToNative(aBigEndianStruct.off_mem_rsvmap);
-            result.version = BEToNative(aBigEndianStruct.version);
-            result.last_comp_version = BEToNative(aBigEndianStruct.last_comp_version);
-            result.boot_cpuid_phys = BEToNative(aBigEndianStruct.boot_cpuid_phys);
-            result.size_dt_strings = BEToNative(aBigEndianStruct.size_dt_strings);
-            result.size_dt_struct = BEToNative(aBigEndianStruct.size_dt_struct);
-            return result;
-        }
-
-        /**
-         * Converts a big-endian entry to native endian (for our kernel)
-         * 
-         * @param aBigEndianStruct The entry to convert
-         * @return The converted header
-         */
-        constexpr fdt_reserve_entry BEToNative(fdt_reserve_entry const& aBigEndianStruct)
-        {
-            fdt_reserve_entry result;
-            result.address = BEToNative(aBigEndianStruct.address);
-            result.size = BEToNative(aBigEndianStruct.size);
-            return result;
-        }
-
-        /**
-         * Converts a big-endian extra data to native endian (for our kernel)
-         * 
-         * @param aBigEndianStruct The extra data to convert
-         * @return The converted header
-         */
-        constexpr fdt_prop_extra_data BEToNative(fdt_prop_extra_data const& aBigEndianStruct)
-        {
-            fdt_prop_extra_data result;
-            result.len = BEToNative(aBigEndianStruct.len);
-            result.nameoff = BEToNative(aBigEndianStruct.nameoff);
-            return result;
-        }
-
         /**
          * Aligns the given pointer
          * 
@@ -312,8 +211,6 @@ namespace DeviceTree
             {
                 fdt_reserve_entry entry;
                 std::memcpy(&entry, pcurEntry, sizeof(entry));
-
-                entry = BEToNative(entry);
 
                 done = (entry.address == 0) && (entry.size == 0);
                 if (!done)
@@ -405,9 +302,8 @@ namespace DeviceTree
             }
             else
             {
-                uint32_t value = 0;
+                BigEndian<uint32_t> value = 0;
                 std::memcpy(&value, apValue, sizeof(value));
-                value = BEToNative(value);
                 Print::FormatToMiniUART("<{}>", value);
             }
         }
@@ -427,9 +323,8 @@ namespace DeviceTree
             }
             else
             {
-                uint64_t value = 0;
+                BigEndian<uint64_t> value = 0;
                 std::memcpy(&value, apValue, sizeof(value));
-                value = BEToNative(value);
                 Print::FormatToMiniUART("<{}>", value);
             }
         }
@@ -505,15 +400,15 @@ namespace DeviceTree
             uint64_t nativeValue = 0;
             if (aCellCount == 1)
             {
-                uint32_t bevalue = 0;
+                BigEndian<uint32_t> bevalue = 0;
                 std::memcpy(&bevalue, apValue, sizeof(bevalue));
-                nativeValue = BEToNative(bevalue);
+                nativeValue = bevalue;
             }
             else if (aCellCount == 2)
             {
-                uint64_t bevalue = 0;
+                BigEndian<uint64_t> bevalue = 0;
                 std::memcpy(&bevalue, apValue, sizeof(bevalue));
-                nativeValue = BEToNative(bevalue);
+                nativeValue = bevalue;
             }
             // any other sizes are either 0 or not supported
             return ReturnT{ nativeValue };
@@ -627,8 +522,6 @@ namespace DeviceTree
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             uint8_t const* pendPtr = apExtraData + sizeof(dataHeader);
 
-            dataHeader = BEToNative(dataHeader);
-
             IndentOutput(aIndentLevel);
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic)
             char const* pname = reinterpret_cast<char const*>(aBaseAddr + aHeader.off_dt_strings + dataHeader.nameoff);
@@ -640,8 +533,9 @@ namespace DeviceTree
                 auto currentCellInfo = arCurStack.Top();
                 if (dataHeader.len == sizeof(currentCellInfo.AddressCells))
                 {
-                    std::memcpy(&currentCellInfo.AddressCells, pendPtr, sizeof(currentCellInfo.AddressCells));
-                    currentCellInfo.AddressCells = BEToNative(currentCellInfo.AddressCells);
+                    BigEndian<uint32_t> addressCells;
+                    std::memcpy(&addressCells, pendPtr, sizeof(currentCellInfo.AddressCells));
+                    currentCellInfo.AddressCells = addressCells;
                     arCurStack.SetTop(currentCellInfo);
                 }
             }
@@ -650,8 +544,9 @@ namespace DeviceTree
                 auto currentCellInfo = arCurStack.Top();
                 if (dataHeader.len == sizeof(currentCellInfo.SizeCells))
                 {
-                    std::memcpy(&currentCellInfo.SizeCells, pendPtr, sizeof(currentCellInfo.SizeCells));
-                    currentCellInfo.SizeCells = BEToNative(currentCellInfo.SizeCells);
+                    BigEndian<uint32_t> sizeCells;
+                    std::memcpy(&sizeCells, pendPtr, sizeof(currentCellInfo.SizeCells));
+                    currentCellInfo.SizeCells = sizeCells;
                     arCurStack.SetTop(currentCellInfo);
                 }
             }
@@ -713,12 +608,10 @@ namespace DeviceTree
             auto done = false;
             while (!done)
             {
-                uint32_t token = 0;
+                BigEndian<uint32_t> token = 0;
                 std::memcpy(&token, pcurToken, sizeof(token));
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 pcurToken += sizeof(token);
-
-                token = BEToNative(token);
 
                 switch (token)
                 {
@@ -802,8 +695,6 @@ namespace DeviceTree
 
         fdt_header header;
         std::memcpy(&header, apDTB, sizeof(header));
-
-        header = BEToNative(header);
 
         if (header.magic == ExpectedMagic)
         {

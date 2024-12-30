@@ -14,6 +14,7 @@
 #include "KernelStdlib/NewTests.h"
 #include "KernelStdlib/TypeInfoTests.h"
 #include "KernelStdlib/UtilityTests.h"
+#include "BigEndianTests.h"
 #include "MemoryManagerTests.h"
 #include "PointerTypesTests.h"
 #include "PrintTests.h"
@@ -180,8 +181,8 @@ namespace UnitTests
         AArch64::MemoryPageTables::Run();
         AArch64::SystemRegisters::Run();
 
-        // Devices/* not tested as right now they're just constexpr values
-        // #TODO: Devices/DeviceTree.h/cpp untested
+        // Peripherals/* not tested as right now they're just constexpr values
+        // #TODO: Peripherals/DeviceTree.h/cpp untested
 
         // No runtime tests for bit
         KernelStdlib::Bitset::Run();
@@ -195,7 +196,8 @@ namespace UnitTests
         // No runtime tests for type_traits
         KernelStdlib::Utility::Run();
 
-        // #TODO: Exceptions.cpp untested (currently just unimplemented stubs)
+        BigEndian::Run();
+        // #TODO: Debug.h/cpp untested (not sure if testable)
         // #TODO: ExceptionVectorHandlers.h/cpp/S untested (not sure if testable)
         // #TODO: IRQ.h/S untested (likely untestable)
         MemoryManager::Run();

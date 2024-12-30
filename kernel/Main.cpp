@@ -17,7 +17,7 @@
 #include "Utils.h"
 
 // Uncomment define to output the device tree to UART on boot
-//#define OUTPUT_DEVICE_TREE
+#define OUTPUT_DEVICE_TREE
 #ifdef OUTPUT_DEVICE_TREE
 #include "Peripherals/DeviceTree.h"
 #include "MemoryManager.h"

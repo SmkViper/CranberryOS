@@ -1,5 +1,6 @@
 target_sources(kernel8.elf
     PRIVATE
+        BigEndianTests.h BigEndianTests.cpp
         Framework.h Framework.cpp
         MemoryManagerTests.h MemoryManagerTests.cpp
         PointerTypesTests.h PointerTypesTests.cpp
