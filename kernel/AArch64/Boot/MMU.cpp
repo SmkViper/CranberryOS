@@ -281,12 +281,10 @@ namespace AArch64::Boot
         auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
         auto const deviceEndPA = deviceBasePA.Offset(0x00FF'FFFF);
 
-        // Calculate the range of the kernel image in L2 block size
-        // #TODO: Originally this was done so we didn't have to set up 4k pages and could instead use 2MB blocks,
-        // but it may not make sense anymore, especially since we later want to flag certain areas as read-only
+        // Calculate the range of the kernel image in page size size
         // #TODO: Why are these symbols from the linker script pointing at physical addresses? (PC-relative apparently)
-        auto const kernelBasePA = MemoryManager::CalculateBlockStart(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image) }, MemoryManager::L2BlockSize);
-        auto const kernelEndPA = MemoryManager::CalculateBlockEnd(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image_end) }, MemoryManager::L2BlockSize);
+        auto const kernelBasePA = MemoryManager::CalculateBlockStart(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image) }, MemoryManager::PageSize);
+        auto const kernelEndPA = MemoryManager::CalculateBlockEnd(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image_end) }, MemoryManager::PageSize);
 
         // Converts a physical pointer to a virtual pointer assuming offset mapping
         auto toVAOffsetMapping = [](PhysicalPtr const aPA)
