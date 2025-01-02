@@ -24,7 +24,10 @@ namespace AArch64::Boot
      */
     VirtualPtr StoreFlattenedDeviceTree(PhysicalPtr aDeviceTree);
 
-    // #TODO: Going to want to have a way to unmap the identity mapping once we no longer need it
+    /**
+     * Clear out the identity mapping that was used for booting
+     */
+    void UnmapIdentityMapping();
 }
 
 #endif // KERNEL_AARCH64_BOOT_MMU_H

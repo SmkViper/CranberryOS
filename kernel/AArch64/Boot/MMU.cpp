@@ -330,9 +330,9 @@ namespace AArch64::Boot
         // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
         // be pointing at the physical addresses)
         InsertEntriesForMemoryRange(allocator, rootPage, InclusiveMemoryRange{ VirtualPtr{ kernelBasePA.GetAddress() }, VirtualPtr{ kernelEndPA.GetAddress() } }, kernelBasePA, MemoryManager::NormalMAIRIndex);
-        InsertEntriesForMemoryRange(allocator, rootPage, InclusiveMemoryRange{ VirtualPtr{ deviceBasePA.GetAddress() }, VirtualPtr{ deviceEndPA.GetAddress() } }, deviceBasePA, MemoryManager::DeviceMAIRIndex);
 
         // Now map the kernel and devices into high memory
+        // #TODO: Want to be able to remove the device mapping eventually - once we have a device driver that can map
         InsertEntriesForMemoryRange(allocator, rootPage, kernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
         InsertEntriesForMemoryRange(allocator, rootPage, deviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
 
@@ -349,6 +349,8 @@ namespace AArch64::Boot
     void EnableMMU()
     {
         // #TODO: Linker seems to be using PC-relative addresses for these, why?
+        // #TODO: Relies on our page allocator returning the first address for the first allocate. Would like to remove
+        // the implicit dependency if possible
         SwitchToPageTable(PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) });
 
         MAIR_EL1 mair_el1;
@@ -418,6 +420,40 @@ namespace AArch64::Boot
         {
             Debug::Panic("Invalid device tree");
             return VirtualPtr{ 0 };
+        }
+    }
+
+    void UnmapIdentityMapping()
+    {
+        // Don't use CalculatePhysicalToLinkTimeAddressOffset() here because it expects the PC to be physical, but it's
+        // virtual by now
+        // #TODO: We should save off the offset mapping somewhere
+        // #TODO: Linker seems to be using PC-relative addresses for these, why? Seems to differ between debug and
+        // release builds
+        uint8_t* prootPage = MemoryManager::AdjustKernelPtrForMMU(static_cast<uint8_t*>(_pg_dir));
+
+        // manually dig out the level 2 entry for our zero address and clear it, which will nuke our identity mapping
+        // (though it won't return the pages we used, as we aren't keeping track of that yet)
+        // #TODO: See if we can reclaim the memory
+        auto const rootPage = PageTable::Level0View{ std::bit_cast<uint64_t*>(prootPage) };
+        auto identityLevel1Entry = rootPage.GetEntryForVA(VirtualPtr{ 0 });
+        PhysicalPtr level1TablePtr;
+        identityLevel1Entry.Visit(Overloaded{
+            [](auto)
+            {
+                // if it's not a table, then nothing is mapped here and we do nothing
+            },
+            [&level1TablePtr](Descriptor::Table const aTable)
+            {
+                level1TablePtr = aTable.Address();
+            }
+        });
+        
+        if (level1TablePtr.GetAddress() != 0)
+        {
+            auto const level1TableVirtual = VirtualPtr{ level1TablePtr.Offset(MemoryManager::KernelVirtualAddressOffset).GetAddress() };
+            auto const level1Page = PageTable::Level1View{ std::bit_cast<uint64_t*>(level1TableVirtual.GetAddress()) };
+            level1Page.SetEntryForVA(VirtualPtr{ 0 }, Descriptor::Fault{} );
         }
     }
 }

@@ -131,6 +131,7 @@ namespace Kernel
     void kmain(VirtualPtr const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
         uint64_t const aX3Reserved, PhysicalPtr const aStartPointer)
     {
+        // #TODO: Looks like we trap in debug builds now on static constructor handling. Need to figure out why
         CallStaticConstructors();
 
         MiniUART::Init();

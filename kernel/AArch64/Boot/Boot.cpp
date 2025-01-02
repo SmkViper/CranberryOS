@@ -70,7 +70,12 @@ extern "C"
             : "x0" // bashed registers
         );
 
-        // #TODO: Unmap identity mapping
+        // #TODO: This technically appears to work, in that it unmaps the memory, but that seems to cause problems with
+        // our debug out functions which trap when trying to access their function pointers for unknown reasons. I
+        // really have to track down what is going on with static variable access during boot, especially since
+        // sometimes it appears to be physical, sometimes it appears to be virtual, sometimes it's PC-relative, and it 
+        // even seems to depend on debug vs release
+        //AArch64::Boot::UnmapIdentityMapping();
 
         Debug::OutputDebug("Calling kmain()...");
         Kernel::kmain(deviceTreeVA, aX1Reserved, aX2Reserved, aX3Reserved, PhysicalPtr{ aStartPointer });

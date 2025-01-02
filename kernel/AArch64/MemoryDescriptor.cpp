@@ -9,6 +9,15 @@ namespace AArch64::Descriptor
 {
     // #TODO: Remove when we get std::array
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+    void Fault::Write(Fault const /*aValue*/, uint64_t apTable[], size_t const aIndex)
+    {
+        // #TODO: Range-check index with pointers per table - or make an array view type
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        apTable[aIndex] = 0ULL;
+    }
+
+    // #TODO: Remove when we get std::array
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
     void Table::Write(Table const aValue, uint64_t apTable[], size_t const aIndex)
     {
         // #TODO: Range-check index with pointers per table - or make an array view type

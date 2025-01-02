@@ -250,6 +250,15 @@ namespace AArch64
             Fault(uint64_t /*aValue*/, Details::ValueConstructTag /* aTag */) {}
 
             /**
+             * Writes the given entry to the table
+             * 
+             * @param aValue Value to write
+             * @param apTable Table to write to
+             * @param aIndex Index to write to in the table
+             */
+            static void Write(Fault aValue, uint64_t apTable[], size_t aIndex); // NOLINT(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+
+            /**
              * Checks to see if the value represents a descriptor of this type
              * 
              * @param aValue The value to check
