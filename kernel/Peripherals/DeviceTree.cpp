@@ -18,24 +18,6 @@ namespace DeviceTree
         // #TODO: There are a lot of NOLINT comments due to all the casting and pointer math being done to read the raw
         // memory. Would be nice if we could figure out a way to handle it better
 
-        // #TODO: We can probably be a bit smarter about this and encode the endianness in the type in some manner
-
-        // From DeviceTree specification, section 5.2
-        struct fdt_header
-        {
-            // NOTE: All values are big-endian when loaded from memory
-            BigEndian<uint32_t> magic = 0; // "Magic" number to verify the header is valid
-            BigEndian<uint32_t> totalsize = 0; // The total size of the device tree blob, including all padding
-            BigEndian<uint32_t> off_dt_struct = 0; // Offset to the structure block from the header, in bytes
-            BigEndian<uint32_t> off_dt_strings = 0; // Offset to the strings block from the header, in bytes
-            BigEndian<uint32_t> off_mem_rsvmap = 0; // Offset to the memory reservation block from the header, in bytes
-            BigEndian<uint32_t> version = 0; // The version of the data structure
-            BigEndian<uint32_t> last_comp_version = 0; // The lowest version which this structure is backwards compatible with
-            BigEndian<uint32_t> boot_cpuid_phys = 0; // Physical ID of the boot CPU. Same as the "reg" property of the CPU node
-            BigEndian<uint32_t> size_dt_strings = 0; // Length in bytes of the strings block
-            BigEndian<uint32_t> size_dt_struct = 0; // Length in bytes of the structs block
-        };
-
         // From DeviceTree specification, section 5.3.2
         struct fdt_reserve_entry
         {
@@ -682,6 +664,13 @@ namespace DeviceTree
                 }
             }
         }
+    }
+
+    bool ValidateMagicAndVersion(fdt_header const& aHeader)
+    {
+        auto valid = (aHeader.magic == ExpectedMagic);
+        valid = valid && ((aHeader.version >= ExpectedVersion) && (aHeader.last_comp_version <= ExpectedVersion));
+        return valid;
     }
 
     /**

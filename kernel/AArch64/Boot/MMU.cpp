@@ -6,6 +6,7 @@
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include "../../Peripherals/DeviceTree.h"
 #include "../../Debug.h"
 #include "../../MemoryManager.h"
 #include "../../PointerTypes.h"
@@ -34,6 +35,34 @@ namespace AArch64::Boot
 {
     namespace
     {
+        // We want to store the device tree at a known location so we don't have to worry about remapping it on boot
+        // #TODO: Is there a better way to handle this - perhaps by mapping it on demand while it is needed instead of
+        // copying it (since we might want the space back)
+        constexpr auto const DeviceTreeStorageSizeCS = 2ULL * 1024ULL * 1024ULL; // 2MB
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-avoid-non-const-global-variables)
+        uint8_t DeviceTreeStorage[DeviceTreeStorageSizeCS] = {};
+
+        /**
+         * Calculates the offset from where things are linked to where they are in physical memory
+         * 
+         * @return The offset from physical to linker address
+         */
+        uintptr_t CalculatePhysicalToLinkTimeAddressOffset()
+        {
+            uintptr_t physicalAddr = 0; // NOLINT(misc-const-correctness)
+            uintptr_t linktimeAddr = 0; // NOLINT(misc-const-correctness)
+            
+            asm volatile( // NOLINT(hicpp-no-assembler)
+                // Loads the PC-relative address of this instruction into physicalAddr
+                "   adr %[physicalAddr], #0\n"
+                // Loads the linktime address of this instruction into linktimeAddr
+                "1: ldr %[linktimeAddr], =1b\n"
+                : [physicalAddr] "=r"(physicalAddr),
+                  [linktimeAddr] "=r"(linktimeAddr)
+            );
+            return linktimeAddr - physicalAddr - 4;
+        }
+
         /**
          * Helper to specify a memory range where the end is exclusive
          */
@@ -355,5 +384,40 @@ namespace AArch64::Boot
 
         // Make sure the MMU being enabled is seen by anything following this function
         InstructionBarrier();
+    }
+
+    VirtualPtr StoreFlattenedDeviceTree(PhysicalPtr const aDeviceTree)
+    {
+        // MMU isn't on yet, so physical pointers are "real" pointers at this point
+        auto const* const pdeviceTree = std::bit_cast<uint8_t const*>(aDeviceTree.GetAddress());
+
+        auto const* pheader = std::bit_cast<DeviceTree::fdt_header const*>(pdeviceTree);
+        if (DeviceTree::ValidateMagicAndVersion(*pheader))
+        {
+            if (pheader->totalsize <= DeviceTreeStorageSizeCS)
+            {
+                // #TODO: Why is it giving us physical addresses instead of linked ones? (PC relative addressing?)
+                auto* destBuffer = static_cast<uint8_t*>(DeviceTreeStorage);
+                auto const* sourceBuffer = std::bit_cast<uint8_t const*>(aDeviceTree.GetAddress());
+                // #TODO: Why can't we use memcpy yet?
+                for (auto curByte = 0U; curByte < pheader->totalsize; ++curByte)
+                {
+                    destBuffer[curByte] = sourceBuffer[curByte]; // #NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                }
+                
+                auto const deviceTreePA = PhysicalPtr{ std::bit_cast<uintptr_t>(destBuffer) };
+                return VirtualPtr{ deviceTreePA.GetAddress() }.Offset(CalculatePhysicalToLinkTimeAddressOffset());
+            }
+            else
+            {
+                Debug::Panic("Device tree too large");
+                return VirtualPtr{ 0 };
+            }
+        }
+        else
+        {
+            Debug::Panic("Invalid device tree");
+            return VirtualPtr{ 0 };
+        }
     }
 }

@@ -15,7 +15,7 @@ namespace Kernel
      * @param aX3Reserved Reserved for future use by the firmware
      * @param aStartPointer Pointer to _start which the firmware launched
      */
-    void kmain(PhysicalPtr aDTBPointer, uint64_t aX1Reserved, uint64_t aX2Reserved,
+    void kmain(VirtualPtr aDTBPointer, uint64_t aX1Reserved, uint64_t aX2Reserved,
         uint64_t aX3Reserved, PhysicalPtr aStartPointer);
 }
 

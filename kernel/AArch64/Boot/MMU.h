@@ -1,6 +1,8 @@
 #ifndef KERNEL_AARCH64_BOOT_MMU_H
 #define KERNEL_AARCH64_BOOT_MMU_H
 
+#include "../../PointerTypes.h"
+
 namespace AArch64::Boot
 {
     /**
@@ -12,6 +14,15 @@ namespace AArch64::Boot
      * Turns on the memory management unit
      */
     void EnableMMU();
+
+    /**
+     * Stores the device tree into a known location and returns where it was copied to
+     * Expected to be called before the MMU is turned on
+     * 
+     * @param aDeviceTree Where the bootloader put the device tree
+     * @return Where we moved the device tree
+     */
+    VirtualPtr StoreFlattenedDeviceTree(PhysicalPtr aDeviceTree);
 
     // #TODO: Going to want to have a way to unmap the identity mapping once we no longer need it
 }

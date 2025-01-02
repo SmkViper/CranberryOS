@@ -16,7 +16,8 @@ extern "C"
      * @param aX2Reserved Reserved for future use by the firmware
      * @param aX3Reserved Reserved for future use by the firmware
      * @param aStartPointer 32-bit pointer to _start which the firmware launched
-    */
+     */
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     void boot_kernel(uint32_t const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
         uint64_t const aX3Reserved, uint32_t const aStartPointer)
     {
@@ -35,6 +36,10 @@ extern "C"
         
         //Debug::OutputDebug("Switching to EL1...");
         AArch64::Boot::SwitchToEL1();
+
+        // have to store this before the MMU is turned on and we lose access to the physical address
+        auto const deviceTreeVA = AArch64::Boot::StoreFlattenedDeviceTree(PhysicalPtr{ aDTBPointer });
+
         //Debug::OutputDebug("Setting up page tables...");
         AArch64::Boot::CreatePageTables();
         //Debug::OutputDebug("Enabling MMU...");
@@ -68,6 +73,6 @@ extern "C"
         // #TODO: Unmap identity mapping
 
         Debug::OutputDebug("Calling kmain()...");
-        Kernel::kmain(PhysicalPtr{ aDTBPointer }, aX1Reserved, aX2Reserved, aX3Reserved, PhysicalPtr{ aStartPointer });
+        Kernel::kmain(deviceTreeVA, aX1Reserved, aX2Reserved, aX3Reserved, PhysicalPtr{ aStartPointer });
     }
 }

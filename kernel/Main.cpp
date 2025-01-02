@@ -128,7 +128,7 @@ extern "C"
 
 namespace Kernel
 {
-    void kmain(PhysicalPtr const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
+    void kmain(VirtualPtr const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
         uint64_t const aX3Reserved, PhysicalPtr const aStartPointer)
     {
         CallStaticConstructors();
@@ -151,9 +151,8 @@ namespace Kernel
         Print::FormatToMiniUART("x2: {:x}\r\n", aX2Reserved);
         Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
         Print::FormatToMiniUART("_start: {}\r\n", aStartPointer);
-        // #TODO: Should find a better way to go from the pointer from the firmware to our virtual address
 #ifdef OUTPUT_DEVICE_TREE
-        DeviceTree::ParseDeviceTree(std::bit_cast<uint8_t const*>(aDTBPointer.Offset(MemoryManager::KernelVirtualAddressOffset).GetAddress()));
+        DeviceTree::ParseDeviceTree(std::bit_cast<uint8_t const*>(aDTBPointer.GetAddress()));
 #endif // OUTPUT_DEVICE_TREE
 
         UnitTests::Run();
