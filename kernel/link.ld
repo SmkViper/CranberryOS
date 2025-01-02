@@ -96,6 +96,22 @@ SECTIONS
         __exidx_end = .;
     }
 
+    /*
+        #TODO: everything past this point is basically increasing the size of the kernel image so we're guaranteed that
+        the memory is available. We'd like to free all this up at some point if possible
+    */
+
+    /*
+        Reserving space for our initial kernel stack memory
+    */
+    . = ALIGN(4K);
+    _start_of_kernel_stack = .;
+    . += 1M;
+    _end_of_kernel_stack = .;
+
+    /*
+        Reserving space for our initial page directories
+    */
     . = ALIGN(4K);
     _pg_dir = .;
     . += 8M; /* #TODO: we're reserving 8mb for now, but should come up with a real value at some point */

@@ -47,14 +47,16 @@ clear_bss:
     cbnz    w6, clear_bss       // If w6 is not 0, go to next chunk
 
 continue_boot:
-    // Point our stack to start just before our code (it grows towards 0).
-    // #TODO: There's likely a better way to do this, hopefully in a way that
-    // doesn't risk stomping anything before our kernel start point, but we'll
-    // have to investigate the memory mapping on boot. Old version used
-    // then end of a 4MB block for the stack root, which ran the risk of
-    // bashing the kernel image.
-    adrp    x5, _start          // Loads the offset to the page where _start is
-    add     x5, x5, :lo12:_start // Add in the offset to the actual _start symbol
+    // Point our stack to the end of the space the linker reserved for it (it
+    // grows towards 0). This does run the risk of bashing the kernel image if
+    // the stack grows too large, but for now it's fine.
+    // #TODO: Either find a better way to do this, or start up a seperate
+    // "proper" thread early in the boot process and let this stack go away
+
+    // Loads the offset to the page where _end_of_kernel_stack is
+    adrp    x5, _end_of_kernel_stack
+    // Add in the offset to the actual _end_of_kernel_stack symbol
+    add     x5, x5, :lo12:_end_of_kernel_stack
     mov     sp, x5
     bl      boot_kernel
 
