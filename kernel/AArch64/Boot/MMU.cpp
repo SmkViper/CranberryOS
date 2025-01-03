@@ -7,13 +7,13 @@
 #include <cstdint>
 #include <cstring>
 #include "../../Peripherals/DeviceTree.h"
-#include "../../Debug.h"
 #include "../../MemoryManager.h"
 #include "../../PointerTypes.h"
 #include "../../Utils.h"
 #include "../MemoryDescriptor.h"
 #include "../MemoryPageTables.h"
 #include "../SystemRegisters.h"
+#include "Output.h"
 
 // Address translation documentation: https://documentation-service.arm.com/static/5efa1d23dbdee951c1ccdec5?token=
 
@@ -40,10 +40,11 @@ namespace AArch64::Boot
         // copying it (since we might want the space back)
         constexpr auto const DeviceTreeStorageSizeCS = 2ULL * 1024ULL * 1024ULL; // 2MB
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-avoid-non-const-global-variables)
-        uint8_t DeviceTreeStorage[DeviceTreeStorageSizeCS] = {};
+        uint8_t DeviceTreeStorageS[DeviceTreeStorageSizeCS] = {};
 
         /**
-         * Calculates the offset from where things are linked to where they are in physical memory
+         * Calculates the offset from where things are linked to where they are in physical memory. Only works before
+         * the MMU is turned on.
          * 
          * @return The offset from physical to linker address
          */
@@ -81,7 +82,7 @@ namespace AArch64::Boot
             {
                 if (aBegin >= aEnd)
                 {
-                    Debug::Panic("Begin should be before end");
+                    PanicNoMMU("Begin should be before end");
                 }
             }
 
@@ -107,7 +108,7 @@ namespace AArch64::Boot
             {
                 if (aBegin > aEnd)
                 {
-                    Debug::Panic("Begin should be before or equal to end");
+                    PanicNoMMU("Begin should be before or equal to end");
                 }
             }
 
@@ -148,15 +149,15 @@ namespace AArch64::Boot
             {
                 if (Start > End)
                 {
-                    Debug::Panic("Bump allocator start is past the end");
+                    PanicNoMMU("Bump allocator start is past the end");
                 }
                 if (Start.GetAddress() % MemoryManager::PageSize != 0)
                 {
-                    Debug::Panic("Bump allocator start address is not aligned to a page size");
+                    PanicNoMMU("Bump allocator start address is not aligned to a page size");
                 }
                 if (End.GetAddress() % MemoryManager::PageSize != 0)
                 {
-                    Debug::Panic("Bump allocator start address is not aligned to a page size");
+                    PanicNoMMU("Bump allocator start address is not aligned to a page size");
                 }
             }
 
@@ -169,7 +170,7 @@ namespace AArch64::Boot
             {
                 if (Current >= End)
                 {
-                    Debug::Panic("Bump allocator out of memory");
+                    PanicNoMMU("Bump allocator out of memory");
                 }
 
                 auto const retPage = Current;
@@ -211,11 +212,11 @@ namespace AArch64::Boot
                 },
                 [](Descriptor::L1Block)
                 {
-                    Debug::Panic("Should not have level 1 blocks in boot tables");
+                    PanicNoMMU("Should not have level 1 blocks in boot tables");
                 },
                 [](Descriptor::L2Block)
                 {
-                    Debug::Panic("Should not have level 2 blocks in boot tables");
+                    PanicNoMMU("Should not have level 2 blocks in boot tables");
                 }
             });
 
@@ -398,44 +399,41 @@ namespace AArch64::Boot
         {
             if (pheader->totalsize <= DeviceTreeStorageSizeCS)
             {
-                // #TODO: Why is it giving us physical addresses instead of linked ones? (PC relative addressing?)
-                auto* destBuffer = static_cast<uint8_t*>(DeviceTreeStorage);
-                auto const* sourceBuffer = std::bit_cast<uint8_t const*>(aDeviceTree.GetAddress());
-                // #TODO: Why can't we use memcpy yet?
+                auto* destBuffer = static_cast<uint8_t*>(GlobalNoMMU(DeviceTreeStorageS));
+                // #TODO: Why can't we use memcpy yet? (complier may be substituting its own copy that uses opcodes
+                // that are disabled at this point)
                 for (auto curByte = 0U; curByte < pheader->totalsize; ++curByte)
                 {
-                    destBuffer[curByte] = sourceBuffer[curByte]; // #NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                    // #NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                    destBuffer[curByte] = pdeviceTree[curByte];
                 }
                 
                 auto const deviceTreePA = PhysicalPtr{ std::bit_cast<uintptr_t>(destBuffer) };
-                return VirtualPtr{ deviceTreePA.GetAddress() }.Offset(CalculatePhysicalToLinkTimeAddressOffset());
+                return VirtualPtr{
+                    deviceTreePA.Offset(CalculatePhysicalToLinkTimeAddressOffset()).GetAddress()
+                };
             }
             else
             {
-                Debug::Panic("Device tree too large");
+                PanicNoMMU("Device tree too large");
                 return VirtualPtr{ 0 };
             }
         }
         else
         {
-            Debug::Panic("Invalid device tree");
+            PanicNoMMU("Invalid device tree");
             return VirtualPtr{ 0 };
         }
     }
 
     void UnmapIdentityMapping()
     {
-        // Don't use CalculatePhysicalToLinkTimeAddressOffset() here because it expects the PC to be physical, but it's
-        // virtual by now
-        // #TODO: We should save off the offset mapping somewhere
-        // #TODO: Linker seems to be using PC-relative addresses for these, why? Seems to differ between debug and
-        // release builds
-        uint8_t* prootPage = MemoryManager::AdjustKernelPtrForMMU(static_cast<uint8_t*>(_pg_dir));
+        auto* const prootPageBuffer = std::bit_cast<uint64_t*>(static_cast<uint8_t*>(_pg_dir));
 
         // manually dig out the level 2 entry for our zero address and clear it, which will nuke our identity mapping
         // (though it won't return the pages we used, as we aren't keeping track of that yet)
         // #TODO: See if we can reclaim the memory
-        auto const rootPage = PageTable::Level0View{ std::bit_cast<uint64_t*>(prootPage) };
+        auto const rootPage = PageTable::Level0View{ prootPageBuffer };
         auto identityLevel1Entry = rootPage.GetEntryForVA(VirtualPtr{ 0 });
         PhysicalPtr level1TablePtr;
         identityLevel1Entry.Visit(Overloaded{
@@ -451,9 +449,29 @@ namespace AArch64::Boot
         
         if (level1TablePtr.GetAddress() != 0)
         {
+            // #TODO: Would like something better than the fixed constant (which I'd like to eventually get rid of).
+            // Can't use CalculatePhysicalToLinkTimeAddressOffset because the MMU is on and the offset would therefore
+            // be 0 (but we could probably store the result of a pre-MMU call of that for later use)
             auto const level1TableVirtual = VirtualPtr{ level1TablePtr.Offset(MemoryManager::KernelVirtualAddressOffset).GetAddress() };
             auto const level1Page = PageTable::Level1View{ std::bit_cast<uint64_t*>(level1TableVirtual.GetAddress()) };
             level1Page.SetEntryForVA(VirtualPtr{ 0 }, Descriptor::Fault{} );
         }
+    }
+
+    uintptr_t AdjustPointerForNoMMU(uintptr_t const aPtr)
+    {
+        auto const offset = CalculatePhysicalToLinkTimeAddressOffset();
+        // Sometimes we have a physical address (usually calculated via PC-relative operations) and sometimes we have a
+        // virtual address (usually calculated by the linker). Which one we get can change link-by-line or even based
+        // on build configuration, so we have to detect it here and handle it (we can't rely on always getting virtual
+        // addresses).
+        // #TODO: Would really like to get rid of this conditional and figure out why the pointers are inconsistent
+        if (aPtr >= offset)
+        {
+            // Pointer is a virtual address, so strip out the offset
+            return aPtr - offset;
+        }
+        // Otherwise we assume the pointer is a physical address and return it unchanged
+        return aPtr;
     }
 }

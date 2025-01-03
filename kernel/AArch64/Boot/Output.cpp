@@ -6,13 +6,13 @@
 #include <cstddef>
 #include <cstring>
 
+#include "MMU.h"
 #include "../CPU.h"
-#include "../../MemoryManager.h"
 
 extern "C"
 {
     // DO NOT ACCESS DIRECTLY
-    // We can access these before the MMU is set up, so always go through the GetX() functions instead
+    // Use GlobalNoMMU() instead
 
     // from link.ld
     // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
@@ -26,52 +26,38 @@ namespace AArch64::Boot
     namespace
     {
         // DO NOT ACCESS DIRECTLY
-        // We can access these before the MMU is set up, so always go through the GetX() functions instead
+        // Use GlobalNoMMU() instead
 
         // Kind of janky, but keep track of whether we've written anything so we can ensure that if they request the
         // buffer with no output, they get nothing
-        auto AnyOutputWritten = false; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+        auto AnyOutputWrittenS = false; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
         // #TODO: Switch to function level static once we support __cxa_guard_acquire/__cxa_guard_release
-        auto BufferOffset = 0ULL; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+        auto BufferOffsetS = 0ULL; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+        // Struct to give to the output functions so it knows how to access the globals
+        struct OutputData
+        {
+            char* pBufferStart = nullptr;
+            char* pBufferEnd = nullptr;
+            decltype(AnyOutputWrittenS)* pAnyOutputWritten = nullptr;
+            decltype(BufferOffsetS)* pBufferOffset = nullptr;
+        };
 
         /**
-         * Obtain the buffer start pointer, adjusted for whether the MMU is on or not
+         * Copies text to the given buffer, avoiding memcpy
          * 
-         * @return The buffer start pointer
+         * @param apOutput Buffer to copy to
+         * @param apText Text to copy
+         * @param aCount Number of characters to copy
          */
-        char* GetBufferStart()
+        void CopyToBuffer(char* const apOutput, char const* const apText, size_t const aCount)
         {
-            return MemoryManager::AdjustKernelPtrForMMU(static_cast<char*>(_output_buffer));
-        }
-
-        /**
-         * Obtain the buffer end pointer, adjusted for whether the MMU is on or not
-         * 
-         * @return The buffer end pointer
-         */
-        char* GetBufferEnd()
-        {
-            return MemoryManager::AdjustKernelPtrForMMU(static_cast<char*>(_output_buffer_end));
-        }
-
-        /**
-         * Obtain the any output written bool, adjusted for whether the MMU is on or not
-         * 
-         * @return Reference to the output written bool
-         */
-        bool& GetAnyOutputWritten()
-        {
-            return *MemoryManager::AdjustKernelPtrForMMU(&AnyOutputWritten);
-        }
-
-        /**
-         * Obtain the buffer offset, adjusted for whether the MMU is on or not
-         * 
-         * @return Reference to the buffer offset index
-         */
-        unsigned long long& GetBufferOffset()
-        {
-            return *MemoryManager::AdjustKernelPtrForMMU(&BufferOffset);
+            // #TODO: memcpy seems to cause issues when called this early (perhaps compiler is substituting its own
+            // optimized intrinsic that doesn't work before the MMU and CPU are fully set up)
+            for (auto curIndex = 0U; curIndex < aCount; ++curIndex)
+            {
+                apOutput[curIndex] = apText[curIndex]; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            }
         }
 
         /**
@@ -79,25 +65,19 @@ namespace AArch64::Boot
          * 
          * @param apMessage The message to output
          * @param aNewLine Whether to output a newline or not
+         * @param aOutput Pointers to the globals for output
          */
-        void OutputText(char const* const apMessage, bool const aNewLine) // NOLINT(misc-no-recursion)
+        // NOLINTNEXTLINE(misc-no-recursion)
+        void OutputText(char const* const apMessage, bool const aNewLine, OutputData const& aOutput)
         {
-            // Since we are called during the boot process, possibly before the MMU is set up, apMessage might be a
-            // virtual address instead of a physical one, so we need to adjust the pointer for that
-            auto const* const pfixedMessage = MemoryManager::AdjustKernelPtrForMMU(apMessage);
-
-            auto* const pbufferStart = GetBufferStart();
-            auto* const pbufferEnd = GetBufferEnd();
-            auto& rbufferOffset = GetBufferOffset();
-
-            GetAnyOutputWritten() = true;
+            *aOutput.pAnyOutputWritten = true;
             // #TODO: Switch to function level static once we support __cxa_guard_acquire/__cxa_guard_release
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-            auto const BufferSizeCS = static_cast<std::size_t>(pbufferEnd - pbufferStart);
+            auto const BufferSizeCS = static_cast<std::size_t>(aOutput.pBufferEnd - aOutput.pBufferStart);
 
-            auto const messageLen = strlen(pfixedMessage);
+            auto const messageLen = strlen(apMessage);
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-            auto const remainingLen = BufferSizeCS - rbufferOffset;
+            auto const remainingLen = BufferSizeCS - *aOutput.pBufferOffset;
             
             if ((messageLen + 1) > remainingLen)
             {
@@ -109,44 +89,91 @@ namespace AArch64::Boot
                 // the debugger
                 static constexpr auto bufferFullMsgLen = ((sizeof(bufferFullMsg) / sizeof(bufferFullMsg[0])) - 1);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-                memcpy(pbufferStart, "PANIC: Output buffer full", bufferFullMsgLen);
+                CopyToBuffer(aOutput.pBufferStart, "PANIC: Output buffer full", bufferFullMsgLen);
 
                 CPU::Halt();
             }
             else
             {
                 // NOLINTNEXTLINE(bugprone-not-null-terminated-result,cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay,cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                memcpy(pbufferStart + rbufferOffset, pfixedMessage, messageLen);
-                rbufferOffset += messageLen;
+                CopyToBuffer(aOutput.pBufferStart + *aOutput.pBufferOffset, apMessage, messageLen);
+                *aOutput.pBufferOffset += messageLen;
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                pbufferStart[rbufferOffset] = '\0';
+                aOutput.pBufferStart[*aOutput.pBufferOffset] = '\0';
                 // do NOT increment the offset so any next write will bash the null
 
                 if (aNewLine)
                 {
-                    OutputText("\r\n", false);
+                    OutputText("\r\n", false, aOutput);
                 }
             }
         }
     }
 
-    void PanicImpl(char const* const apMessage)
+    void PanicNoMMU(char const* const apMessage)
     {
-        OutputText("PANIC: ", false);
-        OutputText(apMessage, true);
+        // pointer we get might be a virtual address from the linker, so fix it up first
+        auto const* const pfixedMessage = GlobalNoMMU(apMessage);
+
+        auto data = OutputData{
+            .pBufferStart = static_cast<char*>(GlobalNoMMU(_output_buffer)),
+            .pBufferEnd = static_cast<char*>(GlobalNoMMU(_output_buffer_end)),
+            .pAnyOutputWritten = &GlobalNoMMU(AnyOutputWrittenS),
+            .pBufferOffset = &GlobalNoMMU(BufferOffsetS)
+        };
+
+        OutputText("PANIC: ", false, data);
+        OutputText(pfixedMessage, true, data);
         // #TODO: Would be nice if we could trigger a breakpoint in some way
         CPU::Halt();
     }
 
-    void OutputDebugImpl(char const* const apMessage)
+    void PanicMMU(char const* const apMessage)
     {
-        OutputText(apMessage, true);
+        auto data = OutputData{
+            .pBufferStart = static_cast<char*>(_output_buffer),
+            .pBufferEnd = static_cast<char*>(_output_buffer_end),
+            .pAnyOutputWritten = &AnyOutputWrittenS,
+            .pBufferOffset = &BufferOffsetS
+        };
+
+        OutputText("PANIC: ", false, data);
+        OutputText(apMessage, true, data);
+        // #TODO: Would be nice if we could trigger a breakpoint in some way
+        CPU::Halt();
+    }
+
+    void OutputDebugNoMMU(char const* const apMessage)
+    {
+        // pointer we get might be a virtual address from the linker, so fix it up first
+        auto const* const pfixedMessage = GlobalNoMMU(apMessage);
+
+        auto data = OutputData{
+            .pBufferStart = static_cast<char*>(GlobalNoMMU(_output_buffer)),
+            .pBufferEnd = static_cast<char*>(GlobalNoMMU(_output_buffer_end)),
+            .pAnyOutputWritten = &GlobalNoMMU(AnyOutputWrittenS),
+            .pBufferOffset = &GlobalNoMMU(BufferOffsetS)
+        };
+
+        OutputText(pfixedMessage, true, data);
+    }
+
+    void OutputDebugMMU(char const* const apMessage)
+    {
+        auto data = OutputData{
+            .pBufferStart = static_cast<char*>(_output_buffer),
+            .pBufferEnd = static_cast<char*>(_output_buffer_end),
+            .pAnyOutputWritten = &AnyOutputWrittenS,
+            .pBufferOffset = &BufferOffsetS
+        };
+
+        OutputText(apMessage, true, data);
     }
 
     char const* GetOutputBuffer()
     {
-        char* pbufferStart = GetBufferStart();
-        if (!GetAnyOutputWritten())
+        auto* pbufferStart = static_cast<char*>(_output_buffer);
+        if (!AnyOutputWrittenS)
         {
             *pbufferStart = 0;
         }

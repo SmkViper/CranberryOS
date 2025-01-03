@@ -155,30 +155,6 @@ namespace MemoryManager
     {
         return VirtualPtr{ CalculateBlockEnd(aPtr.GetAddress(), aBlockSize) };
     }
-
-    /**
-     * Adjusts the given pointer in the kernel image (i.e. static variables) for whether the MMU is on or not
-     * 
-     * @param apPtr The pointer to adjust
-     * 
-     * @return The adjusted pointer
-     */
-    template<typename PtrT>
-    PtrT* AdjustKernelPtrForMMU(PtrT* const apPtr)
-    {
-        // #TODO: Need to probably remove the need for this, as unless we're in boot, the MMU is always turned on
-        // #TODO: Need to figure out better what pointers to static data look like consistently
-        if (Internal::MMUEnabled())
-        {
-            auto const pointerInt = std::bit_cast<uintptr_t>(apPtr);
-            return std::bit_cast<PtrT*>(pointerInt | KernelVirtualAddressOffset);
-        }
-        else
-        {
-            auto const pointerInt = std::bit_cast<uintptr_t>(apPtr);
-            return std::bit_cast<PtrT*>(pointerInt & (~KernelVirtualAddressOffset));
-        }
-    }
 }
 
 #endif // KERNEL_MEMORY_MANAGER_H

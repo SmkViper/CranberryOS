@@ -3,7 +3,7 @@
 
 #include "ExceptionLevel.h"
 
-#include "../../Debug.h"
+#include "Output.h"
 #include "../CPU.h"
 #include "../SystemRegisters.h"
 
@@ -71,17 +71,17 @@ namespace AArch64::Boot
 
         if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL3)
         {
-            Debug::Panic("Unknown exception level (above EL3)");
+            PanicNoMMU("Unknown exception level (above EL3)");
         }
         else if (initialExceptionLevel < AArch64::CPU::ExceptionLevel::EL1)
         {
-            Debug::Panic("We must at least be in EL1 to boot");
+            PanicNoMMU("We must at least be in EL1 to boot");
         }
 
         if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL2)
         {
             // #TODO: Figure out how to handle EL3
-            Debug::Panic("We don't yet know how to switch from EL3 to EL2");
+            PanicNoMMU("We don't yet know how to switch from EL3 to EL2");
         }
         if (initialExceptionLevel > AArch64::CPU::ExceptionLevel::EL1)
         {

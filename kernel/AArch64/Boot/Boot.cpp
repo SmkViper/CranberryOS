@@ -5,6 +5,7 @@
 #include "../../PointerTypes.h"
 #include "ExceptionLevel.h"
 #include "MMU.h"
+//#include "Output.h"
 
 extern "C"
 {
@@ -25,7 +26,7 @@ extern "C"
         // Did a bunch more experimentation and it seems that we can output a string up to 7 characters long (plus null
         // terminator), but one that is 8 + terminator causes real hardware to halt. I.e. Debug::OutputDebug("Test567")
         // works just fine before all the code below, but Debug::OutputDebug("Test5678") does not. I confirmed that
-        // reading the data in the string works just fine (strlen doesn't halt), but the memcpy to the buffer does.
+        // reading the data in the string works just fine (strlen doesn't halt), but the memcpy to the buffer does not.
         //
         // Reproducing the memcpy loop here in testing reproduces the halt on real hardware, but adding an if check
         // (even if it never passes) makes the memcpy loop work, which implies to me that the compiler might be doing
