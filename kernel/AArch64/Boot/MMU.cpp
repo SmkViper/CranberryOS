@@ -283,6 +283,28 @@ namespace AArch64::Boot
             }
         }
 
+        /**
+         * Sets up an identity mapping for the first 1GB of memory in the given level 0 table
+         * 
+         * @param arAllocator Allocator for memory pages
+         * @param aRootPage The root page table
+         * @param aMAIRIndex The index into the MAIR register for the attributes for this memory
+         */
+        void InsertEntriesForIdentityMapping(PageBumpAllocator& arAllocator, PageTable::Level0View const aRootPage,
+            uint8_t const aMAIRIndex)
+        {
+            // Level 0 table points to level 1 table (512GB range)
+            auto const level1Table = GetOrInsertPageDescriptor<PageTable::Level1View>(arAllocator, aRootPage, VirtualPtr{ 0 });
+            
+            Descriptor::L1Block blockEntry;
+            blockEntry.Address(PhysicalPtr{ 0 });
+            blockEntry.AF(true); // don't fault when accessed
+            blockEntry.AP(Descriptor::L1Block::AccessPermissions::KernelRWUserNone); // only kernel can access
+            blockEntry.AttrIndx(aMAIRIndex);
+
+            level1Table.SetEntryForVA(VirtualPtr{ 0 }, blockEntry);
+        }
+
         struct PageRoots
         {
             PhysicalPtr Table0; // table for user space (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF)
@@ -296,9 +318,9 @@ namespace AArch64::Boot
          */
         PageRoots AllocateAndInitPageTables()
         {
-            // #TODO: Linker seems to have set up PC-relative address calculations for these, which is why they come out as
-            // physical addresses, and not virtual ones (cause the PC is still in PA space)
-            PageBumpAllocator allocator{ ExclusiveMemoryRange{ PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) }, PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir_end) } } };
+            auto const pageDirectoryBuffer = PhysicalPtr{ std::bit_cast<uintptr_t>(&GlobalNoMMU(_pg_dir)) };
+            auto const pageDirectoryBufferEnd = PhysicalPtr{ std::bit_cast<uintptr_t>(&GlobalNoMMU(_pg_dir_end)) };
+            PageBumpAllocator allocator{ ExclusiveMemoryRange{ pageDirectoryBuffer, pageDirectoryBufferEnd } };
 
             // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
             // they need based on device tree information
@@ -306,9 +328,12 @@ namespace AArch64::Boot
             auto const deviceEndPA = deviceBasePA.Offset(0x00FF'FFFF);
 
             // Calculate the range of the kernel image in page size size
-            // #TODO: Why are these symbols from the linker script pointing at physical addresses? (PC-relative apparently)
-            auto const kernelBasePA = MemoryManager::CalculateBlockStart(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image) }, MemoryManager::PageSize);
-            auto const kernelEndPA = MemoryManager::CalculateBlockEnd(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image_end) }, MemoryManager::PageSize);
+            auto const kernelBasePA = MemoryManager::CalculateBlockStart(
+                PhysicalPtr{ std::bit_cast<uintptr_t>(&GlobalNoMMU(_kernel_image)) }, MemoryManager::PageSize
+            );
+            auto const kernelEndPA = MemoryManager::CalculateBlockEnd(
+                PhysicalPtr{ std::bit_cast<uintptr_t>(&GlobalNoMMU(_kernel_image_end)) }, MemoryManager::PageSize
+            );
 
             // Converts a physical pointer to a virtual pointer assuming offset mapping
             auto toVAOffsetMapping = [](PhysicalPtr const aPA)
@@ -316,34 +341,46 @@ namespace AArch64::Boot
                 return VirtualPtr{ aPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressOffset);
             };
 
-            auto const kernelRangeVA = InclusiveMemoryRange{ toVAOffsetMapping(kernelBasePA), toVAOffsetMapping(kernelEndPA) };
-            auto const deviceRangeVA = InclusiveMemoryRange{ toVAOffsetMapping(deviceBasePA), toVAOffsetMapping(deviceEndPA) };
+            auto const kernelRangeVA = InclusiveMemoryRange{
+                toVAOffsetMapping(kernelBasePA),
+                toVAOffsetMapping(kernelEndPA)
+            };
+            auto const deviceRangeVA = InclusiveMemoryRange{
+                toVAOffsetMapping(deviceBasePA),
+                toVAOffsetMapping(deviceEndPA)
+            };
 
             // physical addresses that the allocator returns are pointers since we have no MMU at this point
-            auto const rootPage = PageTable::Level0View{ std::bit_cast<uint64_t*>(allocator.Allocate().GetAddress()) };
+            auto const table1Root = allocator.Allocate();
+            auto const table1RootView = PageTable::Level0View{ std::bit_cast<uint64_t*>(table1Root.GetAddress()) };
 
-            // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
-            // be pointing at the physical addresses)
-            InsertEntriesForMemoryRange(allocator, rootPage, InclusiveMemoryRange{ VirtualPtr{ kernelBasePA.GetAddress() }, VirtualPtr{ kernelEndPA.GetAddress() } }, kernelBasePA, MemoryManager::NormalMAIRIndex);
-
-            // Now map the kernel and devices into high memory
+            // Map the kernel and devices into high memory
             // #TODO: Want to be able to remove the device mapping eventually - once we have a device driver that can map
-            InsertEntriesForMemoryRange(allocator, rootPage, kernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
-            InsertEntriesForMemoryRange(allocator, rootPage, deviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, table1RootView, kernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, table1RootView, deviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
 
             // Map everything between the kernel range and device range for now
             // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
             // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
             // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
             // kernel space
-            auto const extraRangeVA = InclusiveMemoryRange{ kernelRangeVA.End.Offset(1), VirtualPtr{ deviceRangeVA.Begin.GetAddress() - 1 } };
+            auto const extraRangeVA = InclusiveMemoryRange{
+                kernelRangeVA.End.Offset(1),
+                VirtualPtr{ deviceRangeVA.Begin.GetAddress() - 1 }
+            };
             auto const startOfExtraPA = kernelEndPA.Offset(1);
-            InsertEntriesForMemoryRange(allocator, rootPage, extraRangeVA, startOfExtraPA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, table1RootView, extraRangeVA, startOfExtraPA, MemoryManager::NormalMAIRIndex);
 
-            // #TODO: Set up with a real table 0 so we can clear out the identity mapping later
+            // Now we are going to set up a very basic 1GB block for identity mapping to ensure that when we turn the
+            // MMU on we don't immediately trap because the IP and SP are pointing in the lower half (until we
+            // update them)
+            auto const table0Root = allocator.Allocate();
+            auto const table0RootView = PageTable::Level0View{ std::bit_cast<uint64_t*>(table0Root.GetAddress()) };
+            InsertEntriesForIdentityMapping(allocator, table0RootView, MemoryManager::NormalMAIRIndex);
+
             return PageRoots{
-                .Table0 = PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) },
-                .Table1 = PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) }
+                .Table0 = table0Root,
+                .Table1 = table1Root
             };
         }
 
@@ -444,9 +481,17 @@ namespace AArch64::Boot
 
     void UnmapIdentityMapping()
     {
-        auto* const prootPageBuffer = std::bit_cast<uint64_t*>(static_cast<uint8_t*>(_pg_dir));
+        // Can't use CalculatePhysicalToLinkTimeAddressOffset because the MMU is on and the offset would therefore be
+        // 0 (but we could probably store the result of a pre-MMU call of that for later use)
+        // #TODO: Maybe calculate the offset pre-MMU and store it instead
 
-        // manually dig out the level 2 entry for our zero address and clear it, which will nuke our identity mapping
+        auto const ttbrn_el1 = TTBRn_EL1::Read0();
+        auto const rootPagePA = ttbrn_el1.BADDR();
+        // The page tables are offset-mapped at this point, so just shift the pointer into kernel space
+        auto const rootPageVA = VirtualPtr{ rootPagePA.Offset(MemoryManager::KernelVirtualAddressOffset).GetAddress() };
+        auto* const prootPageBuffer = std::bit_cast<uint64_t*>(rootPageVA.GetAddress());
+
+        // manually dig out the level 1 block for our zero address and clear it, which will nuke our identity mapping
         // (though it won't return the pages we used, as we aren't keeping track of that yet)
         // #TODO: See if we can reclaim the memory
         auto const rootPage = PageTable::Level0View{ prootPageBuffer };
@@ -465,12 +510,9 @@ namespace AArch64::Boot
         
         if (level1TablePtr.GetAddress() != 0)
         {
-            // #TODO: Would like something better than the fixed constant (which I'd like to eventually get rid of).
-            // Can't use CalculatePhysicalToLinkTimeAddressOffset because the MMU is on and the offset would therefore
-            // be 0 (but we could probably store the result of a pre-MMU call of that for later use)
             auto const level1TableVirtual = VirtualPtr{ level1TablePtr.Offset(MemoryManager::KernelVirtualAddressOffset).GetAddress() };
-            auto const level1Page = PageTable::Level1View{ std::bit_cast<uint64_t*>(level1TableVirtual.GetAddress()) };
-            level1Page.SetEntryForVA(VirtualPtr{ 0 }, Descriptor::Fault{} );
+            auto const level1Table = PageTable::Level1View{ std::bit_cast<uint64_t*>(level1TableVirtual.GetAddress()) };
+            level1Table.SetEntryForVA(VirtualPtr{ 0 }, Descriptor::Fault{} );
         }
     }
 
