@@ -7,14 +7,9 @@
 namespace AArch64::Boot
 {
     /**
-     * Sets up the page tables needed for booting
+     * Sets up the page tables needed for booting and turns on the MMU
      */
-    void CreatePageTables();
-
-    /**
-     * Turns on the memory management unit
-     */
-    void EnableMMU();
+    void InitPageTablesAndMMU();
 
     /**
      * Stores the device tree into a known location and returns where it was copied to

@@ -283,76 +283,92 @@ namespace AArch64::Boot
             }
         }
 
-        /**
-         * Sets the page table registers to the given table
-         * 
-         * @param aTable The table to use
-         */
-        void SwitchToPageTable(PhysicalPtr const aTable)
+        struct PageRoots
         {
-            // the apTable pointer gets the top 16 bits masked out (because it becomes the ASID), so we don't have
-            // to do any adjustment to it to account for it being on a virtual kernel address
-            // #TODO: In theory, but the debugger shows it at the physical address for an unknown reason.
+            PhysicalPtr Table0; // table for user space (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF)
+            PhysicalPtr Table1; // table for kernel space (0xFFFF'0000'0000'0000 - 0xFFFF'FFFF'FFFF'FFFF)
+        };
+
+        /**
+         * Allocate the page tables, initialize them with enough data to boot, and return the pointers
+         * 
+         * @return The two tables that were set up
+         */
+        PageRoots AllocateAndInitPageTables()
+        {
+            // #TODO: Linker seems to have set up PC-relative address calculations for these, which is why they come out as
+            // physical addresses, and not virtual ones (cause the PC is still in PA space)
+            PageBumpAllocator allocator{ ExclusiveMemoryRange{ PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) }, PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir_end) } } };
+
+            // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
+            // they need based on device tree information
+            auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
+            auto const deviceEndPA = deviceBasePA.Offset(0x00FF'FFFF);
+
+            // Calculate the range of the kernel image in page size size
+            // #TODO: Why are these symbols from the linker script pointing at physical addresses? (PC-relative apparently)
+            auto const kernelBasePA = MemoryManager::CalculateBlockStart(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image) }, MemoryManager::PageSize);
+            auto const kernelEndPA = MemoryManager::CalculateBlockEnd(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image_end) }, MemoryManager::PageSize);
+
+            // Converts a physical pointer to a virtual pointer assuming offset mapping
+            auto toVAOffsetMapping = [](PhysicalPtr const aPA)
+            {
+                return VirtualPtr{ aPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressOffset);
+            };
+
+            auto const kernelRangeVA = InclusiveMemoryRange{ toVAOffsetMapping(kernelBasePA), toVAOffsetMapping(kernelEndPA) };
+            auto const deviceRangeVA = InclusiveMemoryRange{ toVAOffsetMapping(deviceBasePA), toVAOffsetMapping(deviceEndPA) };
+
+            // physical addresses that the allocator returns are pointers since we have no MMU at this point
+            auto const rootPage = PageTable::Level0View{ std::bit_cast<uint64_t*>(allocator.Allocate().GetAddress()) };
+
+            // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
+            // be pointing at the physical addresses)
+            InsertEntriesForMemoryRange(allocator, rootPage, InclusiveMemoryRange{ VirtualPtr{ kernelBasePA.GetAddress() }, VirtualPtr{ kernelEndPA.GetAddress() } }, kernelBasePA, MemoryManager::NormalMAIRIndex);
+
+            // Now map the kernel and devices into high memory
+            // #TODO: Want to be able to remove the device mapping eventually - once we have a device driver that can map
+            InsertEntriesForMemoryRange(allocator, rootPage, kernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
+            InsertEntriesForMemoryRange(allocator, rootPage, deviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
+
+            // Map everything between the kernel range and device range for now
+            // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
+            // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
+            // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
+            // kernel space
+            auto const extraRangeVA = InclusiveMemoryRange{ kernelRangeVA.End.Offset(1), VirtualPtr{ deviceRangeVA.Begin.GetAddress() - 1 } };
+            auto const startOfExtraPA = kernelEndPA.Offset(1);
+            InsertEntriesForMemoryRange(allocator, rootPage, extraRangeVA, startOfExtraPA, MemoryManager::NormalMAIRIndex);
+
+            // #TODO: Set up with a real table 0 so we can clear out the identity mapping later
+            return PageRoots{
+                .Table0 = PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) },
+                .Table1 = PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) }
+            };
+        }
+
+        /**
+         * Sets the page table registers
+         * 
+         * @param aTables The tables to use
+         */
+        void SwitchToPageTables(PageRoots const aTables)
+        {
             TTBRn_EL1 ttbrn_el1;
-            ttbrn_el1.BADDR(aTable);
-            TTBRn_EL1::Write0(ttbrn_el1); // table for user space (0x0000'0000'0000'0000 - 0x0000'FFFF'FFFF'FFFF)
-            TTBRn_EL1::Write1(ttbrn_el1); // table for kernel space (0xFFFF'0000'0000'0000 - 0xFFFF'FFFF'FFFF'FFFF)
+
+            ttbrn_el1.BADDR(aTables.Table0);
+            TTBRn_EL1::Write0(ttbrn_el1);
+
+            ttbrn_el1.BADDR(aTables.Table1);
+            TTBRn_EL1::Write1(ttbrn_el1);
         }
     }
 
-    void CreatePageTables()
+    void InitPageTablesAndMMU()
     {
-        // #TODO: Linker seems to have set up PC-relative address calculations for these, which is why they come out as
-        // physical addresses, and not virtual ones (cause the PC is still in PA space)
-        PageBumpAllocator allocator{ ExclusiveMemoryRange{ PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) }, PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir_end) } } };
+        auto const tables = AllocateAndInitPageTables();
 
-        // #TODO: This is hardcoded for now and we should likely have the individual devices request the addresses
-        // they need based on device tree information
-        auto const deviceBasePA = MemoryManager::DeviceBaseAddress;
-        auto const deviceEndPA = deviceBasePA.Offset(0x00FF'FFFF);
-
-        // Calculate the range of the kernel image in page size size
-        // #TODO: Why are these symbols from the linker script pointing at physical addresses? (PC-relative apparently)
-        auto const kernelBasePA = MemoryManager::CalculateBlockStart(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image) }, MemoryManager::PageSize);
-        auto const kernelEndPA = MemoryManager::CalculateBlockEnd(PhysicalPtr{ std::bit_cast<uintptr_t>(&_kernel_image_end) }, MemoryManager::PageSize);
-
-        // Converts a physical pointer to a virtual pointer assuming offset mapping
-        auto toVAOffsetMapping = [](PhysicalPtr const aPA)
-        {
-            return VirtualPtr{ aPA.GetAddress() }.Offset(MemoryManager::KernelVirtualAddressOffset);
-        };
-
-        auto const kernelRangeVA = InclusiveMemoryRange{ toVAOffsetMapping(kernelBasePA), toVAOffsetMapping(kernelEndPA) };
-        auto const deviceRangeVA = InclusiveMemoryRange{ toVAOffsetMapping(deviceBasePA), toVAOffsetMapping(deviceEndPA) };
-
-        // physical addresses that the allocator returns are pointers since we have no MMU at this point
-        auto const rootPage = PageTable::Level0View{ std::bit_cast<uint64_t*>(allocator.Allocate().GetAddress()) };
-
-        // Identity mappings - so we don't break immediately when turning the MMU on (since the stack and IP will
-        // be pointing at the physical addresses)
-        InsertEntriesForMemoryRange(allocator, rootPage, InclusiveMemoryRange{ VirtualPtr{ kernelBasePA.GetAddress() }, VirtualPtr{ kernelEndPA.GetAddress() } }, kernelBasePA, MemoryManager::NormalMAIRIndex);
-
-        // Now map the kernel and devices into high memory
-        // #TODO: Want to be able to remove the device mapping eventually - once we have a device driver that can map
-        InsertEntriesForMemoryRange(allocator, rootPage, kernelRangeVA, kernelBasePA, MemoryManager::NormalMAIRIndex);
-        InsertEntriesForMemoryRange(allocator, rootPage, deviceRangeVA, deviceBasePA, MemoryManager::DeviceMAIRIndex);
-
-        // Map everything between the kernel range and device range for now
-        // #TODO: Should be able to remove this once the memory manager can scan the list of valid addresses from
-        // the device tree and map all physical memory into kernel space. Without this, any attempt to allocate
-        // pages in MemoryManager.cpp would fail because the memory the page is taken from wouldn't be mapped into
-        // kernel space
-        auto const extraRangeVA = InclusiveMemoryRange{ kernelRangeVA.End.Offset(1), VirtualPtr{ deviceRangeVA.Begin.GetAddress() - 1 } };
-        auto const startOfExtraPA = kernelEndPA.Offset(1);
-        InsertEntriesForMemoryRange(allocator, rootPage, extraRangeVA, startOfExtraPA, MemoryManager::NormalMAIRIndex);
-    }
-
-    void EnableMMU()
-    {
-        // #TODO: Linker seems to be using PC-relative addresses for these, why?
-        // #TODO: Relies on our page allocator returning the first address for the first allocate. Would like to remove
-        // the implicit dependency if possible
-        SwitchToPageTable(PhysicalPtr{ std::bit_cast<uintptr_t>(&_pg_dir) });
+        SwitchToPageTables(tables);
 
         MAIR_EL1 mair_el1;
         mair_el1.SetAttribute(MemoryManager::DeviceMAIRIndex, MAIR_EL1::Attribute::DeviceMemory());

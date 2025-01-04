@@ -42,9 +42,7 @@ extern "C"
         auto const deviceTreeVA = AArch64::Boot::StoreFlattenedDeviceTree(PhysicalPtr{ aDTBPointer });
 
         //Debug::OutputDebug("Setting up page tables...");
-        AArch64::Boot::CreatePageTables();
-        //Debug::OutputDebug("Enabling MMU...");
-        AArch64::Boot::EnableMMU();
+        AArch64::Boot::InitPageTablesAndMMU();
 
         // The MMU is now on, but our stack pointer and instruction pointer are still pointing at the original physical
         // addresses, which are identity mapped. We need to move those to the kernel virtual addresses, so we can clean
