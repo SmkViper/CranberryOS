@@ -19,6 +19,10 @@ namespace
     const char LoopParentStr[] = "abcde";
     __attribute__((section(".rodata.user")))
     const char LoopChildStr[] = "12345";
+    __attribute__((section(".rodata.user")))
+    const char ChildStr[] = "Child";
+    __attribute__((section(".rodata.user")))
+    const char ParentStr[] = "Parent";
     // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
     /**
@@ -70,7 +74,6 @@ namespace User
     __attribute__((section(".text.user")))
     void Process()
     {
-        // #TODO: Somewhere after we write this we trigger a SYNC_ERROR in debug. Need to figure out why
         SystemCall::Write(static_cast<char const*>(UserProcessStr));
         auto pid = SystemCall::Fork();
         if (pid < 0)
@@ -81,11 +84,15 @@ namespace User
         }
         if (pid == 0) // child process
         {
-            Loop(static_cast<char const*>(LoopParentStr));
+            // #TODO: "Child" is NOT printed in debug (we trap with level 3 translation fault)
+            SystemCall::Write(static_cast<char const*>(ChildStr));
+            Loop(static_cast<char const*>(LoopChildStr));
         }
         else // parent process
         {
-            Loop(static_cast<char const*>(LoopChildStr));
+            // #TODO: "Parent" is printed in debug, but nothing past it (we trap with level 3 translation fault)
+            SystemCall::Write(static_cast<char const*>(ParentStr));
+            Loop(static_cast<char const*>(LoopParentStr));
         }
     }
 } // User namespace
