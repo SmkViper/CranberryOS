@@ -52,10 +52,13 @@ namespace AArch64::Boot
          */
         void CopyToBuffer(char* const apOutput, char const* const apText, size_t const aCount)
         {
-            // #TODO: memcpy seems to cause issues when called this early (perhaps compiler is substituting its own
-            // optimized intrinsic that doesn't work before the MMU and CPU are fully set up)
+            // #TODO: Compiler seems to be a bit too smart with optimizing memcpy and even just this loop before we
+            // have the CPU and MMU fully set up. So we force this ugly volatile and manual loop here to ensure that
+            // things are copied byte by byte until we can figure out what exactly needs to change
+            [[maybe_unused]] volatile char deOptimize = 0;
             for (auto curIndex = 0U; curIndex < aCount; ++curIndex)
             {
+                deOptimize = apText[curIndex]; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 apOutput[curIndex] = apText[curIndex]; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             }
         }
@@ -82,7 +85,6 @@ namespace AArch64::Boot
             if ((messageLen + 1) > remainingLen)
             {
                 // specifically bash whatever is at the start before halting
-                // #TODO: Switch to strcpy when we have it
                 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
                 static constexpr char const bufferFullMsg[] = "PANIC: Output buffer full";
                 // Intentionally do NOT include the null terminator so it's easier to see what's left of the buffer in

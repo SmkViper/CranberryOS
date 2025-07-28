@@ -3,6 +3,11 @@
 
 namespace AArch64::Boot
 {
+    // #TODO: Want to figure out a way to help ensure that the NoMMU versions are never used after MMU is set up, and
+    // the MMU versions aren't used BEFORE the MMU is set up.
+    // Probably going to need to seperate out the code a little more into pre- and post-MMU functions/files, and
+    // ensuring that they online include pre- or post-MMU headers
+    
     /**
      * Panics the kernel with the given message during the boot process (no MMU)
      * 
