@@ -49,7 +49,8 @@ namespace
      */
     void CallStaticConstructors()
     {
-        auto const init_arraySize = std::bit_cast<uintptr_t>(&_init_end) - std::bit_cast<uintptr_t>(&_init_start);
+        auto const init_arraySize = (std::bit_cast<uintptr_t>(&_init_end) - std::bit_cast<uintptr_t>(&_init_start)) /
+            sizeof(StaticInitFunction);
         for (auto curFunc = 0U; curFunc < init_arraySize; ++curFunc)
         {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
@@ -62,7 +63,8 @@ namespace
      */
     void CallStaticDestructors()
     {
-        auto const fini_arraySize = std::bit_cast<uintptr_t>(&_fini_end) - std::bit_cast<uintptr_t>(&_fini_start);
+        auto const fini_arraySize = (std::bit_cast<uintptr_t>(&_fini_end) - std::bit_cast<uintptr_t>(&_fini_start)) /
+            sizeof(StaticFiniFunction);
         for (auto curFunc = 0U; curFunc < fini_arraySize; ++curFunc)
         {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, performance-no-int-to-ptr)
@@ -131,7 +133,6 @@ namespace Kernel
     void kmain(VirtualPtr const aDTBPointer, uint64_t const aX1Reserved, uint64_t const aX2Reserved,
         uint64_t const aX3Reserved, PhysicalPtr const aStartPointer)
     {
-        // #TODO: Looks like we trap in debug builds now on static constructor handling. Need to figure out why
         CallStaticConstructors();
 
         MiniUART::Init();

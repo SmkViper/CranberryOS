@@ -70,6 +70,7 @@ namespace User
     __attribute__((section(".text.user")))
     void Process()
     {
+        // #TODO: Somewhere after we write this we trigger a SYNC_ERROR in debug. Need to figure out why
         SystemCall::Write(static_cast<char const*>(UserProcessStr));
         auto pid = SystemCall::Fork();
         if (pid < 0)
