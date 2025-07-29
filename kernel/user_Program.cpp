@@ -19,10 +19,6 @@ namespace
     const char LoopParentStr[] = "abcde";
     __attribute__((section(".rodata.user")))
     const char LoopChildStr[] = "12345";
-    __attribute__((section(".rodata.user")))
-    const char ChildStr[] = "Child";
-    __attribute__((section(".rodata.user")))
-    const char ParentStr[] = "Parent";
     // NOLINTEND(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 
     /**
@@ -50,17 +46,15 @@ namespace
     __attribute__((section(".text.user")))
     void Loop(const char* const apStr)
     {
-        // #TODO: We don't have std::array yet, so suppress lint warning
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
-        char buffer[] = {'\0', '\0'};
         while (true)
         {
             // #TODO: Could be made safer with something like string_view perhaps when we have that
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             for (auto curIndex = 0U; apStr[curIndex] != '\0'; ++curIndex)
             {
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                buffer[0] = apStr[curIndex];
+                // #TODO: We don't have std::array yet, so suppress lint warning
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-avoid-c-arrays, hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+                char buffer[] = { apStr[curIndex], '\0' };
                 SystemCall::Write(static_cast<char const*>(buffer));
                 constexpr auto delayDuration = 100'000U;
                 Delay(delayDuration);
@@ -84,14 +78,10 @@ namespace User
         }
         if (pid == 0) // child process
         {
-            // #TODO: "Child" is NOT printed in debug (we trap with level 3 translation fault)
-            SystemCall::Write(static_cast<char const*>(ChildStr));
             Loop(static_cast<char const*>(LoopChildStr));
         }
         else // parent process
         {
-            // #TODO: "Parent" is printed in debug, but nothing past it (we trap with level 3 translation fault)
-            SystemCall::Write(static_cast<char const*>(ParentStr));
             Loop(static_cast<char const*>(LoopParentStr));
         }
     }
