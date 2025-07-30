@@ -7,6 +7,7 @@
 #include "AArch64/MemoryDescriptor.h"
 #include "AArch64/MemoryPageTables.h"
 #include "AArch64/SystemRegisters.h"
+#include "Debug.h"
 #include "PointerTypes.h"
 #include "Print.h"
 #include "Scheduler.h"
@@ -125,15 +126,15 @@ namespace MemoryManager
                 },
                 [](AArch64::Descriptor::L1Block)
                 {
-                    // #TODO: Panic if this ever happens
+                    ::Debug::Panic("MapTable does not expect to run into L1 blocks");
                 },
                 [](AArch64::Descriptor::L2Block)
                 {
-                    // #TODO: Panic if this ever happens
+                    ::Debug::Panic("MapTable does not expect to run into L2 blocks");
                 },
                 [](AArch64::Descriptor::Page)
                 {
-                    // #TODO: Panic if this ever happens
+                    ::Debug::Panic("MapTable does not expect to run into pages");
                 }
             });
 
