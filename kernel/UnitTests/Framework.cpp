@@ -14,6 +14,7 @@
 #include "KernelStdlib/NewTests.h"
 #include "KernelStdlib/TypeInfoTests.h"
 #include "KernelStdlib/UtilityTests.h"
+#include "MemoryManagement/SimpleAllocatorTests.h"
 #include "BigEndianTests.h"
 #include "MemoryManagerTests.h"
 #include "PointerTypesTests.h"
@@ -195,6 +196,8 @@ namespace UnitTests
         KernelStdlib::TypeInfo::Run();
         // No runtime tests for type_traits
         KernelStdlib::Utility::Run();
+
+        MemoryManagement::SimpleAllocator::Run();
 
         BigEndian::Run();
         // #TODO: Debug.h/cpp untested (not sure if testable)

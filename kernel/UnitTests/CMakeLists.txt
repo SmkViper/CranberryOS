@@ -10,3 +10,4 @@ target_sources(kernel8.elf
 
 add_subdirectory(AArch64)
 add_subdirectory(KernelStdlib)
+add_subdirectory(MemoryManagement)

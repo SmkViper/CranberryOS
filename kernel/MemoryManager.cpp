@@ -81,17 +81,15 @@ namespace MemoryManager
         /**
          * Free a page of memory
          * 
-         * @param apPage Physical address of the page to free
+         * @param aPage Physical address of the page to free
          */
-        /* Currently unused
-        void FreePage(void* apPage)
+        void FreePage(PhysicalPtr aPage)
         {
-            // #TODO: Double-check that the page is valid
+            // #TODO: Double-check that the page address is valid
             auto const pageMemoryStart = CalculatePagingMemoryPAStart();
-            const auto index = (reinterpret_cast<uintptr_t>(apPage) - pageMemoryStart) / PageSize;
+            const auto index = (aPage.GetAddress() - pageMemoryStart.GetAddress()) / PageSize;
             PageInUse[index] = false;
         }
-        */
 
        /**
          * Map a new table, or get the existing table for the specified table, shift, and virtual address
@@ -427,6 +425,15 @@ namespace MemoryManager
         }
         // map the physical page to the kernel address space (offset-mapped)
         return std::bit_cast<void*>(physicalPage.Offset(KernelVirtualAddressOffset).GetAddress());
+    }
+
+    void FreeKernelPage(void* const apPage)
+    {
+        // map the kernel page to physical page (offset-mapped)
+        auto const pagePA = PhysicalPtr{ std::bit_cast<uintptr_t>(apPage) - KernelVirtualAddressOffset };
+        FreePage(pagePA);
+        // #TODO: Probably need to do some unmapping too - though AllocateKernelPage doesn't do any mapping (probably
+        // relies on how we initially map 1gb of memory into kernel space?)
     }
 
     void* AllocateUserPage(Scheduler::TaskStruct& arTask, VirtualPtr const aVirtualAddress)

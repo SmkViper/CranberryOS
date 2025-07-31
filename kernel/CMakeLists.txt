@@ -30,6 +30,7 @@ target_link_libraries(kernel8.elf PRIVATE kernel_stdlib CranberryOS_Options Cran
 # Bring in each sub folder that we need (they have their own CMakeLists.txt files that will add appropriate
 # information to the targets)
 add_subdirectory(AArch64)
+add_subdirectory(MemoryManagement)
 add_subdirectory(Peripherals)
 add_subdirectory(UnitTests)
 

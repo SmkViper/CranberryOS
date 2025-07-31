@@ -50,6 +50,13 @@ namespace MemoryManager
     void* AllocateKernelPage();
 
     /**
+     * Returns a kernel page to the free pool
+     * 
+     * @param apPage The page to free up
+     */
+    void FreeKernelPage(void* apPage);
+
+    /**
      * Allocates a page of memory in the task's virtual address space that contains the specified address
      * 
      * @param arTask The task that will hold the page

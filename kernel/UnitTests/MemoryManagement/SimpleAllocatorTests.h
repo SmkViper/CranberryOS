@@ -1,0 +1,12 @@
+#ifndef KERNEL_UNITTESTS_MEMORYMANAGEMENT_SIMPLEALLOCATORTESTS_H
+#define KERNEL_UNITTESTS_MEMORYMANAGEMENT_SIMPLEALLOCATORTESTS_H
+
+namespace UnitTests::MemoryManagement::SimpleAllocator
+{
+    /**
+     * Run all runtime tests
+     */
+    void Run();
+}
+
+#endif // KERNEL_UNITTESTS_MEMORYMANAGEMENT_SIMPLEALLOCATORTESTS_H
