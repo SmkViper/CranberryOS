@@ -43,14 +43,14 @@ Debugging has been tested in VSCode with the CodeLLDB extension. The following l
 
 ```json
 {
-    "type": "lldb",
-    "request": "custom",
     "name": "Connect to QEMU",
+    "type": "lldb",
+    "request": "attach",
     "targetCreateCommands": [
         "target create ${workspaceFolder}/build/kernel/kernel8.elf"
     ],
     "processCreateCommands": [
-        "gdb-remote <ip or localhost>:1234"
+        "gdb-remote localhost:1234"
     ]
 }
 ```
