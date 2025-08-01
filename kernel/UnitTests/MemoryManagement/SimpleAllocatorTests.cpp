@@ -44,18 +44,37 @@ namespace UnitTests::MemoryManagement::SimpleAllocator
             void* pPage = nullptr;
         };
 
-        void MallocNonNullTest()
+        /**
+         * Testing basic malloc/free behavior
+         */
+        void MallocFreeTests()
         {
             auto const testPage = AutoKernelPage{};
             auto testAllocator = ::MemoryManagement::SimpleAllocator{ testPage.QPage() };
 
-            auto* pinteger = std::bit_cast<uint32_t*>(testAllocator.Malloc(sizeof(uint32_t)));
-            EmitTestResult((pinteger != nullptr), "SimpleAllocator Malloc Returns Non-null");
-            testAllocator.Free(pinteger);
-        }
+            auto* const poriginalMemory = testAllocator.Malloc(sizeof(uint32_t));
+            EmitTestResult(poriginalMemory != nullptr, "SimpleAllocator::Malloc returns non-null");
 
-        // #TODO: Need a lot more tests
-        
+            // read/write to ensure we have access to the memory
+            constexpr auto testValue = 0xFEFE'ABCDU;
+            // using volatile to try to ensure the values are written and read and not cached
+            auto volatile* const ptestMemory = std::bit_cast<uint32_t volatile*>(poriginalMemory);
+            *ptestMemory = testValue;
+            EmitTestResult(*ptestMemory == testValue, "SimpleAllocator::Malloc memory read/write");
+
+            auto* const potherMemory = testAllocator.Malloc(sizeof(uint32_t));
+            EmitTestResult(potherMemory != poriginalMemory, "SimpleAllocator::Malloc returns seperate pointer");
+
+            testAllocator.Free(poriginalMemory);
+
+            auto* const preusedMemory = testAllocator.Malloc(sizeof(uint32_t));
+            EmitTestResult(preusedMemory == poriginalMemory, "SimpleAllocator::Malloc reused free memory");
+
+            testAllocator.Free(preusedMemory);
+            testAllocator.Free(potherMemory);
+            // Additional testing is done implicitly via the allocator destructor, which panics if there is any unfreed
+            // or corrupted memory blocks
+        }
     } // anonymous namespace
 
     // #TODO: Figure out if there is a better way to fix this
@@ -63,6 +82,6 @@ namespace UnitTests::MemoryManagement::SimpleAllocator
     // NOLINTNEXTLINE(misc-use-internal-linkage)
     void Run()
     {
-        MallocNonNullTest();
+        MallocFreeTests();
     }
 } // UnitTests::MemoryManagement::SimpleAllocator namespace

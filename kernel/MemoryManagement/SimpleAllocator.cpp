@@ -29,7 +29,8 @@ namespace MemoryManagement
         , pBlockList{ CreateInitialFreeBlock(pPageListHead) }
     {
         // #TODO: Should we own the page and be responsible for freeing it? Probably. In which case update comments
-        // around other NOLINT in this file
+        // around other NOLINT in this file. Alternatively, maybe a wrapping class that owns the page could be written
+        // so we have options for owning and non-owning allocators.
     }
 
     SimpleAllocator::SimpleAllocator(SimpleAllocator&& amOther) noexcept
@@ -55,9 +56,13 @@ namespace MemoryManagement
             auto const* pcurBlock = pBlockList;
             while (pcurBlock != nullptr)
             {
-                if (pcurBlock->Magic != FreeMagicCS)
+                if (!pcurBlock->IsValid())
                 {
-                    Debug::Panic("Unfreed memory OR corrupted!");
+                    Debug::Panic("Corrupted block in list!");
+                }
+                if (!pcurBlock->IsFree())
+                {
+                    Debug::Panic("Unfreed memory in list!");
                 }
                 if (pcurBlock->Size != FullPageBlockSize<PageInfo, BlockHeader>())
                 {
@@ -91,10 +96,14 @@ namespace MemoryManagement
             {
                 Debug::Panic("Cannot allocate from an allocator with no pages!");
             }
+
+            // we need to adjust the size so that if we're splitting the block the next block ends up on the right
+            // alignment
+            auto const sizePlusAlign = aSize + (defaultAlignmentC -(aSize % defaultAlignmentC));
             
-            if (auto* const pexistingFreeBlock = FindFreeBlock(aSize); pexistingFreeBlock != nullptr)
+            if (auto* const pexistingFreeBlock = FindFreeBlock(sizePlusAlign); pexistingFreeBlock != nullptr)
             {
-                pexistingFreeBlock->SplitIfWorthIt(aSize);
+                pexistingFreeBlock->SplitIfWorthIt(sizePlusAlign);
                 pexistingFreeBlock->Magic = AllocatedMagicCS;
                 // #TODO: Might be worth validating the memory here against a known magic to detect corruption
                 pretVal = pexistingFreeBlock->GetMemory();
@@ -123,13 +132,17 @@ namespace MemoryManagement
         }
         // block header is right before the pointer itself
         auto* const pheader = std::bit_cast<BlockHeader*>(apPtr) - 1;
-        if (pheader->Magic != AllocatedMagicCS)
+        if (!pheader->IsValid())
         {
             Debug::Panic("Memory corruption in block, OR pointer is not at start of block!");
         }
+        if (pheader->IsFree())
+        {
+            Debug::Panic("Attempted to double-free memory!");
+        }
 
         pheader->Magic = FreeMagicCS;
-        pheader->AttemptToMerge();
+        MergeFreeBlocks();
     }
 
     /**
@@ -155,7 +168,7 @@ namespace MemoryManagement
         {
             Debug::Panic("Block size not large enough for desired size!");
         }
-        if (Magic != FreeMagicCS)
+        if (!IsFree())
         {
             Debug::Panic("Attempted to split a non-free block!");
         }
@@ -163,7 +176,7 @@ namespace MemoryManagement
         // we'll consider a block worth splitting if it results in enough space for another block header and a pointer
         if (Size >= (aDesiredSize + sizeof(BlockHeader) + sizeof(void*)))
         {
-            auto* const pnewBlockMemory = std::bit_cast<uint8_t*>(GetMemory()) + Size;
+            auto* const pnewBlockMemory = std::bit_cast<uint8_t*>(GetMemory()) + aDesiredSize;
             // caller is responsible for freeing, not us, and they're getting a raw pointer, not our block
             auto* const pnewBlock = new (pnewBlockMemory) BlockHeader{ // NOLINT(cppcoreguidelines-owning-memory)
                 .Size = Size - aDesiredSize - sizeof(BlockHeader),
@@ -178,14 +191,17 @@ namespace MemoryManagement
 
     /**
      * Attempt to merge this block with its next block, if it is free
+     * 
+     * @return True if a block was merged
      */
-    void SimpleAllocator::BlockHeader::AttemptToMerge()
+    bool SimpleAllocator::BlockHeader::AttemptToMerge()
     {
+        auto blockMerged = false;
         if (pNextBlock == nullptr)
         {
-            return;
+            return blockMerged;
         }
-        if (Magic != FreeMagicCS)
+        if (!IsFree())
         {
             Debug::Panic("Attempted to merge a non-free block!");
         }
@@ -197,7 +213,7 @@ namespace MemoryManagement
         {
             Debug::Panic("Next block isn't at expected position!");
         }
-        if (pNextBlock->Magic == FreeMagicCS)
+        if (pNextBlock->IsFree())
         {
             auto* const poriginalNextBlock = pNextBlock;
             pNextBlock = pNextBlock->pNextBlock;
@@ -206,9 +222,9 @@ namespace MemoryManagement
             // #TODO: std::destroy when we have it
             poriginalNextBlock->~BlockHeader();
 
-            // we don't need to recurse with our new next block since we're always trying to merge blocks, so you won't
-            // end up with two free blocks in a row
+            blockMerged = true;
         }
+        return blockMerged;
     }
 
     /**
@@ -319,16 +335,36 @@ namespace MemoryManagement
         auto* pretVal = static_cast<BlockHeader*>(nullptr);
         while ((pcurBlock != nullptr) && (pretVal == nullptr))
         {
-            if (ValidMagic(pcurBlock->Magic))
+            if (!ValidMagic(pcurBlock->Magic))
             {
                 Debug::Panic("Invalid magic on memory block - probable memory corruption!");
             }
-            if ((pcurBlock->Magic == FreeMagicCS) && (pcurBlock->Size >= aSize))
+            if (pcurBlock->IsFree() && (pcurBlock->Size >= aSize))
             {
                 pretVal = pcurBlock;
             }
             pcurBlock = pcurBlock->pNextBlock;
         }
         return pretVal;
+    }
+
+    /**
+     * Goes through the list of blocks and merges any adjacent free ones
+     */
+    void SimpleAllocator::MergeFreeBlocks()
+    {
+        auto* pcurBlock = pBlockList;
+        while (pcurBlock != nullptr)
+        {
+            if (pcurBlock->IsFree() && pcurBlock->AttemptToMerge())
+            {
+                // merged a free block - don't advance pcurBlock since it might be able to be merged again
+            }
+            else
+            {
+                // block wasn't free, or didn't merge, so go to next one
+                pcurBlock = pcurBlock->pNextBlock;
+            }
+        }
     }
 } // MemoryManagement namespace

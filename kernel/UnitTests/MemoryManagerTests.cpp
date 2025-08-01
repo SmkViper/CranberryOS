@@ -1,5 +1,8 @@
 #include "MemoryManagerTests.h"
 
+#include <bit>
+#include <cstdint>
+#include "Framework.h"
 #include "../MemoryManager.h"
 #include "../PointerTypes.h"
 
@@ -24,7 +27,34 @@ namespace UnitTests::MemoryManager
         static_assert(::MemoryManager::CalculateBlockEnd(PhysicalPtr{ 0x1024 }, 0x1000) == PhysicalPtr{ 0x1FFF }, "Unexpected block end");
         static_assert(::MemoryManager::CalculateBlockEnd(VirtualPtr{ 0x1024 }, 0x1000) == VirtualPtr{ 0x1FFF }, "Unexpected block end");
 
-        // #TODO: AllocateKernelPage tests
+        /**
+         * Tests around Allocate/FreeKernelPage
+         */
+        void AllocateAndFreeKernelPageTests()
+        {
+            auto* const poriginalTestPage = ::MemoryManager::AllocateKernelPage();
+            EmitTestResult((poriginalTestPage != nullptr), "MemoryManager::AllocateKernelPage returns non-null");
+            
+            // read/write to ensure we have access to the memory
+            constexpr auto testValue = 0xFEFE'ABCDU;
+            // using volatile to try to ensure the values are written and read and not cached
+            auto volatile* const ptestMemory = std::bit_cast<uint32_t volatile*>(poriginalTestPage);
+            *ptestMemory = testValue;
+            EmitTestResult(*ptestMemory == testValue, "MemoryManager::AllocateKernelPage memory read/write");
+
+            auto* const potherPage = ::MemoryManager::AllocateKernelPage();
+            EmitTestResult(potherPage != poriginalTestPage, "MemoryManager::AllocateKernelPage returns seperate page");
+
+            // can't directly see if the page is freed, but we can ensure that the next allocate returns what was
+            // previously freed
+            ::MemoryManager::FreeKernelPage(poriginalTestPage);
+            auto* const preusedTestPage = ::MemoryManager::AllocateKernelPage();
+            EmitTestResult(preusedTestPage == poriginalTestPage, "MemoryManager::AllocateKernelPage reused free page");
+
+            ::MemoryManager::FreeKernelPage(preusedTestPage);
+            ::MemoryManager::FreeKernelPage(potherPage);
+        }
+        
         // #TODO: AllocateUserPage tests
         // #TODO: CopyVirtualMemory tests
 
@@ -34,7 +64,7 @@ namespace UnitTests::MemoryManager
 
     void Run()
     {
-        // #TODO: No tests yet, probably will need some ones later
+        AllocateAndFreeKernelPageTests();
     }
 }
 // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

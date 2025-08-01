@@ -64,8 +64,24 @@ namespace MemoryManagement
         struct BlockHeader
         {
             void SplitIfWorthIt(std::size_t aDesiredSize);
-            void AttemptToMerge();
-            void* GetMemory();
+            [[nodiscard]] bool AttemptToMerge();
+            [[nodiscard]] void* GetMemory();
+
+            /**
+             * Checks to see if this block is flagged as free
+             * 
+             * @return True if free
+             */
+            [[nodiscard]] bool IsFree() const { return Magic == FreeMagicCS; }
+
+            // TODO: Might be worth ensuring that the memory of freed blocks is filled with a marker value to detect
+            // memory corruption
+            /**
+             * Checks to see if this block is valid
+             * 
+             * @return True if valid
+             */
+            [[nodiscard]] bool IsValid() const { return ValidMagic(Magic); }
 
             std::size_t Size = 0;
             BlockHeader* pNextBlock = nullptr;
@@ -73,17 +89,17 @@ namespace MemoryManagement
         };
         struct PageInfo
         {
-            bool ContainsPointer(void* apPtr) const;
+            [[nodiscard]] bool ContainsPointer(void* apPtr) const;
 
             PageInfo* pNextPage = nullptr;
         };
 
-        static PageInfo* CreatePageInfo(void* apPage, PageInfo* apPrevPage);
-        static BlockHeader* CreateInitialFreeBlock(PageInfo* apEmptyPage);
-        static void SplitBlock(BlockHeader& arBlock, std::size_t aDesiredSize);
+        [[nodiscard]] static PageInfo* CreatePageInfo(void* apPage, PageInfo* apPrevPage);
+        [[nodiscard]] static BlockHeader* CreateInitialFreeBlock(PageInfo* apEmptyPage);
 
-        bool PointerInAllocator(void* apPtr) const;
-        BlockHeader* FindFreeBlock(std::size_t aSize);
+        [[nodiscard]] bool PointerInAllocator(void* apPtr) const;
+        [[nodiscard]] BlockHeader* FindFreeBlock(std::size_t aSize);
+        void MergeFreeBlocks();
 
         PageInfo* pPageListHead = nullptr;
         BlockHeader* pBlockList = nullptr;
