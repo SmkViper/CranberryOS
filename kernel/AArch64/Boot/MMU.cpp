@@ -448,7 +448,7 @@ namespace AArch64::Boot
         auto const* const pdeviceTree = std::bit_cast<uint8_t const*>(aDeviceTree.GetAddress());
 
         auto const* pheader = std::bit_cast<DeviceTree::fdt_header const*>(pdeviceTree);
-        if (DeviceTree::ValidateMagicAndVersion(*pheader))
+        if (DeviceTree::ValidateMagicAndVersion(*pheader) == DeviceTree::ValidationStatus::Valid)
         {
             if (pheader->totalsize <= DeviceTreeStorageSizeCS)
             {

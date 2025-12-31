@@ -154,7 +154,10 @@ namespace Kernel
         Print::FormatToMiniUART("x3: {:x}\r\n", aX3Reserved);
         Print::FormatToMiniUART("_start: {}\r\n", aStartPointer);
 #ifdef OUTPUT_DEVICE_TREE
-        DeviceTree::ParseDeviceTree(std::bit_cast<uint8_t const*>(aDTBPointer.GetAddress()));
+        if (!DeviceTree::OutputDeviceTreeDebugToUART(std::bit_cast<uint8_t const*>(aDTBPointer.GetAddress())))
+        {
+            Print::FormatToMiniUART("FAILED to completely output the DTB!\r\n");
+        }
 #endif // OUTPUT_DEVICE_TREE
 
         UnitTests::Run();

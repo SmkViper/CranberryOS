@@ -185,6 +185,7 @@ namespace DeviceTree
          */
         void OutputMemoryReservationMap(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
         {
+            // #TODO: Should probably make an iteration helper for this so other systems can reuse the logic
             MiniUART::SendString("Memory reservation map:\r\n");
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             uint8_t const* pcurEntry = aBaseAddr + aHeader.off_mem_rsvmap;
@@ -215,39 +216,6 @@ namespace DeviceTree
             {
                 MiniUART::SendString("  ");
             }
-        }
-
-        /**
-         * Outputs a begin node with its extra data
-         * 
-         * @param apExtraData The location of the extra data in the table
-         * @param aIndentLevel Level of indentation to use
-         * @return The new position of the pointer after the extra data and alignment
-         */
-        uint8_t const* OutputBeginNode(uint8_t const* const apExtraData, uint32_t const aIndentLevel)
-        {
-            IndentOutput(aIndentLevel);
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            char const* pnodeName = reinterpret_cast<char const*>(apExtraData);
-            Print::FormatToMiniUART("{} {{\r\n", pnodeName);
-            auto const nameByteLen = std::strlen(pnodeName) + 1; // including terminator
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            return AlignPointer(apExtraData + nameByteLen, alignof(uint32_t));
-        }
-
-        /**
-         * Outputs an end node with its extra data
-         * 
-         * @param apExtraData The location of the extra data in the table
-         * @param aIndentLevel Level of indentation to use
-         * @return The new position of the pointer after the extra data and alignment
-         */
-        uint8_t const* OutputEndNode(uint8_t const* const apExtraData, uint32_t const aIndentLevel)
-        {
-            // No extra data
-            IndentOutput(aIndentLevel);
-            MiniUART::SendString("};\r\n");
-            return apExtraData;
         }
 
         /**
@@ -486,111 +454,245 @@ namespace DeviceTree
             }
         }
 
-        /**
-         * Outputs a property with its extra data
-         * 
-         * @param aHeader Header containing offsets and other information
-         * @param aBaseAddr Base address for offsets in the header
-         * @param apExtraData The location of the extra data in the table
-         * @param aIndentLevel Level of indentation to use
-         * @param arCurStack The current cell information stack
-         * @return The new position of the pointer after the extra data and alignment
-         */
-        uint8_t const* OutputProp(fdt_header const& aHeader, uint8_t const* const aBaseAddr, // NOLINT(bugprone-easily-swappable-parameters)
-            uint8_t const* const apExtraData, uint32_t const aIndentLevel, CellInformationStack& arCurStack)
+        class OutputDebugToUART : public IteratorBase
         {
-            fdt_prop_extra_data dataHeader;
-            std::memcpy(&dataHeader, apExtraData, sizeof(dataHeader));
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            uint8_t const* pendPtr = apExtraData + sizeof(dataHeader);
+        public:
+            /**
+             * Constructor
+             * 
+             * @param apDTBBase Pointer to the start of the DTB
+             */
+            explicit OutputDebugToUART(uint8_t const* const apDTBBase)
+                : pDTBBase{ apDTBBase }
+            {}
 
-            IndentOutput(aIndentLevel);
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            char const* pname = reinterpret_cast<char const*>(aBaseAddr + aHeader.off_dt_strings + dataHeader.nameoff);
-            MiniUART::SendString(pname);
+            /**
+             * Called when the header is read in - header may be invalid!
+             * 
+             * @param aHeader The header data read in (might be invalid, check status!)
+             * @param aValidationStatus The status of the DTB, for error reporting if desired
+             * @return Whether iteration should continue
+             * @remarks Iteration will stop if validation failed, regardless of the return value of this function
+             */
+            [[nodiscard]] Result OnHeaderRead(fdt_header const& aHeader, ValidationStatus const aValidationStatus) override
+            {
+                auto continueIteration = Result::Continue;
+                switch (aValidationStatus)
+                {
+                case ValidationStatus::InvalidMagic:
+                    Print::FormatToMiniUART("Magic mismatch, found {:x}, expected {:x}\r\n", aHeader.magic, ExpectedMagic);
+                    continueIteration = Result::Stop;
+                    break;
 
-            // #TODO: There is likely a far better way to handle this
-            if (strcmp(pname, "#address-cells") == 0)
-            {
-                auto currentCellInfo = arCurStack.Top();
-                if (dataHeader.len == sizeof(currentCellInfo.AddressCells))
-                {
-                    BigEndian<uint32_t> addressCells;
-                    std::memcpy(&addressCells, pendPtr, sizeof(currentCellInfo.AddressCells));
-                    currentCellInfo.AddressCells = addressCells;
-                    arCurStack.SetTop(currentCellInfo);
+                case ValidationStatus::InvalidVersion:
+                    Print::FormatToMiniUART("Version check FAILED. Version: {} (last compatible version: {}). Expected version: {}",
+                        aHeader.version, aHeader.last_comp_version, ExpectedVersion);
+                    continueIteration = Result::Stop;
+                    break;
+
+                case ValidationStatus::Valid:
+                    MiniUART::SendString("Magic matches, and version check passed.\r\n");
+                    OutputHeader(aHeader);
+                    OutputMemoryReservationMap(aHeader, pDTBBase);
+                    // The block will come next as we enter/leave nodes, so print out a header for it
+                    MiniUART::SendString("Structure block:\r\n");
+                    break;
                 }
-            }
-            else if (strcmp(pname, "#size-cells") == 0)
-            {
-                auto currentCellInfo = arCurStack.Top();
-                if (dataHeader.len == sizeof(currentCellInfo.SizeCells))
-                {
-                    BigEndian<uint32_t> sizeCells;
-                    std::memcpy(&sizeCells, pendPtr, sizeof(currentCellInfo.SizeCells));
-                    currentCellInfo.SizeCells = sizeCells;
-                    arCurStack.SetTop(currentCellInfo);
-                }
+                return continueIteration;
             }
             
-            if (dataHeader.len == 0)
+            /**
+             * Called when a node begins
+             * 
+             * @param apNodeName The name of the node
+             * @return Whether iteration should continue
+             */
+            [[nodiscard]] Result OnBeginNode(char const* const apNodeName) override
             {
-                MiniUART::SendString(";\r\n");
+                auto continueIteration = Result::Continue;
+
+                // fine if the stack is empty, as we'll get the defaults
+                auto const parentCellInfo = InfoStack.Top();
+
+                IndentOutput(IndentLevel);
+                Print::FormatToMiniUART("{} {{\r\n", apNodeName);
+
+                // inherit default values from our parent
+                if (InfoStack.Push())
+                {
+                    InfoStack.SetTop(parentCellInfo);
+                }
+                else
+                {
+                    Print::FormatToMiniUART("Out of cell information stack space, aborting\r\n");
+                    continueIteration = Result::Stop;
+                }
+            
+                ++IndentLevel;
+                return continueIteration;
+            }
+
+            /**
+             * Called when a node ends
+             * 
+             * @return Whether iteration should continue
+             */
+            [[nodiscard]] Result OnEndNode() override
+            {
+                auto continueIteration = Result::Continue;
+
+                --IndentLevel;
+                if (!InfoStack.Pop())
+                {
+                    Print::FormatToMiniUART("Cell information stack out of sync (too many pops), aborting\r\n");
+                    continueIteration = Result::Stop;
+                }
+
+                // No extra data
+                IndentOutput(IndentLevel);
+                MiniUART::SendString("};\r\n");
+
+                return continueIteration;
+            }
+
+            /**
+             * Called when a property is found
+             * 
+             * @param apPropName The name of the property
+             * @param apDataStart The start of the data
+             * @param aDataLen The size of the data in bytes
+             * @return Whether iteration should continue
+             */
+            [[nodiscard]] Result OnProperty(char const* const apPropName, uint8_t const* const apDataStart, size_t const aDataLen) override
+            {
+                auto continueIteration = Result::Continue;
+                if (InfoStack.Empty())
+                {
+                    Print::FormatToMiniUART("Cell information stack out of sync (empty), aborting\r\n");
+                    continueIteration = Result::Stop;
+                }
+                else
+                {
+                    IndentOutput(IndentLevel);
+                    MiniUART::SendString(apPropName);
+
+                    // #TODO: There is likely a far better way to handle this
+                    if (strcmp(apPropName, "#address-cells") == 0)
+                    {
+                        auto currentCellInfo = InfoStack.Top();
+                        if (aDataLen == sizeof(currentCellInfo.AddressCells))
+                        {
+                            BigEndian<uint32_t> addressCells;
+                            std::memcpy(&addressCells, apDataStart, sizeof(currentCellInfo.AddressCells));
+                            currentCellInfo.AddressCells = addressCells;
+                            InfoStack.SetTop(currentCellInfo);
+                        }
+                    }
+                    else if (strcmp(apPropName, "#size-cells") == 0)
+                    {
+                        auto currentCellInfo = InfoStack.Top();
+                        if (aDataLen == sizeof(currentCellInfo.SizeCells))
+                        {
+                            BigEndian<uint32_t> sizeCells;
+                            std::memcpy(&sizeCells, apDataStart, sizeof(currentCellInfo.SizeCells));
+                            currentCellInfo.SizeCells = sizeCells;
+                            InfoStack.SetTop(currentCellInfo);
+                        }
+                    }
+                    
+                    if (aDataLen == 0)
+                    {
+                        MiniUART::SendString(";\r\n");
+                    }
+                    else
+                    {
+                        MiniUART::SendString(" = ");
+                        PrettyPrintValue(apPropName, apDataStart, aDataLen, InfoStack.Top());
+                        MiniUART::SendString(";\r\n");
+                    }
+                }
+                return continueIteration;
+            }
+
+            // We don't do anything special for NOP or End
+
+        private:
+            uint8_t const* pDTBBase = nullptr;
+            CellInformationStack InfoStack;
+            uint32_t IndentLevel = 0U;
+        };
+    }
+
+    auto IteratorBase::OnHeaderRead(fdt_header const& /*aHeader*/, ValidationStatus const /*aValidationStatus*/) -> Result
+    {
+        // By default, continue
+        return Result::Continue;
+    }
+
+    auto IteratorBase::OnBeginNode(char const* const /*apNodeName*/) -> Result
+    {
+        // By default, continue
+        return Result::Continue;
+    }
+
+    auto IteratorBase::OnEndNode() -> Result
+    {
+        // By default, continue
+        return Result::Continue;
+    }
+
+    auto IteratorBase::OnProperty(char const* const /*apPropName*/, uint8_t const* const /*apDataStart*/, size_t const /*aDataLen*/) -> Result
+    {
+        // By default, continue
+        return Result::Continue;
+    }
+
+    auto IteratorBase::OnNOP() -> Result
+    {
+        // By default, continue
+        return Result::Continue;
+    }
+
+    void IteratorBase::OnEnd()
+    {
+        // By default, do nothing
+    }
+
+    ValidationStatus ValidateMagicAndVersion(fdt_header const& aHeader)
+    {
+        if (aHeader.magic == ExpectedMagic)
+        {
+            if ((aHeader.version >= ExpectedVersion) && (aHeader.last_comp_version <= ExpectedVersion))
+            {
+                return ValidationStatus::Valid;
             }
             else
             {
-                MiniUART::SendString(" = ");
-                PrettyPrintValue(pname, pendPtr, dataHeader.len, arCurStack.Top());
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                pendPtr += dataHeader.len;
-                MiniUART::SendString(";\r\n");
+                return ValidationStatus::InvalidVersion;
             }
-            return AlignPointer(pendPtr, 4);
         }
+        return ValidationStatus::InvalidMagic;
+    }
 
-        /**
-         * Outputs a nop with its extra data
-         * 
-         * @param apExtraData The location of the extra data in the table
-         * @return The new position of the pointer after the extra data and alignment
-         */
-        uint8_t const* OutputNop(uint8_t const* const apExtraData)
-        {
-            // No extra data
-            // Nothing to output
-            return apExtraData;
-        }
+    bool ParseDeviceTree(uint8_t const* apDTB, IteratorBase& arIterator)
+    {
+        fdt_header header;
+        std::memcpy(&header, apDTB, sizeof(header));
+        auto const validationResult = ValidateMagicAndVersion(header);
+        auto success = validationResult == ValidationStatus::Valid;
 
-        /**
-         * Outputs an end with its extra data
-         * 
-         * @param apExtraData The location of the extra data in the table
-         * @return The new position of the pointer after the extra data and alignment
-         */
-        uint8_t const* OutputEnd(uint8_t const* const apExtraData)
+        // We're calling this regardless of validation success so it can handle validation failure with some more
+        // information
+        // #TODO: Find a better way to do this - probably come up with all the different ways we could fail and make an
+        // error result that is bubbled up (std::expected would be nice)
+        auto continueIteration = arIterator.OnHeaderRead(header, validationResult);
+        if (success && (continueIteration == IteratorBase::Result::Continue))
         {
-            // No extra data
-            // Nothing to output
-            return apExtraData;
-        }
-
-        /**
-         * Outputs the device tree to the UART
-         * 
-         * @param aHeader The header containing the block offset and other data needed
-         * @param aBaseAddr The base address for the offsets
-         */
-        void OutputDeviceTree(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
-        {
-            MiniUART::SendString("Structure block:\r\n");
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            uint8_t const* pcurToken = aBaseAddr + aHeader.off_dt_struct;
-            CellInformationStack infoStack;
-            auto indentLevel = 0U;
-            auto done = false;
-            while (!done)
+            auto const* pcurToken = apDTB + header.off_dt_struct;
+            while (success && (continueIteration == IteratorBase::Result::Continue))
             {
-                BigEndian<uint32_t> token = 0;
+                auto token = BigEndian<uint32_t>{ 0 };
                 std::memcpy(&token, pcurToken, sizeof(token));
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 pcurToken += sizeof(token);
@@ -599,112 +701,73 @@ namespace DeviceTree
                 {
                 case FDT_BEGIN_NODE:
                     {
-                        // fine if the stack is empty, as we'll get the defaults
-                        auto const parentCellInfo = infoStack.Top();
+                        // our extra data is the node name, as a zero-terminated string
+                        
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                        auto const* const pnodeName = reinterpret_cast<char const*>(pcurToken);
+                        continueIteration = arIterator.OnBeginNode(pnodeName);
 
-                        pcurToken = OutputBeginNode(pcurToken, indentLevel);
-
-                        // inherit default values from our parent
-                        if (infoStack.Push())
-                        {
-                            infoStack.SetTop(parentCellInfo);
-                        }
-                        else
-                        {
-                            Print::FormatToMiniUART("Out of cell information stack space, aborting\r\n");
-                            done = true;
-                        }
-                    
-                        ++indentLevel;
+                        auto const nameByteLen = std::strlen(pnodeName) + 1; // including terminator
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        pcurToken = AlignPointer(pcurToken + nameByteLen, alignof(uint32_t));
                     }
                     break;
 
                 case FDT_END_NODE:
-                    --indentLevel;
-                    if (!infoStack.Pop())
-                    {
-                        Print::FormatToMiniUART("Cell information stack out of sync (too many pops), aborting\r\n");
-                        done = true;
-                    }
-                    pcurToken = OutputEndNode(pcurToken, indentLevel);
+                    // no extra data
+                    continueIteration = arIterator.OnEndNode();
                     break;
 
                 case FDT_PROP:
-                    if (infoStack.Empty())
                     {
-                        Print::FormatToMiniUART("Cell information stack out of sync (empty), aborting\r\n");
-                        done = true;
-                    }
-                    else
-                    {
-                        pcurToken = OutputProp(aHeader, aBaseAddr, pcurToken, indentLevel, infoStack);
+                        auto dataHeader = fdt_prop_extra_data{};
+                        std::memcpy(&dataHeader, pcurToken, sizeof(dataHeader));
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        auto const* const pdataStart = pcurToken + sizeof(dataHeader);
+
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        auto const* const pname = reinterpret_cast<char const*>(apDTB + header.off_dt_strings + dataHeader.nameoff);
+                        
+                        continueIteration = arIterator.OnProperty(pname, pdataStart, dataHeader.len);
+                        
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        pcurToken = AlignPointer(pdataStart + dataHeader.len, alignof(uint32_t));
                     }
                     break;
 
                 case FDT_NOP:
-                    pcurToken = OutputNop(pcurToken);
+                    // no extra data
+                    continueIteration = arIterator.OnNOP();
                     break;
 
                 case FDT_END:
-                    pcurToken = OutputEnd(pcurToken);
-                    done = true;
+                    // no extra data
+                    arIterator.OnEnd();
+                    continueIteration = IteratorBase::Result::Stop;
                     break;
 
                 default:
-                    Print::FormatToMiniUART("Unknown token {}, aborting\r\n", token);
-                    done = true;
+                    // #TODO: Need better error reporting (invalid token)
+                    success = false;
                     break;
                 }
 
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                if ((pcurToken >= (aBaseAddr + aHeader.off_dt_struct + aHeader.size_dt_struct)) && !done)
+                if ((pcurToken >= (apDTB + header.off_dt_struct + header.size_dt_struct)) && success && (continueIteration != IteratorBase::Result::Stop))
                 {
-                    MiniUART::SendString("Ran off the end of the table, aborting\r\n");
-                    done = true;
+                    // #TODO: Need better error reporting (ran off end of memory)
+                    success = false;
                 }
             }
         }
+        return success;
     }
 
-    bool ValidateMagicAndVersion(fdt_header const& aHeader)
-    {
-        auto valid = (aHeader.magic == ExpectedMagic);
-        valid = valid && ((aHeader.version >= ExpectedVersion) && (aHeader.last_comp_version <= ExpectedVersion));
-        return valid;
-    }
-
-    /**
-     * Parse a device tree binary blob
-     * 
-     * @param apDTB The device tree blob to read
-     */
-    void ParseDeviceTree(uint8_t const* const apDTB)
+    bool OutputDeviceTreeDebugToUART(uint8_t const* const apDTB)
     {
         Print::FormatToMiniUART("Loading DTB from: {:x}...\r\n", std::bit_cast<uintptr_t>(apDTB));
 
-        fdt_header header;
-        std::memcpy(&header, apDTB, sizeof(header));
-
-        if (header.magic == ExpectedMagic)
-        {
-            MiniUART::SendString("Magic matches!\r\n");
-            if ((header.version >= ExpectedVersion) && (header.last_comp_version <= ExpectedVersion))
-            {
-                MiniUART::SendString("Version check passes!\r\n");
-
-                OutputHeader(header);
-                OutputMemoryReservationMap(header, apDTB);
-                OutputDeviceTree(header, apDTB);
-            }
-            else
-            {
-                Print::FormatToMiniUART("Version check FAILED. Version: {} (last compatible version: {}). Expected version: {}",
-                    header.version, header.last_comp_version, ExpectedVersion);
-            }
-        }
-        else
-        {
-            Print::FormatToMiniUART("Magic mismatch, found {:x}, expected {:x}\r\n", header.magic, ExpectedMagic);
-        }
+        auto iterator = OutputDebugToUART{ apDTB };
+        return ParseDeviceTree(apDTB, iterator);
     }
 }
