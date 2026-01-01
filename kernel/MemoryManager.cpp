@@ -1,5 +1,6 @@
 #include "MemoryManager.h"
 
+#include <array>
 #include <bit>
 #include <bitset>
 #include <cstdint>
@@ -239,6 +240,9 @@ namespace MemoryManager
             }
         };
 
+        // NOTE: For information on reserved memory in the DTB (outside of the ranges in the header):
+        // https://android.googlesource.com/kernel/msm/+/android-7.1.0_r0.2/Documentation/devicetree/bindings/reserved-memory/reserved-memory.txt
+
         /**
          * Records all memory information in a device tree blob
          */
@@ -271,10 +275,68 @@ namespace MemoryManager
                 return Result::Continue;
             }
 
+            /**
+             * Called when a node begins
+             * 
+             * @param apNodeName The name of the node
+             * @return Whether iteration should continue
+             */
+            [[nodiscard]] Result OnBeginNode(char const* const apNodeName) override
+            {
+                switch (CurState)
+                {
+                case State::RootOrUninteresting:
+                    // the nodes we're looking for to change state are all immediately under the root, so if we're not
+                    // iterating over immediate children, we can ignore them
+                    if (Depth == 1)
+                    {
+                        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
+                        constexpr char const memoryName[] = "memory";
+                        constexpr size_t memoryNameLen = std::size(memoryName) - 1; // -1 for null terminator
+                        if (strcmp(apNodeName, "reserved-memory") == 0)
+                        {
+                            CurState = State::ReservedMemory;
+                        }
+                        // #TODO: Should use starts_with from string_view when we have it
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
+                        else if (strncmp(apNodeName, memoryName, memoryNameLen) == 0)
+                        {
+                            CurState = State::Memory;
+                        }
+                    }
+                    break;
+                case State::ReservedMemory:
+                    CurState = State::ReservedMemoryChild;
+                    break;
+
+                case State::ReservedMemoryChild:
+                case State::Memory:
+                    ::Debug::Panic("Unexpected child of memory node, or reserved memory child node in DTB\r\n");
+                    break;
+                }
+                ++Depth;
+                return Result::Continue;
+            }
+
             // #TODO: Record all other memory information
 
         private:
+            enum class State : int8_t
+            {
+                RootOrUninteresting,
+                ReservedMemory,
+                ReservedMemoryChild,
+                Memory
+            };
+
             uint8_t const* pDTB = nullptr;
+            int32_t Depth = 0;
+            // NOTE: We're assuming we don't have to maintain a "stack" here (i.e. that either no children or all
+            // children define these)
+            // #TODO: Probably should have the tracking of these actually be handled by the base iterator
+            //uint32_t CurAddressCells = 0u;
+            //uint32_t CurSizeCells = 0u;
+            State CurState = State::RootOrUninteresting;
         };
     }
 

@@ -44,6 +44,29 @@ extern "C"
         return retVal;
     }
 
+    int strncmp(char const* const apLHS, char const* const apRHS, size_t const aSize)
+    {
+        auto retVal = 0;
+        auto pcurLHS = apLHS;
+        auto pcurRHS = apRHS;
+        auto remainingSize = aSize;
+
+        auto endOfString = [](char const* const apStrPos) {return *apStrPos == '\0';};
+
+        while (!endOfString(pcurLHS) && !endOfString(pcurRHS) && (remainingSize > 0) && (retVal == 0))
+        {
+            retVal = (static_cast<int>(*pcurLHS) - static_cast<int>(*pcurRHS));
+            ++pcurLHS;
+            ++pcurRHS;
+            --remainingSize;
+        }
+        if ((retVal == 0) && (endOfString(pcurLHS) != endOfString(pcurRHS)))
+        {
+            retVal = endOfString(pcurLHS) ? -1 : 1;
+        }
+        return retVal;
+    }
+
     size_t strlen(char const* const apStr)
     {
         auto pend = apStr;

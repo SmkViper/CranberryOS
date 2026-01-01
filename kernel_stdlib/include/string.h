@@ -42,6 +42,18 @@ extern "C"
     int strcmp(char const* apLHS, char const* apRHS);
 
     /**
+     * Compare two possibly zero-terminated strings up to a maximum count
+     * 
+     * @param apLHS Left-hand string to compare
+     * @param apRHS Right-hand string to compare
+     * @param aCount Maximum number of characters to compare
+     * 
+     * @return 0 if they are equal, negative if LHS appears before RHS in lexicographical order, positive if LHS appears
+     *         after RHS in lexicographical order
+     */
+    int strncmp(char const* apLHS, char const* apRHS, size_t aCount);
+
+    /**
      * Obtain the length of a string, not including the null character
      * 
      * @param apStr String to get the length of. UB if apStr is null

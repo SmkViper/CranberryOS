@@ -162,7 +162,7 @@ namespace Kernel
 
         if (!MemoryManager::InitializeMemoryInformationFromDTB(std::bit_cast<uint8_t const*>(aDTBPointer.GetAddress())))
         {
-            Debug::Panic("Failed to initialize memory manager from DTB!");
+            Debug::Panic("Failed to initialize memory manager from DTB!\r\n");
         }
 
         UnitTests::Run();

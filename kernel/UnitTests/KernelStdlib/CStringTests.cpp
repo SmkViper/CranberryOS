@@ -83,6 +83,45 @@ namespace UnitTests::KernelStdlib::CString
             EmitTestResult(strcmp("ABCD", "ABC") > 0, "strcmp greater than - differing lengths");
         }
 
+        // This clang tidy checker seems to want the third paramter of strncmp to be equal to or less than the length
+        // of one of the strings, even though strncmp can explicitly handle more (probably to catch people using
+        // strncmp when they could use a cheaper strcmp). But we want to make sure our implementation of strncmp works
+        // under these conditions, so disable the warning
+        // NOLINTBEGIN(bugprone-not-null-terminated-result)
+
+        /**
+         * Make sure strncmp handles equality
+         */
+        void StrncmpEqualTest()
+        {
+            EmitTestResult(strncmp("Hello", "Hello", 10) == 0, "strncmp equality, full string");
+            EmitTestResult(strncmp("Hello", "Heppy", 2) == 0, "strncmp equality, substring");
+        }
+
+        /**
+         * Make sure strncmp handles less than
+         */
+        void StrncmpLTTest()
+        {
+            EmitTestResult(strncmp("ABC", "BCD", 10) < 0, "strncmp less than, full string");
+            EmitTestResult(strncmp("ABC", "ACD", 10) < 0, "strncmp less than - partial, full string");
+            EmitTestResult(strncmp("ABC", "ABCD", 10) < 0, "strncmp less than - differing lengths, full string");
+            EmitTestResult(strncmp("ABC", "BCD", 2) < 0, "strncmp less than, substring");
+        }
+
+        /**
+         * Make sure strncmp handles greater than
+         */
+        void StrncmpGTTest()
+        {
+            EmitTestResult(strncmp("BCD", "ABC", 10) > 0, "strncmp greater than, full string");
+            EmitTestResult(strncmp("ACD", "ABC", 10) > 0, "strncmp greater than - partial, full string");
+            EmitTestResult(strncmp("ABCD", "ABC", 10) > 0, "strncmp greater than - differing lengths, full string");
+            EmitTestResult(strncmp("ACD", "ABC", 2) > 0, "strncmp greater than, substring");
+        }
+
+        // NOLINTEND(bugprone-not-null-terminated-result)
+
         /**
          * Run tests on strlen
          */
@@ -98,9 +137,15 @@ namespace UnitTests::KernelStdlib::CString
     {
         MemcpyTest();
         MemsetTest();
+
         StrcmpEqualTest();
         StrcmpLTTest();
         StrcmpGTTest();
+
+        StrncmpEqualTest();
+        StrncmpLTTest();
+        StrncmpGTTest();
+        
         StrlenTest();
     }
 }
