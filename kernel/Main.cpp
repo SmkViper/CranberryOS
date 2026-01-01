@@ -160,6 +160,11 @@ namespace Kernel
         }
 #endif // OUTPUT_DEVICE_TREE
 
+        if (!MemoryManager::InitializeMemoryInformationFromDTB(std::bit_cast<uint8_t const*>(aDTBPointer.GetAddress())))
+        {
+            Debug::Panic("Failed to initialize memory manager from DTB!");
+        }
+
         UnitTests::Run();
 
         MemoryManager::Debug::OutputKernelVARangesToUART();

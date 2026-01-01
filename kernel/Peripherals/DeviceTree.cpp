@@ -195,7 +195,7 @@ namespace DeviceTree
                  * @param aAddress The start of the reserved range
                  * @param aSize The size of the reserved range
                  */
-                [[nodiscard]] Result OnReserveEntry(uintptr_t aAddress, size_t aSize) override
+                [[nodiscard]] Result OnReserveEntry(uintptr_t const aAddress, size_t const aSize) override
                 {
                     Print::FormatToMiniUART("\tAddress (size): {:x} ({} bytes)\r\n", aAddress, aSize);
                     return Result::Continue;

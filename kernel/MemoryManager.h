@@ -43,6 +43,15 @@ namespace MemoryManager
     constexpr uint8_t NormalMAIRIndex = 1; // Normal non-cachable memory
 
     /**
+     * Extracts all the memory information from the DTB so the memory manager knows how much is available and what is
+     * reserved
+     * 
+     * @param apDTB The DTB to parse
+     * @return True on success
+     */
+    [[nodiscard]] bool InitializeMemoryInformationFromDTB(uint8_t const* apDTB);
+
+    /**
      * Allocates a page of memory in the kernel virtual address space
      * 
      * @return The address of the page in kernel VA space

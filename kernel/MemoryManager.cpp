@@ -7,6 +7,7 @@
 #include "AArch64/MemoryDescriptor.h"
 #include "AArch64/MemoryPageTables.h"
 #include "AArch64/SystemRegisters.h"
+#include "Peripherals/DeviceTree.h"
 #include "Debug.h"
 #include "PointerTypes.h"
 #include "Print.h"
@@ -218,6 +219,63 @@ namespace MemoryManager
             };
             ++arTask.MemoryState.UserPagesCount;
         }
+
+        /**
+         * Records all the reserved memory ranges while iterating a device tree blob
+         */
+        struct ReservedMemoryRangesIterator : public DeviceTree::ReservedMemIteratorBase
+        {
+            /**
+             * Called for each entry in the table
+             * 
+             * @param aAddress The start of the reserved range
+             * @param aSize The size of the reserved range
+             */
+            [[nodiscard]] Result OnReserveEntry(uintptr_t const aAddress, size_t const aSize) override
+            {
+                // #TODO: Record the ranges instead of just ouputting them
+                Print::FormatToMiniUART("Reserved memory range: {:x} ({} bytes)\r\n", aAddress, aSize);
+                return Result::Continue;
+            }
+        };
+
+        /**
+         * Records all memory information in a device tree blob
+         */
+        struct InitializeDTBInfoIterator : public DeviceTree::IteratorBase
+        {
+            /**
+             * Constructor
+             * 
+             * @param apDTB The root pointer of the DTB
+             */
+            explicit InitializeDTBInfoIterator(uint8_t const* const apDTB)
+                : pDTB{ apDTB }
+            {}
+
+            /**
+             * Called when the header is read in - header may be invalid!
+             * 
+             * @param aHeader The header data read in (might be invalid, check status!)
+             * @param aValidationStatus The status of the DTB, for error reporting if desired
+             * @return Whether iteration should continue
+             * @remarks Iteration will stop if validation failed, regardless of the return value of this function
+             */
+            [[nodiscard]] Result OnHeaderRead(DeviceTree::fdt_header const& aHeader, DeviceTree::ValidationStatus aValidationStatus) override
+            {
+                if (aValidationStatus == DeviceTree::ValidationStatus::Valid)
+                {
+                    auto iterator = ReservedMemoryRangesIterator{};
+                    DeviceTree::ForEachReservedMemoryBlock(aHeader, pDTB, iterator);
+                }
+                return Result::Continue;
+            }
+
+            // #TODO: Record all other memory information
+
+        private:
+            uint8_t const* pDTB = nullptr;
+        };
     }
 
     namespace Internal
@@ -414,6 +472,12 @@ namespace MemoryManager
             // #TODO: Better way to calculate the base address for TTBR1?
             OutputKernelVARangesToUART(AArch64::TTBRn_EL1::Read1(), VirtualPtr{ KernelVirtualAddressOffset });
         }
+    }
+
+    bool InitializeMemoryInformationFromDTB(uint8_t const* const apDTB)
+    {
+        auto iterator = InitializeDTBInfoIterator{ apDTB };
+        return DeviceTree::ParseDeviceTree(apDTB, iterator);
     }
 
     void* AllocateKernelPage()
