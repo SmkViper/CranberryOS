@@ -60,7 +60,7 @@ extern "C"
             ++pcurRHS;
             --remainingSize;
         }
-        if ((retVal == 0) && (endOfString(pcurLHS) != endOfString(pcurRHS)))
+        if ((retVal == 0) && (remainingSize != 0) && (endOfString(pcurLHS) != endOfString(pcurRHS)))
         {
             retVal = endOfString(pcurLHS) ? -1 : 1;
         }

@@ -5,6 +5,13 @@
 
 #include "../Framework.h"
 
+// #TODO: Compiler seems to be getting a bit smart and, recognizing these functions, is just removing them from the
+// code entirely, even in debug builds. Need to find a way to enforce the compiler calling our versions instead of
+// using the intrinsics. There was a bug in strncmp where the length was exactly equal to one of the strings which
+// would fail an equality test in real code (testing against runtime value) but pass in test code (with hardcoded
+// values). To "rebreak" strncmp for testing, remove the remaining length check from the final "not end of string"
+// comparison at the end
+
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
@@ -96,6 +103,7 @@ namespace UnitTests::KernelStdlib::CString
         {
             EmitTestResult(strncmp("Hello", "Hello", 10) == 0, "strncmp equality, full string");
             EmitTestResult(strncmp("Hello", "Heppy", 2) == 0, "strncmp equality, substring");
+            EmitTestResult(strncmp("Beginning", "Begin", 5) == 0, "strncmp equality, exact substring");
         }
 
         /**

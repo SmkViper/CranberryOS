@@ -9,9 +9,11 @@
 #include "AArch64/MemoryPageTables.h"
 #include "AArch64/SystemRegisters.h"
 #include "Peripherals/DeviceTree.h"
+#include "BigEndian.h"
 #include "Debug.h"
 #include "PointerTypes.h"
 #include "Print.h"
+#include "MiniUart.h"
 #include "Scheduler.h"
 #include "TaskStructs.h"
 #include "Utils.h"
@@ -242,6 +244,8 @@ namespace MemoryManager
 
         // NOTE: For information on reserved memory in the DTB (outside of the ranges in the header):
         // https://android.googlesource.com/kernel/msm/+/android-7.1.0_r0.2/Documentation/devicetree/bindings/reserved-memory/reserved-memory.txt
+        // For information on memory in the DTB, see section 3.4 of the spec
+        // https://devicetree-specification.readthedocs.io/en/stable/devicenodes.html#memory-node
 
         /**
          * Records all memory information in a device tree blob
@@ -291,20 +295,24 @@ namespace MemoryManager
                     if (Depth == 1)
                     {
                         // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,hicpp-avoid-c-arrays,modernize-avoid-c-arrays)
-                        constexpr char const memoryName[] = "memory";
-                        constexpr size_t memoryNameLen = std::size(memoryName) - 1; // -1 for null terminator
+                        constexpr char const pmemoryName[] = "memory";
+                        constexpr size_t memoryNameLen = std::size(pmemoryName) - 1; // -1 for null terminator
                         if (strcmp(apNodeName, "reserved-memory") == 0)
                         {
+                            // #TODO: Record data instead of printing
+                            Print::FormatToMiniUART("Reserved memory \"{}\":\r\n", apNodeName);
                             CurState = State::ReservedMemory;
                         }
                         // #TODO: Should use starts_with from string_view when we have it
                         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay,hicpp-no-array-decay)
-                        else if (strncmp(apNodeName, memoryName, memoryNameLen) == 0)
+                        else if (strncmp(apNodeName, pmemoryName, memoryNameLen) == 0)
                         {
+                            MiniUART::SendString("Memory:\r\n");
                             CurState = State::Memory;
                         }
                     }
                     break;
+
                 case State::ReservedMemory:
                     CurState = State::ReservedMemoryChild;
                     break;
@@ -318,7 +326,78 @@ namespace MemoryManager
                 return Result::Continue;
             }
 
-            // #TODO: Record all other memory information
+            /**
+             * Called when a node ends
+             * 
+             * @return Whether iteration should continue
+             */
+            [[nodiscard]] Result OnEndNode() override
+            {
+                switch (CurState)
+                {
+                case State::RootOrUninteresting:
+                    break;
+
+                case State::ReservedMemory:
+                    CurState = State::RootOrUninteresting;
+                    break;
+
+                case State::ReservedMemoryChild:
+                    // OnBegin ensures that reserved memory children have no children, so we can go back to
+                    // ReservedMemory without maintaining a stack
+                    CurState = State::ReservedMemory;
+                    break;
+
+                case State::Memory:
+                    // OnBegin ensures that memory has no children, so we can go back to root without maintaining a
+                    // stack
+                    CurState = State::RootOrUninteresting;
+                    break;
+                }
+                --Depth;
+                return Result::Continue;
+            }
+
+            /**
+             * Called when a property is found
+             * 
+             * @param apPropName The name of the property
+             * @param apDataStart The start of the data
+             * @param aDataLen The size of the data in bytes
+             * @return Whether iteration should continue
+             */
+            [[nodiscard]] Result OnProperty(char const* const apPropName, uint8_t const* const apDataStart, size_t const aDataLen) override
+            {
+                switch (CurState)
+                {
+                case State::RootOrUninteresting:
+                    // We don't care about anything that isn't at the root level
+                    if (Depth == 1)
+                    {
+                        UpdatePossibleCells(apPropName, apDataStart, aDataLen);
+                    }
+                    break;
+
+                case State::ReservedMemory:
+                    // #TODO: Verify address-cells and size-cells match the root
+                    // #TODO: Verify ranges is empty (or handle it?)
+                    break;
+
+                case State::ReservedMemoryChild:
+                case State::Memory:
+                    if (strcmp(apPropName, "reg") == 0)
+                    {
+                        ReadRegList(apDataStart, aDataLen);
+                    }
+                    // #TODO: Handle dynamic allocation with "size", "alignment", and "alloc-ranges"
+                    // #TODO: Handle "compatible"
+                    // #TODO: Handle "no-map"
+                    // #TODO: Handle "no-map-fixup"
+                    // #TODO: Handle "reusable"
+                    break;
+                }
+                return Result::Continue;
+            }
 
         private:
             enum class State : int8_t
@@ -329,13 +408,105 @@ namespace MemoryManager
                 Memory
             };
 
+            /**
+             * If the property is a cell property, read and update the values
+             * 
+             * @param apPropName The property name
+             * @param apDataStart The start of the data
+             * @param aDataLen The length of the data
+             */
+            void UpdatePossibleCells(char const* const apPropName, uint8_t const* const apDataStart, size_t const aDataLen)
+            {
+                // we only support 1 or 2 "cells" (i.e. units of 32 bits) for our addresses and sizes
+                constexpr uint32_t maxCellSize = 2;
+                if (strcmp(apPropName, "#address-cells") == 0)
+                {
+                    BigEndian<uint32_t> addressCells;
+                    if (aDataLen != sizeof(addressCells))
+                    {
+                        ::Debug::Panic("Unexpected size of #address-cells data\r\n");
+                    }
+                    std::memcpy(&addressCells, apDataStart, aDataLen);
+                    CurAddressCells = addressCells;
+                    if ((CurAddressCells == 0) || (CurAddressCells > maxCellSize))
+                    {
+                        ::Debug::Panic("#address-cells is an unsupported value\r\n");
+                    }
+                }
+                else if (strcmp(apPropName, "#size-cells") == 0)
+                {
+                    BigEndian<uint32_t> sizeCells;
+                    if (aDataLen != sizeof(sizeCells))
+                    {
+                        ::Debug::Panic("Unexpected size of #size-cells data\r\n");
+                    }
+                    std::memcpy(&sizeCells, apDataStart, aDataLen);
+                    CurSizeCells = sizeCells;
+                    if ((CurSizeCells == 0) || (CurSizeCells > maxCellSize))
+                    {
+                        ::Debug::Panic("#size-cells is an unsupported value\r\n");
+                    }
+                }
+            }
+
+            /**
+             * Read the list of addresses and sizes of a reg property
+             * 
+             * @param apDataStart the start of the data
+             * @param aDataLen the length of the data
+             */
+            void ReadRegList(uint8_t const* const apDataStart, size_t const aDataLen) const
+            {
+                // #TODO: Record memory information instead of printing
+                // #TODO: Should be shared with (or at least implemented) in the device tree code
+                // reg is a list of concatinated address and size cell values
+                uint8_t const* pcurValue = apDataStart;
+                size_t curOffset = 0;
+                auto readCellSizedValue = [&pcurValue, &curOffset](uint32_t const aCells)
+                {
+                    uint64_t nativeValue = 0;
+                    if (aCells == 1)
+                    {
+                        BigEndian<uint32_t> bevalue = 0;
+                        std::memcpy(&bevalue, pcurValue, sizeof(bevalue));
+                        nativeValue = bevalue;
+                    }
+                    else if (aCells == 2)
+                    {
+                        BigEndian<uint64_t> bevalue = 0;
+                        std::memcpy(&bevalue, pcurValue, sizeof(bevalue));
+                        nativeValue = bevalue;
+                    }
+                    else
+                    {
+                        ::Debug::Panic("Unexpected cell size");
+                    }
+                    auto const valueSize = aCells * sizeof(uint32_t);
+                    pcurValue += valueSize; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                    curOffset += valueSize;
+                    return nativeValue;
+                };
+
+                while (curOffset < aDataLen)
+                {
+                    auto const address = PhysicalPtr{ readCellSizedValue(CurAddressCells) };
+                    auto const size = readCellSizedValue(CurSizeCells);
+                    auto const endAddress = address.Offset(size - 1);
+                    Print::FormatToMiniUART("\t{} - {} ({} bytes)\r\n", address, endAddress, size);
+                }
+                if (curOffset != aDataLen)
+                {
+                    ::Debug::Panic("Bad reg list");
+                }
+            }
+
             uint8_t const* pDTB = nullptr;
             int32_t Depth = 0;
             // NOTE: We're assuming we don't have to maintain a "stack" here (i.e. that either no children or all
             // children define these)
             // #TODO: Probably should have the tracking of these actually be handled by the base iterator
-            //uint32_t CurAddressCells = 0u;
-            //uint32_t CurSizeCells = 0u;
+            uint32_t CurAddressCells = 0U;
+            uint32_t CurSizeCells = 0U;
             State CurState = State::RootOrUninteresting;
         };
     }
