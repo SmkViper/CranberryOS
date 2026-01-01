@@ -185,24 +185,25 @@ namespace DeviceTree
          */
         void OutputMemoryReservationMap(fdt_header const& aHeader, uint8_t const* const aBaseAddr)
         {
-            // #TODO: Should probably make an iteration helper for this so other systems can reuse the logic
             MiniUART::SendString("Memory reservation map:\r\n");
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            uint8_t const* pcurEntry = aBaseAddr + aHeader.off_mem_rsvmap;
-            auto done = false;
-            while (!done)
-            {
-                fdt_reserve_entry entry;
-                std::memcpy(&entry, pcurEntry, sizeof(entry));
 
-                done = (entry.address == 0) && (entry.size == 0);
-                if (!done)
+            struct OutputEachRange : public ReservedMemIteratorBase
+            {
+                /**
+                 * Called for each entry in the table
+                 * 
+                 * @param aAddress The start of the reserved range
+                 * @param aSize The size of the reserved range
+                 */
+                [[nodiscard]] Result OnReserveEntry(uintptr_t aAddress, size_t aSize) override
                 {
-                    Print::FormatToMiniUART("\tAddress (size): {:x} ({} bytes)\r\n", entry.address, entry.size);
-                    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                    pcurEntry += sizeof(entry);
+                    Print::FormatToMiniUART("\tAddress (size): {:x} ({} bytes)\r\n", aAddress, aSize);
+                    return Result::Continue;
                 }
-            }
+            };
+
+            auto iterator = OutputEachRange{};
+            ForEachReservedMemoryBlock(aHeader, aBaseAddr, iterator);
         }
 
         /**
@@ -658,6 +659,12 @@ namespace DeviceTree
         // By default, do nothing
     }
 
+    auto ReservedMemIteratorBase::OnReserveEntry(uintptr_t const /*aAddress*/, size_t const /*aSize*/) -> Result
+    {
+        // By default, continue
+        return Result::Continue;
+    }
+
     ValidationStatus ValidateMagicAndVersion(fdt_header const& aHeader)
     {
         if (aHeader.magic == ExpectedMagic)
@@ -761,6 +768,26 @@ namespace DeviceTree
             }
         }
         return success;
+    }
+
+    void ForEachReservedMemoryBlock(fdt_header const& aHeader, uint8_t const* const apDTB, ReservedMemIteratorBase& arIterator)
+    {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        uint8_t const* pcurEntry = apDTB + aHeader.off_mem_rsvmap;
+        auto done = false;
+        while (!done)
+        {
+            fdt_reserve_entry entry;
+            std::memcpy(&entry, pcurEntry, sizeof(entry));
+
+            done = (entry.address == 0) && (entry.size == 0);
+            if (!done)
+            {
+                done = (arIterator.OnReserveEntry(entry.address, entry.size) == ReservedMemIteratorBase::Result::Stop);
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                pcurEntry += sizeof(entry);
+            }
+        }
     }
 
     bool OutputDeviceTreeDebugToUART(uint8_t const* const apDTB)

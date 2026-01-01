@@ -32,6 +32,9 @@ namespace DeviceTree
         InvalidVersion
     };
 
+    // #TODO: Once we have std::function or equivalent, we should probably swap out these iterators for bundles of
+    // those instead just so lambdas can be used rather than whole classes
+
     /**
      * Base class for iterating a device tree - virtuals will be called at various points in the iteration process
      * #TODO: Should probably have a const version of this
@@ -115,6 +118,43 @@ namespace DeviceTree
         virtual void OnEnd();
     };
 
+    /**
+     * Base class for iterating the reserved memory blocks in a device tree
+     * #TODO: Should probably have a const version of this
+     */
+    class ReservedMemIteratorBase
+    {
+    public:
+        /**
+         * Default constructor
+         */
+        ReservedMemIteratorBase() = default;
+
+        /**
+         * Destructor
+         */
+        virtual ~ReservedMemIteratorBase() = default;
+
+        // Disable copy and move
+        ReservedMemIteratorBase(ReservedMemIteratorBase const&) = delete;
+        ReservedMemIteratorBase(ReservedMemIteratorBase&&) = delete;
+        ReservedMemIteratorBase& operator=(ReservedMemIteratorBase const&) = delete;
+        ReservedMemIteratorBase& operator=(ReservedMemIteratorBase&&) = delete;
+
+        /**
+         * Returned by each callback function to indicate whether iteration should continue or not
+         */
+        enum class Result : int8_t { Continue, Stop };
+
+        /**
+         * Called for each entry in the table
+         * 
+         * @param aAddress The start of the reserved range
+         * @param aSize The size of the reserved range
+         */
+        [[nodiscard]] virtual Result OnReserveEntry(uintptr_t aAddress, size_t aSize);
+    };
+
     // #TODO: Change our one caller to use ParseDeviceTree and only handle OnHeaderRead
     /**
      * Checks to see if the device tree has the right magic value and a good version
@@ -131,6 +171,16 @@ namespace DeviceTree
      * @return Whether parsing succeeded or not
      */
     [[nodiscard]] bool ParseDeviceTree(uint8_t const* apDTB, IteratorBase& arIterator);
+
+    /**
+     * Iterates over every reserved memory block specified by the device tree header
+     * 
+     * @param aHeader The header containing the reserved block information
+     * @param apDTB The device tree blob start pointer
+     * @param arIterator The iterator to call back as iteration progresses
+     * @return Whether iteration succeeded or not
+     */
+    void ForEachReservedMemoryBlock(fdt_header const& aHeader, uint8_t const* apDTB, ReservedMemIteratorBase& arIterator);
 
     // #TODO: We should probably have an override that takes a const iterator
 
